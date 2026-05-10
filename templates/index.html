@@ -459,8 +459,24 @@
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Pipeline processing failed.');
+          let errorMessage = 'Pipeline processing failed.';
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } else {
+            const errorText = await response.text();
+            if (response.status === 504) {
+              errorMessage = 'Request timed out. The document took too long to process (Render 100s limit).';
+            } else if (response.status === 502) {
+              errorMessage = 'Server ran out of memory or crashed (502 Bad Gateway). Try skipping enrichment.';
+            } else if (response.status === 413) {
+              errorMessage = 'File is too large to be uploaded to this server.';
+            } else {
+              errorMessage = `Server Error (${response.status}). The server returned an invalid response.`;
+            }
+          }
+          throw new Error(errorMessage);
         }
 
         updateSteps(4);
