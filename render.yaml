@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: vagent
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app --timeout 120"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: ADMIN_GUIDE_PUBLIC_URL
+        value: "https://drive.google.com/file/d/13sZGBNFm1BRQQjnzT4OhVcpJ1uWJSF5G/view?usp=drive_link"
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false

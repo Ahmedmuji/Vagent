@@ -760,7 +760,10 @@ class FortinetAdminGuideReferenceEnricher:
     def _rewrite_admin_guide_links_for_excel(self, output_path: str) -> None:
         if self.wb is None:
             return
+        
+        public_url = os.getenv("ADMIN_GUIDE_PUBLIC_URL")
         link_dir = os.path.join(os.path.dirname(output_path) or ".", "admin_guide_page_links")
+        
         for ws in self.wb.worksheets:
             headers = [str(cell.value or "").strip() for cell in ws[1]]
             if OUTPUT_COLUMNS[0] not in headers:
@@ -774,8 +777,13 @@ class FortinetAdminGuideReferenceEnricher:
                 uri, label = parsed
                 if not uri.lower().startswith("file:///") or ".pdf#page=" not in uri.lower():
                     continue
-                jump_uri = self._create_pdf_jump_file(link_dir, uri)
-                cell.value = f'=HYPERLINK("{self._excel_quote(jump_uri)}","{self._excel_quote(label)}")'
+                
+                if public_url:
+                    new_uri = public_url
+                else:
+                    new_uri = self._create_pdf_jump_file(link_dir, uri)
+                    
+                cell.value = f'=HYPERLINK("{self._excel_quote(new_uri)}","{self._excel_quote(label)}")'
 
     @staticmethod
     def _parse_hyperlink_formula(value: Any) -> Optional[Tuple[str, str]]:

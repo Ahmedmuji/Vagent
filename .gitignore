@@ -15,7 +15,8 @@ output/
 
 # Keep these if you want them in the repo (uncomment if needed)
 # !data/product_catalogs/
-# !output/toc_flat_index.json
+!output/toc_flat_index.json
+!output/toc_embeddings.npz
 
 # Large Reference Files
 data/Reference dataset/*.pdf

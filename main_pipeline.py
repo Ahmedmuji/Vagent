@@ -81,13 +81,19 @@ def prepare_admin_guide_index(project_root, skip_enrichment=False):
     paths = get_project_paths(project_root)
     if skip_enrichment:
         return None, paths["admin_guide_pdf_path"]
-    if os.path.exists(paths["admin_guide_pdf_path"]):
-        if not toc_index_has_pdf_links(paths["toc_index_path"]):
-            print("Extracting Admin Guide PDF metadata for enrichment...")
-            flat_index = build_admin_guide_metadata_index(paths["admin_guide_pdf_path"], paths["toc_index_path"])
-            print(f"  Flat index saved: {paths['toc_index_path']} ({len(flat_index)} entries)")
+        
+    # If the pre-computed TOC index exists, proceed even if the PDF is missing
+    if os.path.exists(paths["toc_index_path"]):
         return paths["toc_index_path"], paths["admin_guide_pdf_path"]
-    print(f"WARNING: Admin Guide PDF not found: {paths['admin_guide_pdf_path']}")
+        
+    # If TOC is missing, try to build it from the PDF
+    if os.path.exists(paths["admin_guide_pdf_path"]):
+        print("Extracting Admin Guide PDF metadata for enrichment...")
+        flat_index = build_admin_guide_metadata_index(paths["admin_guide_pdf_path"], paths["toc_index_path"])
+        print(f"  Flat index saved: {paths['toc_index_path']} ({len(flat_index)} entries)")
+        return paths["toc_index_path"], paths["admin_guide_pdf_path"]
+        
+    print(f"WARNING: Neither TOC index nor Admin Guide PDF found.")
     print("  Skipping Admin Guide enrichment.")
     return None, paths["admin_guide_pdf_path"]
 
