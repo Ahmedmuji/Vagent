@@ -1,0 +1,179 @@
+{
+  "products": [
+    {
+      "vendor": "Juniper",
+      "model": "SRX1500",
+      "category": "NGFW",
+      "ngfw_throughput_gbps": 3,
+      "ips_throughput_gbps": 4,
+      "ssl_tls_inspection_gbps": 1,
+      "concurrent_sessions": 2000000,
+      "ssl_vpn_users": 2500,
+      "connections_per_second": 25000,
+      "policies": 10000,
+      "storage_tb": 0,
+      "interfaces": {
+        "10g_sfp_plus": 4,
+        "1g_rj45": 12
+      },
+      "ha_port": true,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.juniper.net/us/en/products/security/srx-series/srx1500-enterprise-firewall.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/security/srx-series/srx1500-firewall-datasheet.html"
+    },
+    {
+      "vendor": "Juniper",
+      "model": "SRX4100",
+      "category": "NGFW",
+      "ngfw_throughput_gbps": 20,
+      "ips_throughput_gbps": 20,
+      "ssl_tls_inspection_gbps": 8,
+      "concurrent_sessions": 6000000,
+      "ssl_vpn_users": 10000,
+      "connections_per_second": 350000,
+      "policies": 50000,
+      "storage_tb": 0,
+      "interfaces": {
+        "10g_sfp_plus": 8,
+        "1g_rj45": 8
+      },
+      "ha_port": true,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.juniper.net/us/en/products/security/srx-series/srx4100-enterprise-firewall.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/security/srx-series/srx4100-srx4200-firewall-datasheet.html"
+    },
+    {
+      "vendor": "Juniper",
+      "model": "SRX4200",
+      "category": "NGFW",
+      "ngfw_throughput_gbps": 40,
+      "ips_throughput_gbps": 20,
+      "ssl_tls_inspection_gbps": 15,
+      "concurrent_sessions": 12000000,
+      "ssl_vpn_users": 20000,
+      "connections_per_second": 500000,
+      "policies": 100000,
+      "storage_tb": 1,
+      "interfaces": {
+        "25g_sfp28": 4,
+        "10g_sfp_plus": 8,
+        "1_10g_rj45": 2
+      },
+      "ha_port": true,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.juniper.net/us/en/products/security/srx-series/srx4200-enterprise-firewall.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/security/srx-series/srx4100-srx4200-firewall-datasheet.html"
+    },
+    {
+      "vendor": "Juniper",
+      "model": "EX4400",
+      "category": "ACCESS_SWITCH",
+      "switching_capacity_gbps": 960,
+      "throughput_gbps": 714,
+      "interfaces": {
+        "25g_sfp28": 4,
+        "10g_sfp_plus": 8,
+        "1g_rj45": 48
+      },
+      "ha_port": false,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex4400-enterprise-switch.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex4400-line-of-ethernet-switches-datasheet.html"
+    },
+    {
+      "vendor": "Juniper",
+      "model": "QFX5120",
+      "category": "DATACENTER_SWITCH",
+      "switching_capacity_gbps": 2160,
+      "throughput_gbps": 1620,
+      "interfaces": {
+        "100g_qsfp28": 4,
+        "40g_qsfp_plus": 4,
+        "25g_sfp28": 48,
+        "10g_sfp_plus": 48
+      },
+      "ha_port": false,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5120-data-center-switches.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5120-ethernet-switch-datasheet.html"
+    },
+    {
+      "vendor": "Juniper",
+      "model": "QFX5200",
+      "category": "DATACENTER_SWITCH",
+      "switching_capacity_gbps": 6400,
+      "throughput_gbps": 4800,
+      "interfaces": {
+        "100g_qsfp28": 32,
+        "40g_qsfp_plus": 32,
+        "25g_sfp28": 64,
+        "10g_sfp_plus": 64
+      },
+      "ha_port": false,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5200-data-center-switches.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5200-switch-datasheet.html"
+    },
+    {
+      "vendor": "Juniper",
+      "model": "QFX10002",
+      "category": "DATACENTER_SWITCH",
+      "switching_capacity_gbps": 24000,
+      "throughput_gbps": 24000,
+      "interfaces": {
+        "100g_qsfp28": 72,
+        "40g_qsfp_plus": 72,
+        "10g_sfp_plus": 288
+      },
+      "ha_port": true,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx10002-data-center-switch.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx10000-line-datasheet.html"
+    },
+    {
+      "vendor": "Juniper",
+      "model": "MX204",
+      "category": "ROUTER",
+      "throughput_gbps": 400,
+      "interfaces": {
+        "100g_qsfp28": 4,
+        "10g_sfp_plus": 8
+      },
+      "ha_port": false,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx204-universal-routing-platform.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx204-universal-routing-platform-datasheet.html"
+    },
+    {
+      "vendor": "Juniper",
+      "model": "MX240",
+      "category": "ROUTER",
+      "throughput_gbps": 3000,
+      "interfaces": {
+        "100g_qsfp28": 12,
+        "40g_qsfp_plus": 12,
+        "10g_sfp_plus": 48
+      },
+      "ha_port": true,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx240-universal-routing-platform.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx240-universal-routing-platform-datasheet.html"
+    },
+    {
+      "vendor": "Juniper",
+      "model": "Apstra",
+      "category": "SDN_AUTOMATION",
+      "product_url": "https://www.juniper.net/us/en/products/network-automation/apstra.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/network-automation/apstra-datasheet.html"
+    }
+  ]
+}

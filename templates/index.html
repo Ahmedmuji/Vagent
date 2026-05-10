@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RFP Extraction Pipeline</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0f766e;
+      --primary-glow: rgba(15, 118, 110, 0.3);
+      --bg-dark: #0f172a;
+      --card-bg: rgba(255, 255, 255, 0.05);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --error: #ef4444;
+      --success: #22c55e;
+    }
+
+    * { box-sizing: border-box; }
+    
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 0% 0%, rgba(15, 118, 110, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 100% 100%, rgba(45, 212, 191, 0.1) 0%, transparent 50%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+    }
+
+    #app {
+      width: min(1000px, 95vw);
+      padding: 2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .glass-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 2rem;
+      padding: clamp(1.5rem, 5vw, 3rem);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .header h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      margin: 0;
+      background: linear-gradient(to right, #2dd4bf, #0f766e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.02em;
+    }
+
+    .header p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      max-width: 600px;
+      margin: 1rem auto 0;
+    }
+
+    .upload-zone {
+      border: 2px dashed var(--card-border);
+      border-radius: 1.5rem;
+      padding: 3rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--primary);
+      background: rgba(15, 118, 110, 0.05);
+      transform: scale(1.01);
+    }
+
+    .upload-zone.has-file {
+      border-style: solid;
+      border-color: var(--primary);
+    }
+
+    .upload-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .upload-text {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .upload-hint {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .input-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .input-field label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .input-field input {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      border-radius: 0.75rem;
+      padding: 0.75rem 1rem;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+
+    .input-field input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px var(--primary-glow);
+    }
+
+    .checkbox-field {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      cursor: pointer;
+      user-select: none;
+      margin-top: 0.5rem;
+    }
+
+    .checkbox-field input {
+      width: 1.25rem;
+      height: 1.25rem;
+      accent-color: var(--primary);
+    }
+
+    .submit-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #2dd4bf, #0f766e);
+      color: white;
+      border: none;
+      border-radius: 1rem;
+      padding: 1.25rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      box-shadow: 0 10px 20px -5px rgba(15, 118, 110, 0.4);
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 30px -5px rgba(15, 118, 110, 0.5);
+    }
+
+    .submit-btn:active {
+      transform: translateY(0);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .spinner {
+      width: 1.5rem;
+      height: 1.5rem;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .status-area {
+      margin-top: 2rem;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      display: none;
+      animation: slideUp 0.4s ease-out;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .status-area.visible { display: block; }
+    
+    .status-processing { background: rgba(15, 118, 110, 0.1); border: 1px solid var(--primary); color: #2dd4bf; }
+    .status-error { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--error); color: #fca5a5; }
+    .status-success { background: rgba(34, 197, 94, 0.1); border: 1px solid var(--success); color: #86efac; }
+
+    .file-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 0.75rem;
+    }
+
+    .file-name {
+      flex: 1;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .remove-file {
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: color 0.2s;
+    }
+
+    .remove-file:hover { color: var(--error); }
+
+    .step-indicator {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--card-border);
+    }
+
+    .step {
+      text-align: center;
+      flex: 1;
+    }
+
+    .step-num {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      background: var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+
+    .step.active .step-num {
+      background: var(--primary);
+      box-shadow: 0 0 15px var(--primary-glow);
+    }
+
+    .step-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    @media (max-width: 640px) {
+      .header h1 { font-size: 2.5rem; }
+      .glass-card { padding: 1.5rem; border-radius: 1.5rem; }
+      .options-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="header">
+      <h1>RFP Extractor</h1>
+      <p>Transform dense PDF proposals into structured, enriched Excel workbooks with AI precision.</p>
+    </div>
+
+    <div class="glass-card" id="mainCard">
+      <div id="formContainer">
+        <div class="upload-zone" id="dropZone">
+          <input type="file" id="fileInput" accept="application/pdf" style="display: none">
+          <span class="upload-icon">📄</span>
+          <div id="dropZoneContent">
+            <div class="upload-text">Click or drag PDF to upload</div>
+            <div class="upload-hint">Only RFP PDF files supported</div>
+          </div>
+          <div id="filePreview" style="display: none" class="file-info">
+            <span class="file-name" id="selectedFileName"></span>
+            <span class="remove-file" id="removeFile">✕</span>
+          </div>
+        </div>
+
+        <div class="options-grid">
+          <div class="input-field">
+            <label for="startPage">Start Page (Optional)</label>
+            <input type="number" id="startPage" placeholder="e.g. 55" min="1">
+          </div>
+          <div class="input-field">
+            <label for="endPage">End Page (Optional)</label>
+            <input type="number" id="endPage" placeholder="e.g. 68" min="1">
+          </div>
+        </div>
+
+        <label class="checkbox-field">
+          <input type="checkbox" id="skipEnrichment">
+          <span>Skip Admin Guide enrichment for faster processing</span>
+        </label>
+
+        <button class="submit-btn" id="submitBtn">
+          <span class="spinner" id="btnSpinner"></span>
+          <span id="btnText">Generate Enriched Excel</span>
+        </button>
+      </div>
+
+      <div id="statusArea" class="status-area">
+        <div id="statusTitle" style="font-weight: 700; margin-bottom: 0.5rem;"></div>
+        <div id="statusDesc" style="font-size: 0.95rem; line-height: 1.5;"></div>
+      </div>
+
+      <div class="step-indicator">
+        <div class="step" id="step1"><div class="step-num">1</div><div class="step-label">Extract</div></div>
+        <div class="step" id="step2"><div class="step-num">2</div><div class="step-label">Analyze</div></div>
+        <div class="step" id="step3"><div class="step-num">3</div><div class="step-label">Enrich</div></div>
+        <div class="step" id="step4"><div class="step-num">4</div><div class="step-label">Deliver</div></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      file: null,
+      isProcessing: false,
+      currentStep: 0,
+    };
+
+    // DOM Elements
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const dropZoneContent = document.getElementById('dropZoneContent');
+    const filePreview = document.getElementById('filePreview');
+    const selectedFileName = document.getElementById('selectedFileName');
+    const removeFile = document.getElementById('removeFile');
+    const submitBtn = document.getElementById('submitBtn');
+    const btnSpinner = document.getElementById('btnSpinner');
+    const btnText = document.getElementById('btnText');
+    const statusArea = document.getElementById('statusArea');
+    const statusTitle = document.getElementById('statusTitle');
+    const statusDesc = document.getElementById('statusDesc');
+    const startPageInput = document.getElementById('startPage');
+    const endPageInput = document.getElementById('endPage');
+    const skipEnrichmentInput = document.getElementById('skipEnrichment');
+
+    // Drag and Drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-over'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-over'), false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      const files = e.dataTransfer.files;
+      if (files.length) handleFile(files[0]);
+    });
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) handleFile(e.target.files[0]);
+    });
+
+    function handleFile(file) {
+      if (file.type !== 'application/pdf') {
+        showStatus('error', 'Invalid File Type', 'Please upload a PDF document.');
+        return;
+      }
+      state.file = file;
+      selectedFileName.textContent = file.name;
+      dropZoneContent.style.display = 'none';
+      filePreview.style.display = 'flex';
+      dropZone.classList.add('has-file');
+      clearStatus();
+    }
+
+    removeFile.addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.file = null;
+      fileInput.value = '';
+      dropZoneContent.style.display = 'block';
+      filePreview.style.display = 'none';
+      dropZone.classList.remove('has-file');
+    });
+
+    // Submission
+    submitBtn.addEventListener('click', async () => {
+      if (!state.file || state.isProcessing) return;
+
+      setProcessing(true);
+      showStatus('processing', 'Processing RFP...', 'Our AI is extracting tables and identifying requirements. This may take a minute.');
+      updateSteps(1);
+
+      const formData = new FormData();
+      formData.append('rfp_file', state.file);
+      formData.append('start_page', startPageInput.value);
+      formData.append('end_page', endPageInput.value);
+      if (skipEnrichmentInput.checked) formData.append('skip_enrichment', 'on');
+
+      try {
+        // Step 2 & 3 simulation (visual only)
+        setTimeout(() => updateSteps(2), 5000);
+        setTimeout(() => updateSteps(3), 15000);
+
+        const response = await fetch('/process', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Pipeline processing failed.');
+        }
+
+        updateSteps(4);
+        
+        // Handle Blob for download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = 'enriched_requirements.xlsx';
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename="(.+)"/);
+          if (match) filename = match[1];
+        }
+        
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        showStatus('success', 'Processing Complete!', 'Your enriched Excel workbook has been generated and downloaded.');
+        setProcessing(false);
+      } catch (error) {
+        console.error(error);
+        showStatus('error', 'Processing Failed', error.message);
+        setProcessing(false);
+        updateSteps(0);
+      }
+    });
+
+    function setProcessing(isProcessing) {
+      state.isProcessing = isProcessing;
+      submitBtn.disabled = isProcessing;
+      btnSpinner.style.display = isProcessing ? 'inline-block' : 'none';
+      btnText.textContent = isProcessing ? 'Processing...' : 'Generate Enriched Excel';
+    }
+
+    function showStatus(type, title, desc) {
+      statusArea.className = `status-area visible status-${type}`;
+      statusTitle.textContent = title;
+      statusDesc.textContent = desc;
+    }
+
+    function clearStatus() {
+      statusArea.className = 'status-area';
+    }
+
+    function updateSteps(step) {
+      for (let i = 1; i <= 4; i++) {
+        const el = document.getElementById(`step${i}`);
+        if (i <= step) el.classList.add('active');
+        else el.classList.remove('active');
+      }
+    }
+  </script>
+</body>
+</html>

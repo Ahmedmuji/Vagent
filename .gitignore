@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Environment
+.env
+.venv
+
+# Generated Data
+data/Complete RFPs/
+data/Extracted Requirements Section/
+data/Extracted JSON Results/
+data/Extracted Excel Results/
+output/
+
+# Keep these if you want them in the repo (uncomment if needed)
+# !data/product_catalogs/
+# !output/toc_flat_index.json
+
+# Large Reference Files
+data/Reference dataset/*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
