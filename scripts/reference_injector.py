@@ -174,7 +174,9 @@ class HardwareReferenceInjector:
             fallback = self.matcher.extract_requirement_metadata(text)
             if not ProductMatcher.normalize_requirements(effective).get("device_type"):
                 effective["device_category"] = fallback.get("device_type")
-            detected = effective.setdefault("detected_specs", {})
+            if not isinstance(effective.get("detected_specs"), dict):
+                effective["detected_specs"] = {}
+            detected = effective["detected_specs"]
             for key, value in (fallback.get("requirements") or {}).items():
                 if key == "interfaces":
                     effective["interfaces"] = self._merge_interface_dicts(effective.get("interfaces") or {}, value)
@@ -201,11 +203,17 @@ class HardwareReferenceInjector:
             if not merged.get(key) and incoming.get(key):
                 merged[key] = incoming[key]
         merged["requires_reference"] = merged.get("requires_reference") or incoming.get("requires_reference")
-        detected = merged.setdefault("detected_specs", {})
-        for key, value in (incoming.get("detected_specs") or {}).items():
-            if value not in (None, ""):
-                current = detected.get(key)
-                detected[key] = max(current, value) if isinstance(current, (int, float)) and isinstance(value, (int, float)) else value
+        
+        if not isinstance(merged.get("detected_specs"), dict):
+            merged["detected_specs"] = {}
+        detected = merged["detected_specs"]
+        
+        incoming_specs = incoming.get("detected_specs")
+        if isinstance(incoming_specs, dict):
+            for key, value in incoming_specs.items():
+                if value not in (None, ""):
+                    current = detected.get(key)
+                    detected[key] = max(current, value) if isinstance(current, (int, float)) and isinstance(value, (int, float)) else value
         for key in NUMERIC_REQUIREMENT_FIELDS:
             value = incoming.get(key)
             if value not in (None, ""):
