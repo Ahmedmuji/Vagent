@@ -15,20 +15,22 @@ Usage:
 import sys
 import os
 import time
-
-try:
-    import fitz  # PyMuPDF
-except ImportError:
-    print("PyMuPDF is required. Please install it with: pip install PyMuPDF")
-    sys.exit(1)
+import subprocess
+import shutil
 
 def linearize_pdf(input_path: str, output_path: str = None):
     if not os.path.exists(input_path):
         print(f"Error: Input file '{input_path}' not found.")
         sys.exit(1)
 
+    # Check if qpdf is installed
+    if not shutil.which("qpdf"):
+        print("Error: 'qpdf' is required for linearization but is not installed.")
+        print("Please install it by running the following command on your server:")
+        print("    sudo apt-get install qpdf -y")
+        sys.exit(1)
+
     if output_path is None:
-        # Create a backup of the original and overwrite it
         directory = os.path.dirname(input_path)
         filename = os.path.basename(input_path)
         name, ext = os.path.splitext(filename)
@@ -45,30 +47,30 @@ def linearize_pdf(input_path: str, output_path: str = None):
     start_time = time.time()
     
     try:
-        doc = fitz.open(input_path_to_read)
-        
-        print(f"Successfully loaded {doc.page_count} pages.")
         print(f"Saving linearized PDF to: {output_path}")
         print("This may take a minute or two for large PDFs...")
         
-        # linear=True enables Fast Web View
-        # garbage=4 aggressively cleans up duplicate/unused objects
-        # deflate=True compresses streams
-        doc.save(
-            output_path, 
-            linear=True, 
-            garbage=4, 
-            deflate=True
+        # Use qpdf to linearize the file natively
+        subprocess.run(
+            ["qpdf", "--linearize", input_path_to_read, output_path],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
         )
         
         elapsed = time.time() - start_time
         print(f"\nSuccess! PDF has been linearized in {elapsed:.1f} seconds.")
         print("Your browser can now use HTTP Byte-Range requests to jump to pages instantly.")
         
-    except Exception as e:
-        print(f"Error processing PDF: {e}")
+    except subprocess.CalledProcessError as e:
+        print(f"Error processing PDF with qpdf:\n{e.stderr.decode('utf-8', errors='ignore')}")
         if output_path == input_path and 'backup_path' in locals():
             print("Restoring backup...")
+            os.rename(backup_path, input_path)
+        sys.exit(1)
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        if output_path == input_path and 'backup_path' in locals():
             os.rename(backup_path, input_path)
         sys.exit(1)
 
