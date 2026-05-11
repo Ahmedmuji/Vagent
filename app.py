@@ -1,5 +1,8 @@
 import os
 import uuid
+
+# Fix for HuggingFace tokenizers crashing/deadlocking in Gunicorn's forked worker processes
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 from pathlib import Path
 
 from flask import Flask, flash, jsonify, redirect, render_template, request, send_file, url_for
