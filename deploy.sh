@@ -8,17 +8,10 @@ echo "==========================================="
 # 1. Update system and install Python 3 venv if needed
 # sudo apt update && sudo apt install python3-venv python3-pip -y
 
-# 2. Create virtual environment
-if [ ! -d "venv" ]; then
-    echo "Creating virtual environment..."
-    python3 -m venv venv
-fi
-
-# 3. Activate and install dependencies
+# 1. Install dependencies globally
 echo "Installing dependencies..."
-source venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
+pip3 install --upgrade pip
+pip3 install -r requirements.txt
 
 # 4. Check for .env
 if [ ! -f ".env" ]; then
