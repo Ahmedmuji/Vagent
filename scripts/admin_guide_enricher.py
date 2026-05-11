@@ -46,6 +46,9 @@ try:
 except ImportError:
     cosine_similarity = None
 
+# Global cache for the machine learning model to drastically speed up processing
+GLOBAL_EMBEDDING_MODEL = None
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -181,9 +184,13 @@ class FortinetAdminGuideReferenceEnricher:
                     cached.shape[0], len(self.toc_titles),
                 )
 
+        global GLOBAL_EMBEDDING_MODEL
+
         if self.toc_embeddings is None:
             logger.info("Encoding %d TOC titles with %s …", len(self.toc_titles), self.model_name)
-            self.model = SentenceTransformer(self.model_name)
+            if GLOBAL_EMBEDDING_MODEL is None:
+                GLOBAL_EMBEDDING_MODEL = SentenceTransformer(self.model_name)
+            self.model = GLOBAL_EMBEDDING_MODEL
             self.toc_embeddings = self.model.encode(
                 self.toc_titles, show_progress_bar=True, batch_size=128
             ).astype("float32")
@@ -194,7 +201,10 @@ class FortinetAdminGuideReferenceEnricher:
 
         # Keep model loaded for query encoding
         if self.model is None:
-            self.model = SentenceTransformer(self.model_name)
+            if GLOBAL_EMBEDDING_MODEL is None:
+                logger.info("Loading global SentenceTransformer model into memory...")
+                GLOBAL_EMBEDDING_MODEL = SentenceTransformer(self.model_name)
+            self.model = GLOBAL_EMBEDDING_MODEL
 
     # ------------------------------------------------------------------
     # 4. Parse reference tag
