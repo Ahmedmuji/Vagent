@@ -761,7 +761,10 @@ class FortinetAdminGuideReferenceEnricher:
         if self.wb is None:
             return
         
-        public_url = os.getenv("ADMIN_GUIDE_PUBLIC_URL")
+        server_base_url = os.getenv("SERVER_BASE_URL")
+        if server_base_url and server_base_url.endswith("/"):
+            server_base_url = server_base_url[:-1]
+            
         link_dir = os.path.join(os.path.dirname(output_path) or ".", "admin_guide_page_links")
         
         for ws in self.wb.worksheets:
@@ -778,8 +781,10 @@ class FortinetAdminGuideReferenceEnricher:
                 if not uri.lower().startswith("file:///") or ".pdf#page=" not in uri.lower():
                     continue
                 
-                if public_url:
-                    new_uri = public_url
+                if server_base_url:
+                    page_match = re.search(r"#page=(\d+)", uri, re.IGNORECASE)
+                    page = page_match.group(1) if page_match else "1"
+                    new_uri = f"{server_base_url}/reference_pdf#page={page}"
                 else:
                     new_uri = self._create_pdf_jump_file(link_dir, uri)
                     

@@ -51,6 +51,15 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/reference_pdf", methods=["GET"])
+def serve_reference_pdf():
+    paths = get_project_paths(PROJECT_ROOT)
+    pdf_path = paths["admin_guide_pdf_path"]
+    if os.path.exists(pdf_path):
+        return send_file(pdf_path)
+    return "Admin Guide PDF not found on server.", 404
+
+
 @app.route("/process", methods=["POST"])
 def process_upload():
     uploaded_file = request.files.get("rfp_file")
