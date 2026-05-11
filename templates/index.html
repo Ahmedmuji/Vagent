@@ -357,6 +357,18 @@
         <div class="step" id="step3"><div class="step-num">3</div><div class="step-label">Enrich</div></div>
         <div class="step" id="step4"><div class="step-num">4</div><div class="step-label">Deliver</div></div>
       </div>
+      
+      <!-- Recent Downloads Section -->
+      <div id="downloadsArea" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <h3 style="margin: 0; font-size: 1.2rem; color: var(--text);">Recent Downloads</h3>
+          <button id="refreshDownloadsBtn" style="background: rgba(255,255,255,0.1); border: none; color: var(--text); padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.9rem; transition: background 0.2s;">↻ Refresh</button>
+        </div>
+        <div id="downloadsList" style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <!-- Items will be populated here -->
+          <div style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 1rem;">No recent files found.</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -466,8 +478,12 @@
             errorMessage = errorData.error || errorMessage;
           } else {
             const errorText = await response.text();
-            if (response.status === 504) {
-              errorMessage = 'Request timed out. The document took too long to process (Render 100s limit).';
+            if (response.status === 504 || response.status === 503) {
+              errorMessage = 'Ngrok timed out waiting for the server, but your file is still processing in the background! Please wait 2-3 minutes, then click "Refresh" in the Recent Downloads section below to get your file.';
+              showStatus('processing', 'Processing in Background', errorMessage);
+              updateSteps(3); // Keep it looking active
+              setProcessing(false);
+              return; // Stop throwing error so we don't turn red
             } else if (response.status === 502) {
               errorMessage = 'Server ran out of memory or crashed (502 Bad Gateway). Try skipping enrichment.';
             } else if (response.status === 413) {
@@ -533,6 +549,47 @@
         else el.classList.remove('active');
       }
     }
+
+    // Recent Downloads Logic
+    const downloadsList = document.getElementById('downloadsList');
+    const refreshDownloadsBtn = document.getElementById('refreshDownloadsBtn');
+
+    async function fetchRecentDownloads() {
+      try {
+        refreshDownloadsBtn.style.opacity = '0.5';
+        const res = await fetch('/recent_downloads');
+        const data = await res.json();
+        
+        downloadsList.innerHTML = '';
+        if (data.files && data.files.length > 0) {
+          data.files.forEach(file => {
+            const date = new Date(file.mtime * 1000).toLocaleString();
+            const size = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+            const item = document.createElement('div');
+            item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 0.75rem;';
+            item.innerHTML = `
+              <div style="overflow: hidden; padding-right: 1rem;">
+                <div style="font-weight: 600; color: #2dd4bf; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem;">${file.name}</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">${date} &bull; ${size}</div>
+              </div>
+              <a href="/download/${encodeURIComponent(file.path)}" style="background: rgba(45, 212, 191, 0.2); color: #2dd4bf; text-decoration: none; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; white-space: nowrap;" onmouseover="this.style.background='rgba(45, 212, 191, 0.3)'" onmouseout="this.style.background='rgba(45, 212, 191, 0.2)'">Download</a>
+            `;
+            downloadsList.appendChild(item);
+          });
+        } else {
+          downloadsList.innerHTML = '<div style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 1rem;">No recent files found.</div>';
+        }
+      } catch (err) {
+        console.error('Failed to fetch downloads:', err);
+      } finally {
+        refreshDownloadsBtn.style.opacity = '1';
+      }
+    }
+
+    refreshDownloadsBtn.addEventListener('click', fetchRecentDownloads);
+    
+    // Initial fetch
+    fetchRecentDownloads();
   </script>
 </body>
 </html>

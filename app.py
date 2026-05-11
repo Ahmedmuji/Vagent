@@ -120,5 +120,45 @@ def process_upload():
         return jsonify({"error": f"Pipeline processing failed: {str(exc)}"}), 500
 
 
+@app.route("/recent_downloads", methods=["GET"])
+def get_recent_downloads():
+    paths = get_project_paths(PROJECT_ROOT)
+    excel_dir = paths["excel_results_dir"]
+    if not os.path.exists(excel_dir):
+        return jsonify({"files": []})
+
+    files = []
+    for root, _, filenames in os.walk(excel_dir):
+        for f in filenames:
+            if f.endswith(".xlsx"):
+                filepath = os.path.join(root, f)
+                rel_path = os.path.relpath(filepath, excel_dir)
+                stat = os.stat(filepath)
+                files.append({
+                    "name": f,
+                    "path": rel_path.replace("\\", "/"),
+                    "mtime": stat.st_mtime,
+                    "size": stat.st_size
+                })
+    
+    # Sort by newest first, take top 10
+    files.sort(key=lambda x: x["mtime"], reverse=True)
+    return jsonify({"files": files[:10]})
+
+
+@app.route("/download/<path:filename>", methods=["GET"])
+def download_file(filename):
+    paths = get_project_paths(PROJECT_ROOT)
+    excel_dir = paths["excel_results_dir"]
+    # Prevent directory traversal
+    safe_path = os.path.abspath(os.path.join(excel_dir, filename))
+    if not safe_path.startswith(os.path.abspath(excel_dir)):
+        return "Access denied", 403
+        
+    if os.path.exists(safe_path):
+        return send_file(safe_path, as_attachment=True)
+    return "File not found", 404
+
+
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)
