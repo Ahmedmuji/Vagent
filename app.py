@@ -59,7 +59,8 @@ def serve_reference_pdf():
     paths = get_project_paths(PROJECT_ROOT)
     pdf_path = paths["admin_guide_pdf_path"]
     if os.path.exists(pdf_path):
-        return send_file(pdf_path)
+        # conditional=True enables HTTP Range Requests, allowing the browser to fetch only the exact page bytes
+        return send_file(pdf_path, conditional=True)
     return "Admin Guide PDF not found on server.", 404
 
 
