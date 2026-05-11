@@ -39,7 +39,7 @@ fi
 # 6. Start Gunicorn Server
 echo "Starting Vagent Server on port 5000..."
 echo "Press Ctrl+C to stop."
-echo "For background execution, run: nohup gunicorn --bind 0.0.0.0:5000 --timeout 600 app:app > vagent.log 2>&1 &"
+echo "For background execution, run: nohup gunicorn -c gunicorn_config.py app:app > vagent.log 2>&1 &"
 
-# Start in foreground for testing, with a massive timeout
-gunicorn --bind 0.0.0.0:5000 --timeout 600 app:app
+# Start in foreground for testing
+gunicorn -c gunicorn_config.py app:app
