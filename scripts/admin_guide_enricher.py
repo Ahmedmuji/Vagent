@@ -445,6 +445,7 @@ class FortinetAdminGuideReferenceEnricher:
             "anchor": pdf_anchor,
             "pdf_anchor": pdf_anchor,
             "pdf_uri": pdf_uri,
+            "url": entry.get("url", ""),
             "named_destination": entry.get("named_destination", ""),
             "section_path": entry.get("section_path") or entry.get("breadcrumb_path", ""),
             "score": round(best_score, 4),
@@ -468,6 +469,7 @@ class FortinetAdminGuideReferenceEnricher:
             "anchor": "",
             "pdf_anchor": "",
             "pdf_uri": "",
+            "url": "",
             "named_destination": "",
             "section_path": "",
             "score": 0.0,
@@ -493,7 +495,9 @@ class FortinetAdminGuideReferenceEnricher:
         pdf = match.get("pdf_page", "")
         if not title:
             return ""
-        return f"FortiOS Admin Guide - {title} (Page {pdf or printed})"
+        if pdf or printed:
+            return f"FortiOS Admin Guide - {title} (Page {pdf or printed})"
+        return f"FortiOS Admin Guide - {title}"
 
     def _page_anchor(self, page: Any) -> str:
         if page in (None, ""):
