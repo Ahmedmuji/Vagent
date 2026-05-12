@@ -290,7 +290,7 @@ class HardwareReferenceInjector:
                     label = f"{label} — {url}"
                 if label not in matches:
                     matches.append(label)
-        return " | ".join(matches)
+        return "\n\n".join(matches)
 
 
 def inject_hardware_references(data: Dict[str, Any], catalog_dir: Optional[str] = None) -> Tuple[Dict[str, Any], Dict[str, int]]:

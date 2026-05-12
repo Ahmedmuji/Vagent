@@ -337,17 +337,47 @@ class FortinetAdminGuideReferenceEnricher:
     # ------------------------------------------------------------------
     # 6. Find best match
     # ------------------------------------------------------------------
-    def find_best_match(
+    def find_all_matches(self, tag_data: Dict[str, Any], requirement_text: str = "") -> List[Dict[str, Any]]:
+        """Extract multiple distinct matches for complex single-row requirements."""
+        feature_candidates = tag_data.get("fortinet_feature_candidates") or []
+        if not feature_candidates:
+            query = tag_data.get("lookup_query", "")
+            if query:
+                feature_candidates = [query]
+            else:
+                return [self._empty_result("No candidates found")]
+
+        matches = []
+        seen_urls = set()
+
+        for candidate in feature_candidates:
+            # Create a localized tag_data for this specific candidate
+            local_tag = dict(tag_data)
+            local_tag["lookup_query"] = str(candidate)
+            local_tag["fortinet_feature_candidates"] = []
+            
+            match = self._find_best_match_single(local_tag, requirement_text)
+            # Use URL or title as the deduplication key
+            dedup_key = match.get("url") or match.get("pdf_uri") or match.get("title")
+            if dedup_key and dedup_key not in seen_urls:
+                seen_urls.add(dedup_key)
+                matches.append(match)
+        
+        if not matches:
+            return [self._empty_result("No candidates found")]
+            
+        return matches
+
+    def _find_best_match_single(
         self, tag_data: Dict[str, Any], requirement_text: str = ""
     ) -> Dict[str, Any]:
         """
-        Run the full hybrid retrieval pipeline for one tag.
+        Run the full hybrid retrieval pipeline for one specific query.
 
         Returns dict with keys: title, path, printed_page, pdf_page,
         score, method, confidence, status, rationale
         """
-        feature_candidates = tag_data.get("fortinet_feature_candidates") or []
-        lookup_query = " ".join(str(item) for item in feature_candidates) if feature_candidates else tag_data.get("lookup_query", "")
+        lookup_query = tag_data.get("lookup_query", "")
         fortinet_domains = tag_data.get("fortinet_domains", [])
         priority = tag_data.get("priority", "medium")
 
@@ -647,20 +677,24 @@ class FortinetAdminGuideReferenceEnricher:
                 continue
 
             try:
-                match = self.find_best_match(tag_data, req_text)
-                citation = self.generate_citation(match)
+                matches = self.find_all_matches(tag_data, req_text)
                 
-                if match["status"] != "Matched":
-                    citation = f"[Review Required] {citation}" if citation else "[Review Required] No match found"
+                # Determine overall status (if any match requires manual review, the cell requires review)
+                overall_status = "Matched"
+                for match in matches:
+                    if match.get("status") != "Matched":
+                        overall_status = "Manual Review Required"
+                        break
 
                 cell = ws.cell(row=row_idx, column=start_col)
-                self._write_citation_cell(cell, citation, match)
-                cell.fill = CITATION_FILL if match["status"] == "Matched" else REVIEW_FILL
+                self._write_citation_cell(cell, matches)
+                
+                cell.fill = CITATION_FILL if overall_status == "Matched" else REVIEW_FILL
                 cell.border = BORDER_THIN
                 cell.alignment = Alignment(wrap_text=True, vertical="top")
 
                 enriched_count += 1
-                if match["status"] == "Matched":
+                if overall_status == "Matched":
                     self.stats["matched"] += 1
                 else:
                     self.stats["manual_review"] += 1
@@ -689,26 +723,32 @@ class FortinetAdminGuideReferenceEnricher:
 
         return enriched_count
 
-    @staticmethod
-    def _write_citation_cell(cell, citation: str, match: Dict[str, Any]) -> None:
-        # Check for web URL first, fallback to pdf_uri
-        uri = match.get("url") or match.get("pdf_uri") or ""
-        
-        # If it's a web URL, don't try to append PDF pages
-        is_web_url = str(uri).startswith("http")
-        
-        if not is_web_url:
-            page = match.get("pdf_page") or match.get("page")
-            if uri and "#page=" not in str(uri) and page not in (None, ""):
-                uri = f"{str(uri).split('#', 1)[0]}#page={page}"
+    def _write_citation_cell(self, cell, matches: List[Dict[str, Any]]) -> None:
+        lines = []
+        for match in matches:
+            citation = self.generate_citation(match)
+            if match.get("status") != "Matched":
+                citation = f"[Review Required] {citation}" if citation else "[Review Required] No match found"
                 
-        if citation and uri:
-            safe_uri = str(uri).replace('"', '""')
-            safe_label = str(citation).replace('"', '""')
-            cell.value = f'=HYPERLINK("{safe_uri}","{safe_label}")'
+            uri = match.get("url") or match.get("pdf_uri") or ""
+            is_web_url = str(uri).startswith("http")
+            
+            if not is_web_url:
+                page = match.get("pdf_page") or match.get("page")
+                if uri and "#page=" not in str(uri) and page not in (None, ""):
+                    uri = f"{str(uri).split('#', 1)[0]}#page={page}"
+                    
+            if citation and uri:
+                lines.append(f"{citation}\n{uri}")
+            elif citation:
+                lines.append(citation)
+        
+        if lines:
+            cell.value = "\n\n".join(lines)
+            # Make the entire block blue and underlined so it looks clickable
             cell.font = Font(color="0563C1", underline="single")
         else:
-            cell.value = citation
+            cell.value = ""
 
     def _write_not_required(self, ws, row_idx: int, start_col: int) -> None:
         """Fill output columns for a row that does not need a reference."""
