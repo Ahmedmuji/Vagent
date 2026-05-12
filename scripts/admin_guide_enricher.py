@@ -389,7 +389,7 @@ class FortinetAdminGuideReferenceEnricher:
 
         # Combine query with requirement text for richer context
         combined_query = lookup_query
-        if requirement_text and not feature_candidates:
+        if requirement_text and not tag_data.get("fortinet_feature_candidates"):
             combined_query = f"{lookup_query} {requirement_text[:200]}"
 
         query_tokens = _tokenize(combined_query)
