@@ -10,7 +10,7 @@ from pypdf import PdfReader
 from werkzeug.utils import secure_filename
 
 from main_pipeline import ensure_runtime_dirs, get_project_paths, local_detect_requirements, prepare_admin_guide_index, process_pdf_section
-from cost_estimator import AbortedByUser
+from cost_estimator import AbortedByUser, estimate_cost
 
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
