@@ -10,6 +10,7 @@ from pypdf import PdfReader
 from werkzeug.utils import secure_filename
 
 from main_pipeline import ensure_runtime_dirs, get_project_paths, local_detect_requirements, prepare_admin_guide_index, process_pdf_section
+from cost_estimator import AbortedByUser
 
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -116,6 +117,8 @@ def process_upload():
         return send_file(final_excel_path, as_attachment=True, download_name=download_name)
     except UserInputError as exc:
         return jsonify({"error": str(exc)}), 400
+    except AbortedByUser as exc:
+        return jsonify({"error": f"Processing cancelled: {exc}"}), 202
     except Exception as exc:
         app.logger.exception("Pipeline processing failed")
         return jsonify({"error": f"Pipeline processing failed: {str(exc)}"}), 500

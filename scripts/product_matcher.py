@@ -221,32 +221,30 @@ class ProductMatcher:
             return None
         categories = self._candidate_categories(category)
         candidates = [p for p in self.catalog.by_vendor(vendor) if p.get("category") in categories]
+
+        # ----------------------------------------------------------------
+        # STRICT PHASE: only consider products that meet ALL hard constraints.
+        # A hard constraint fails when candidate_spec < required_spec.
+        # We NEVER fall back to under-spec hardware.
+        # ----------------------------------------------------------------
         viable: List[Tuple[Dict[str, Any], List[str], Dict[str, float]]] = []
         for product in candidates:
             ok, matched, missing = self._passes_hard_filters(product, requirements)
             if ok:
-                viable.append((product, matched, self._score_product(product, requirements, matched)))
-        if not viable and candidates:
-            partial: List[Tuple[Dict[str, Any], List[str], List[str], Dict[str, float]]] = []
-            for product in candidates:
-                _, matched, missing = self._passes_hard_filters(product, requirements)
-                partial.append((product, matched, missing, self._score_product(product, requirements, matched)))
-            product, matched, missing, breakdown = sorted(partial, key=lambda item: item[3]["total"], reverse=True)[0]
-            confidence = round(max(0.35, min(0.75, breakdown["total"])), 2)
-            return ProductMatch(
-                vendor=vendor,
-                model=str(product.get("model", "")),
-                category=str(product.get("category", category)),
-                confidence=confidence,
-                product_url=str(product.get("product_url", "")),
-                datasheet_url=str(product.get("datasheet_url", "")),
-                matched_requirements=matched,
-                missing_requirements=missing,
-                score_breakdown={k: round(v, 4) for k, v in breakdown.items()},
-            )
+                score = self._score_product(product, requirements, matched)
+                viable.append((product, matched, score))
+
         if not viable:
+            # No product satisfies all requirements → return None rather than
+            # silently selecting an under-spec device.
             return None
-        product, matched, breakdown = sorted(viable, key=lambda item: item[2]["total"], reverse=True)[0]
+
+        # ----------------------------------------------------------------
+        # RANKING PHASE: among all valid candidates, prefer the closest fit
+        # (minimise over-provisioning) using fit_quality score.
+        # ----------------------------------------------------------------
+        viable.sort(key=lambda item: item[2]["fit_quality"], reverse=True)
+        product, matched, breakdown = viable[0]
         confidence = round(max(0.5, min(0.99, breakdown["total"])), 2)
         return ProductMatch(
             vendor=str(product.get("vendor", vendor)),
@@ -304,8 +302,21 @@ class ProductMatcher:
 
     @staticmethod
     def _score_product(product: Dict[str, Any], requirements: Dict[str, Any], matched: List[str]) -> Dict[str, float]:
+        """
+        Score a product that has already passed all hard constraints.
+
+        Two key sub-scores:
+        - closeness  : ratio of required / available for every numeric field.
+                       1.0 = exact match; lower = over-provisioned.
+                       Closer to 1.0 is better (less wasteful).
+        - coverage   : fraction of required fields that are matched.
+        - affinity   : textual overlap between product model name and requirement text.
+        - fit_quality: composite score used as the primary sort key to prefer
+                       the tightest fit without under-sizing.
+        """
         fit_scores: List[float] = []
         required_count = 0
+
         for field in NUMERIC_REQUIREMENT_FIELDS:
             required = requirements.get(field)
             available = product.get(field)
@@ -316,7 +327,11 @@ class ProductMatcher:
             available_float = float(available)
             if required_float <= 0 or available_float <= 0:
                 continue
-            fit_scores.append(min(1.0, required_float / available_float))
+            # ratio = required / available:  1.0 = perfect, <1.0 = over-provisioned.
+            # Since we already passed hard filters, available >= required, so ratio ∈ (0, 1].
+            ratio = required_float / available_float
+            fit_scores.append(ratio)
+
         required_interfaces = requirements.get("interfaces") or {}
         product_interfaces = product.get("interfaces") or {}
         for name, required_interface_count in required_interfaces.items():
@@ -324,20 +339,39 @@ class ProductMatcher:
             available_count = product_interfaces.get(name)
             if not required_interface_count or not available_count:
                 continue
-            fit_scores.append(min(1.0, int(required_interface_count) / int(available_count)))
+            ratio = int(required_interface_count) / int(available_count)
+            fit_scores.append(ratio)
+
         for field in ("ha_port", "management_port", "console_port"):
             if requirements.get(field) is True:
                 required_count += 1
+
+        # closeness: average ratio — 1.0 means every spec is exactly met
         closeness = sum(fit_scores) / len(fit_scores) if fit_scores else 0.75
-        coverage = min(1.0, len(matched) / max(1, required_count))
+        coverage  = min(1.0, len(matched) / max(1, required_count))
+
         context = " ".join([
             str(requirements.get("source_text") or ""),
             " ".join(requirements.get("fortinet_feature_candidates") or []),
         ]).lower()
         model_tokens = [token for token in re.findall(r"[a-z0-9]+", str(product.get("model", "")).lower()) if len(token) > 2]
         affinity = 1.0 if any(token in context for token in model_tokens) else 0.0
+
+        # Composite total (unchanged weights keep backwards compatibility)
         total = (0.64 * closeness) + (0.18 * coverage) + (0.08 * affinity) + 0.10
-        return {"closeness": closeness, "coverage": coverage, "affinity": affinity, "total": total}
+
+        # fit_quality is the primary sort key: maximise closeness (i.e. prefer
+        # the product that is just enough without over-provisioning), with
+        # coverage as a tie-breaker.
+        fit_quality = (0.80 * closeness) + (0.20 * coverage)
+
+        return {
+            "closeness":   closeness,
+            "coverage":    coverage,
+            "affinity":    affinity,
+            "total":       total,
+            "fit_quality": fit_quality,
+        }
 
     @classmethod
     def extract_requirement_metadata(cls, text: str) -> Dict[str, Any]:

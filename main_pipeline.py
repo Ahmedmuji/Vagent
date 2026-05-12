@@ -14,6 +14,7 @@ from json_to_excel import create_formatted_excel
 from admin_guide_enricher import FortinetAdminGuideReferenceEnricher
 from pdf_admin_metadata import build_admin_guide_metadata_index
 from reference_injector import inject_hardware_references
+from cost_estimator import AbortedByUser, confirm_execution, estimate_cost
 
 def get_unique_dir(parent_dir, base_name):
     """Generates a unique directory path by appending a counter if it exists."""
@@ -116,6 +117,14 @@ def process_pdf_section(filename, input_path, start_page, end_page, extracted_pd
     extract_pages(input_path, extracted_pdf_path, int(start_page), int(end_page))
 
     print(f"Sending to Gemini for table extraction (saving chunks to {pdf_json_dir})...")
+
+    # ------------------------------------------------------------------
+    # COST GATE: estimate API cost and require operator confirmation
+    # before making any LLM calls.
+    # ------------------------------------------------------------------
+    cost_info = estimate_cost(extracted_pdf_path)
+    confirm_execution(cost_info)
+
     technical_data = get_technical_data_from_gemini(extracted_pdf_path, chunk_output_dir=pdf_json_dir)
 
     print("Resolving hardware references from deterministic product catalogs...")
