@@ -153,7 +153,7 @@ class FortinetAdminGuideReferenceEnricher:
             if isinstance(entry, dict):
                 self._normalize_index_entry(entry)
         self.toc_titles = [
-            e.get("embedding_text") or e.get("contextual_title") or e.get("section_path") or e.get("title", "")
+            e.get("embedding_text") or e.get("contextual_title") or e.get("section_path") or e.get("path") or e.get("title", "")
             for e in self.toc_index
         ]
         logger.info("Loaded %d TOC entries", len(self.toc_index))
@@ -687,10 +687,17 @@ class FortinetAdminGuideReferenceEnricher:
 
     @staticmethod
     def _write_citation_cell(cell, citation: str, match: Dict[str, Any]) -> None:
-        uri = match.get("pdf_uri") or ""
-        page = match.get("pdf_page") or match.get("page")
-        if uri and "#page=" not in str(uri) and page not in (None, ""):
-            uri = f"{str(uri).split('#', 1)[0]}#page={page}"
+        # Check for web URL first, fallback to pdf_uri
+        uri = match.get("url") or match.get("pdf_uri") or ""
+        
+        # If it's a web URL, don't try to append PDF pages
+        is_web_url = str(uri).startswith("http")
+        
+        if not is_web_url:
+            page = match.get("pdf_page") or match.get("page")
+            if uri and "#page=" not in str(uri) and page not in (None, ""):
+                uri = f"{str(uri).split('#', 1)[0]}#page={page}"
+                
         if citation and uri:
             safe_uri = str(uri).replace('"', '""')
             safe_label = str(citation).replace('"', '""')

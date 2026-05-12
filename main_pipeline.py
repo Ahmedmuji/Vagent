@@ -53,6 +53,11 @@ def toc_index_has_pdf_links(toc_index_path):
         sample = [entry for entry in index[:25] if isinstance(entry, dict)]
         if not sample:
             return False
+        # Check if it has either web URLs or PDF uris
+        has_web_url = any(isinstance(entry.get("url"), str) for entry in sample)
+        if has_web_url:
+            return True
+            
         return all(
             isinstance(entry.get("page"), int)
             and entry.get("anchor") == f"#page={entry.get('page')}"
@@ -70,7 +75,7 @@ def get_project_paths(project_root):
         "json_results_dir": os.path.join(project_root, "data", "Extracted JSON Results"),
         "excel_results_dir": os.path.join(project_root, "data", "Extracted Excel Results"),
         "admin_guide_pdf_path": os.path.join(project_root, "data", "Reference dataset", "FortiOS-7.6.6-Administration_Guide.pdf"),
-        "toc_index_path": os.path.join(project_root, "output", "toc_flat_index.json"),
+        "toc_index_path": os.path.join(project_root, "fortinet_sidebar_flat.json"),
     }
 
 def ensure_runtime_dirs(paths):
