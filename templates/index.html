@@ -372,103 +372,171 @@
     </div>
   </div>
 
+  <!-- ===== Cost Confirmation Modal ===== -->
+  <div id="costModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#1a1f2e; border:1px solid rgba(255,255,255,0.15); border-radius:1.25rem; padding:2rem 2.5rem; max-width:420px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+      <h2 style="margin:0 0 1.25rem; font-size:1.3rem; color:#fff;">💰 API Cost Estimate</h2>
+      <table id="costTable" style="width:100%; border-collapse:collapse; font-size:0.9rem; color:#ccc; margin-bottom:1.5rem;">
+        <tr><td style="padding:0.3rem 0;">Pages</td><td id="cPages" style="text-align:right; color:#fff; font-weight:600;"></td></tr>
+        <tr><td style="padding:0.3rem 0;">Chunks</td><td id="cChunks" style="text-align:right; color:#fff; font-weight:600;"></td></tr>
+        <tr><td style="padding:0.3rem 0;">Est. input tokens</td><td id="cInputTok" style="text-align:right; color:#fff; font-weight:600;"></td></tr>
+        <tr><td style="padding:0.3rem 0;">Est. output tokens</td><td id="cOutputTok" style="text-align:right; color:#fff; font-weight:600;"></td></tr>
+        <tr><td style="padding:0.3rem 0;">Input cost</td><td id="cInputCost" style="text-align:right; color:#fff; font-weight:600;"></td></tr>
+        <tr><td style="padding:0.3rem 0;">Output cost</td><td id="cOutputCost" style="text-align:right; color:#fff; font-weight:600;"></td></tr>
+        <tr style="border-top:1px solid rgba(255,255,255,0.15);">
+          <td style="padding:0.5rem 0; font-weight:700; color:#2dd4bf; font-size:1rem;">Total estimate</td>
+          <td id="cTotal" style="text-align:right; font-weight:700; color:#2dd4bf; font-size:1.1rem;"></td>
+        </tr>
+      </table>
+      <p style="font-size:0.8rem; color:#888; margin-bottom:1.5rem;">Prices are estimates based on token count. Actual cost may vary.</p>
+      <div style="display:flex; gap:1rem;">
+        <button id="costCancelBtn" style="flex:1; padding:0.75rem; border-radius:0.75rem; border:1px solid rgba(255,255,255,0.2); background:transparent; color:#ccc; font-size:0.95rem; cursor:pointer;">Cancel</button>
+        <button id="costConfirmBtn" style="flex:1; padding:0.75rem; border-radius:0.75rem; border:none; background:linear-gradient(135deg,#2dd4bf,#0ea5e9); color:#fff; font-size:0.95rem; font-weight:700; cursor:pointer;">✅ Proceed</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    // ─── State ───────────────────────────────────────────────────────────────
     const state = {
       file: null,
       isProcessing: false,
       currentStep: 0,
+      pendingStoredName: null,   // set after /estimate_cost succeeds
+      pendingOriginalName: null,
     };
 
-    // DOM Elements
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('fileInput');
-    const dropZoneContent = document.getElementById('dropZoneContent');
-    const filePreview = document.getElementById('filePreview');
+    // ─── DOM refs ────────────────────────────────────────────────────────────
+    const dropZone         = document.getElementById('dropZone');
+    const fileInput        = document.getElementById('fileInput');
+    const dropZoneContent  = document.getElementById('dropZoneContent');
+    const filePreview      = document.getElementById('filePreview');
     const selectedFileName = document.getElementById('selectedFileName');
-    const removeFile = document.getElementById('removeFile');
-    const submitBtn = document.getElementById('submitBtn');
-    const btnSpinner = document.getElementById('btnSpinner');
-    const btnText = document.getElementById('btnText');
-    const statusArea = document.getElementById('statusArea');
-    const statusTitle = document.getElementById('statusTitle');
-    const statusDesc = document.getElementById('statusDesc');
-    const startPageInput = document.getElementById('startPage');
-    const endPageInput = document.getElementById('endPage');
+    const removeFile       = document.getElementById('removeFile');
+    const submitBtn        = document.getElementById('submitBtn');
+    const btnSpinner       = document.getElementById('btnSpinner');
+    const btnText          = document.getElementById('btnText');
+    const statusArea       = document.getElementById('statusArea');
+    const statusTitle      = document.getElementById('statusTitle');
+    const statusDesc       = document.getElementById('statusDesc');
+    const startPageInput   = document.getElementById('startPage');
+    const endPageInput     = document.getElementById('endPage');
     const skipEnrichmentInput = document.getElementById('skipEnrichment');
 
-    // Drag and Drop
+    // Cost modal refs
+    const costModal       = document.getElementById('costModal');
+    const costConfirmBtn  = document.getElementById('costConfirmBtn');
+    const costCancelBtn   = document.getElementById('costCancelBtn');
+
+    // ─── Drag & Drop ─────────────────────────────────────────────────────────
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
       dropZone.addEventListener(eventName, preventDefaults, false);
     });
-
-    function preventDefaults(e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-
+    function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
     ['dragenter', 'dragover'].forEach(eventName => {
       dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-over'), false);
     });
-
     ['dragleave', 'drop'].forEach(eventName => {
       dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-over'), false);
     });
-
     dropZone.addEventListener('drop', (e) => {
       const files = e.dataTransfer.files;
       if (files.length) handleFile(files[0]);
     });
-
     dropZone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => {
       if (e.target.files.length) handleFile(e.target.files[0]);
     });
-
     function handleFile(file) {
       if (file.type !== 'application/pdf') {
         showStatus('error', 'Invalid File Type', 'Please upload a PDF document.');
         return;
       }
       state.file = file;
+      state.pendingStoredName = null;
       selectedFileName.textContent = file.name;
       dropZoneContent.style.display = 'none';
       filePreview.style.display = 'flex';
       dropZone.classList.add('has-file');
       clearStatus();
     }
-
     removeFile.addEventListener('click', (e) => {
       e.stopPropagation();
       state.file = null;
+      state.pendingStoredName = null;
       fileInput.value = '';
       dropZoneContent.style.display = 'block';
       filePreview.style.display = 'none';
       dropZone.classList.remove('has-file');
     });
 
-    // Submission
+    // ─── Submit: Step 1 — estimate cost ──────────────────────────────────────
     submitBtn.addEventListener('click', async () => {
       if (!state.file || state.isProcessing) return;
+
+      setProcessing(true);
+      showStatus('processing', 'Estimating cost...', 'Calculating API usage before processing begins.');
+
+      const formData = new FormData();
+      formData.append('rfp_file', state.file);
+      formData.append('start_page', startPageInput.value);
+      formData.append('end_page', endPageInput.value);
+
+      try {
+        const res = await fetch('/estimate_cost', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Cost estimation failed.');
+
+        // Store file reference for Step 2
+        state.pendingStoredName   = data.stored_name;
+        state.pendingOriginalName = data.original_name;
+
+        // Populate modal
+        const c = data.cost;
+        document.getElementById('cPages').textContent      = c.num_pages.toLocaleString();
+        document.getElementById('cChunks').textContent     = c.num_chunks.toLocaleString();
+        document.getElementById('cInputTok').textContent   = c.estimated_input_tokens.toLocaleString();
+        document.getElementById('cOutputTok').textContent  = c.estimated_output_tokens.toLocaleString();
+        document.getElementById('cInputCost').textContent  = '$' + c.input_cost_usd.toFixed(6);
+        document.getElementById('cOutputCost').textContent = '$' + c.output_cost_usd.toFixed(6);
+        document.getElementById('cTotal').textContent      = '$' + c.total_cost_usd.toFixed(6);
+
+        setProcessing(false);
+        costModal.style.display = 'flex';
+      } catch (err) {
+        showStatus('error', 'Estimation Failed', err.message);
+        setProcessing(false);
+      }
+    });
+
+    // ─── Modal: Cancel ───────────────────────────────────────────────────────
+    costCancelBtn.addEventListener('click', () => {
+      costModal.style.display = 'none';
+      state.pendingStoredName = null;
+      clearStatus();
+    });
+
+    // ─── Modal: Confirm — Step 2 — actual processing ─────────────────────────
+    costConfirmBtn.addEventListener('click', async () => {
+      costModal.style.display = 'none';
+      if (!state.pendingStoredName) return;
 
       setProcessing(true);
       showStatus('processing', 'Processing RFP...', 'Our AI is extracting tables and identifying requirements. This may take a minute.');
       updateSteps(1);
 
       const formData = new FormData();
-      formData.append('rfp_file', state.file);
+      formData.append('stored_name',   state.pendingStoredName);
+      formData.append('original_name', state.pendingOriginalName);
       formData.append('start_page', startPageInput.value);
       formData.append('end_page', endPageInput.value);
       if (skipEnrichmentInput.checked) formData.append('skip_enrichment', 'on');
 
       try {
-        // Step 2 & 3 simulation (visual only)
         setTimeout(() => updateSteps(2), 5000);
         setTimeout(() => updateSteps(3), 15000);
 
-        const response = await fetch('/process', {
-          method: 'POST',
-          body: formData,
-        });
+        const response = await fetch('/process', { method: 'POST', body: formData });
 
         if (!response.ok) {
           let errorMessage = 'Pipeline processing failed.';

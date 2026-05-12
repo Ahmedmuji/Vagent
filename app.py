@@ -65,8 +65,14 @@ def serve_reference_pdf():
     return "Admin Guide PDF not found on server.", 404
 
 
-@app.route("/process", methods=["POST"])
-def process_upload():
+@app.route("/estimate_cost", methods=["POST"])
+def estimate_cost_route():
+    """
+    Pre-flight cost estimation endpoint.
+    Accepts the same file upload as /process, saves the file, estimates
+    the API cost, and returns JSON — WITHOUT starting any LLM processing.
+    The browser uses this to show a cost confirmation dialog.
+    """
     uploaded_file = request.files.get("rfp_file")
     if not uploaded_file or not uploaded_file.filename:
         return jsonify({"error": "Please upload an RFP PDF."}), 400
@@ -82,6 +88,63 @@ def process_upload():
     stored_name = f"{base_name}_{run_id}{ext}"
     input_path = os.path.join(paths["input_dir"], stored_name)
     uploaded_file.save(input_path)
+
+    try:
+        total_pages = len(PdfReader(input_path).pages)
+        start_page, end_page = parse_page_range(
+            request.form.get("start_page"),
+            request.form.get("end_page"),
+            total_pages,
+        )
+        # Extract just the relevant pages so the estimate matches what will be processed
+        from pdf_segmenter import extract_pages as _extract
+        import tempfile, pathlib
+        tmp_path = os.path.join(paths["extracted_pdf_dir"], f"cost_check_{run_id}.pdf")
+        _extract(input_path, tmp_path, int(start_page), int(end_page))
+
+        cost_info = estimate_cost(tmp_path)
+        # Clean up the temp file
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+
+        return jsonify({
+            "stored_name": stored_name,   # client passes this back to /process
+            "original_name": original_name,
+            "cost": cost_info,
+        })
+    except Exception as exc:
+        app.logger.exception("Cost estimation failed")
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/process", methods=["POST"])
+def process_upload():
+    paths = get_project_paths(PROJECT_ROOT)
+    ensure_runtime_dirs(paths)
+
+    # Two-step flow: /estimate_cost already saved the file; client passes stored_name back.
+    pre_stored_name = request.form.get("stored_name")
+    if pre_stored_name:
+        stored_name = secure_filename(pre_stored_name)
+        original_name = request.form.get("original_name") or stored_name
+        input_path = os.path.join(paths["input_dir"], stored_name)
+        if not os.path.exists(input_path):
+            return jsonify({"error": "Pre-uploaded file not found. Please re-upload."}), 400
+    else:
+        # Classic single-step upload
+        uploaded_file = request.files.get("rfp_file")
+        if not uploaded_file or not uploaded_file.filename:
+            return jsonify({"error": "Please upload an RFP PDF."}), 400
+        if not allowed_pdf(uploaded_file.filename):
+            return jsonify({"error": "Only PDF files are supported."}), 400
+        original_name = secure_filename(uploaded_file.filename) or "uploaded_rfp.pdf"
+        run_id = uuid.uuid4().hex[:8]
+        base_name, ext = os.path.splitext(original_name)
+        stored_name = f"{base_name}_{run_id}{ext}"
+        input_path = os.path.join(paths["input_dir"], stored_name)
+        uploaded_file.save(input_path)
 
     try:
         total_pages = len(PdfReader(input_path).pages)

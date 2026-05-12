@@ -105,14 +105,11 @@ def estimate_cost(pdf_path: str, extra_prompt_chars: int = 4500) -> dict:
 
 def confirm_execution(cost_info: dict) -> None:
     """
-    Print a cost summary to the terminal and block until the operator confirms.
+    Log the cost summary. In web/Gunicorn mode there is no TTY, so this
+    function simply prints the estimate and returns — the browser UI is
+    responsible for obtaining user confirmation before calling /process.
 
-    Raises AbortedByUser if anything other than "yes" is entered.
-
-    Parameters
-    ----------
-    cost_info : dict
-        The dict returned by estimate_cost().
+    For interactive CLI use, call confirm_execution_cli() instead.
     """
     print("\n" + "=" * 60)
     print("  💰  API COST ESTIMATION")
@@ -126,14 +123,24 @@ def confirm_execution(cost_info: dict) -> None:
     print(f"  ─────────────────────────────────")
     print(f"  TOTAL ESTIMATED    : ${cost_info['total_cost_usd']:.6f} USD")
     print("=" * 60)
+    print("[Cost Gate] Web mode — confirmation handled by browser UI.\n")
+
+
+def confirm_execution_cli(cost_info: dict) -> None:
+    """
+    Interactive CLI confirmation gate. Prints the cost summary and blocks
+    until the operator types 'yes'. Raises AbortedByUser otherwise.
+
+    Only call this from __main__ / CLI entry points, NOT from Flask/Gunicorn.
+    """
+    confirm_execution(cost_info)   # print summary first
 
     try:
         answer = input(
             "\nThis is the total cost for processing the RFP. "
             "Would you like to proceed? (yes/no): "
         ).strip().lower()
-    except (EOFError, KeyboardInterrupt):
-        # Non-interactive environment (e.g., CI or piped stdin) — auto-abort
+    except (EOFError, KeyboardInterrupt, OSError):
         print("\n[Cost Gate] Non-interactive environment detected. Aborting for safety.")
         raise AbortedByUser("Non-interactive environment — execution aborted automatically.")
 
@@ -142,3 +149,4 @@ def confirm_execution(cost_info: dict) -> None:
         raise AbortedByUser(f"User declined to proceed (entered: '{answer}').")
 
     print("[Cost Gate] ✅ Operator confirmed. Proceeding with RFP processing...\n")
+
