@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 NUMERIC_REQUIREMENT_FIELDS = (
     "ports",
     "max_ports",
+    "ipsec_vpn_throughput_gbps",
     "ngfw_throughput_gbps",
     "ips_throughput_gbps",
     "ssl_tls_inspection_gbps",
@@ -37,6 +38,7 @@ NUMERIC_REQUIREMENT_FIELDS = (
 )
 
 PRODUCT_SPEC_ALIASES = {
+    "ipsec_vpn_throughput_gbps": ("vpn_throughput_gbps",),
     "firewall_throughput_gbps": ("ngfw_throughput_gbps", "throughput_gbps"),
     "ngfw_throughput_gbps": ("firewall_throughput_gbps", "throughput_gbps"),
     "switching_capacity_gbps": ("throughput_gbps",),
@@ -704,7 +706,7 @@ class ProductMatcher:
             local_end = min(local_end_candidates) if local_end_candidates else min(len(text), match.end() + 60)
             local_clause = text[local_start:local_end]
             if any(k in local_clause for k in ("ipsec", "vpn")) and category == "NGFW":
-                values["ngfw_throughput_gbps"] = max(values.get("ngfw_throughput_gbps", 0), value)
+                values["ipsec_vpn_throughput_gbps"] = max(values.get("ipsec_vpn_throughput_gbps", 0), value)
             elif any(k in local_clause for k in ("ssl", "tls", "inspection", "decrypt")) and category == "NGFW":
                 values["ssl_tls_inspection_gbps"] = max(values.get("ssl_tls_inspection_gbps", 0), value)
             elif re.search(r"\bips\b|intrusion prevention", local_clause):
