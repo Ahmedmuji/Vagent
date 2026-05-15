@@ -153,6 +153,8 @@ class HardwareReferenceInjector:
         device_type = normalized.get("device_type")
         if not device_type:
             return False
+        if metadata.get("requires_reference") is True:
+            return True
         if device_type in {
             "CENTRALIZED_MANAGEMENT", "SIEM_SOC", "NDR", "ENDPOINT_SECURITY",
             "IDENTITY_ACCESS", "PAM", "SDN_AUTOMATION", "SANDBOX",
@@ -188,10 +190,15 @@ class HardwareReferenceInjector:
                     effective["interfaces"] = self._merge_interface_dicts(effective.get("interfaces") or {}, value)
                 elif detected.get(key) in (None, "") and value not in (None, ""):
                     detected[key] = value
+            if "requires_reference" not in effective and self._text_requires_catalog_reference(text, fallback):
+                effective["requires_reference"] = True
             effective["source_text"] = text[:1000]
             return effective
         fallback = self.matcher.extract_requirement_metadata(text)
-        fallback["requires_reference"] = self._has_matchable_requirements(fallback)
+        fallback["requires_reference"] = (
+            self._has_matchable_requirements(fallback)
+            or self._text_requires_catalog_reference(text, fallback)
+        )
         fallback["group_primary_row"] = True
         return fallback
 
@@ -202,6 +209,19 @@ class HardwareReferenceInjector:
         if "requires_reference" in metadata:
             return False
         return HardwareReferenceInjector._has_matchable_requirements(metadata)
+
+    @staticmethod
+    def _text_requires_catalog_reference(text: str, metadata: Dict[str, Any]) -> bool:
+        normalized = ProductMatcher.normalize_requirements(metadata)
+        if not normalized.get("device_type"):
+            return False
+        lowered = str(text or "").lower()
+        procurement_terms = (
+            "required", "requirement", "supply", "provide", "proposed",
+            "recommended", "solution", "appliance", "hardware", "device",
+            "equipment", "license", "subscription", "bom", "boq",
+        )
+        return any(term in lowered for term in procurement_terms)
 
     def _merge_metadata(self, base: Dict[str, Any], incoming: Dict[str, Any]) -> Dict[str, Any]:
         merged = copy.deepcopy(base)
