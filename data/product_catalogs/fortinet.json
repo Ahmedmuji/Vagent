@@ -26,7 +26,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-7000f-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-7000f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-7000f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -49,7 +50,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-7000f-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-7000f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-7000f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -77,7 +79,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-4800f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-4800f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -105,7 +108,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-4800f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-4800f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -133,7 +137,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-4400f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-4400f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -161,7 +166,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-4400f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-4400f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -189,7 +195,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-4200f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-4200f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -217,7 +224,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-4200f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-4200f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -245,7 +253,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-3800g-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-3800g-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -273,7 +282,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-3700f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-3700f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -301,7 +311,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-3500g-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-3500g-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -329,7 +340,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-3500f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-3500f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -357,7 +369,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-3500f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-3500f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -385,7 +398,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-3200f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-3200f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -413,7 +427,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-3200f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-3200f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -442,7 +457,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-3000g-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-3000g-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -471,7 +487,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-3000f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-3000f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -500,7 +517,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-3000f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-3000f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -530,7 +548,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-2600f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-2600f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -560,7 +579,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-2600f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-2600f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -589,7 +609,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-1800f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-1800f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -618,7 +639,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-1800f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-1800f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -647,7 +669,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-1000f-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-1000f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-1000f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -676,7 +699,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-1000f-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-1000f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-1000f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -704,7 +728,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-900g-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-900g-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-900g-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -732,7 +757,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-900g-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-900g-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-900g-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -761,7 +787,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-700g-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-700g-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-700g-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -789,7 +816,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-600f-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-600f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-600f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -817,7 +845,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-600f-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-600f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-600f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -846,7 +875,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-400g-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-400g-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -873,7 +903,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-400f-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-400f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-400f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -900,7 +931,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-400f-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-400f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-400f-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -928,7 +960,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-200g-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-200g-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-200g-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -955,7 +988,8 @@
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-120g-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-120g-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-120g-series.pdf",
+      "redundant_power": true
     },
     {
       "vendor": "Fortinet",
@@ -981,7 +1015,8 @@
       "management_port": false,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-90g-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-90g-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-90g-series.pdf",
+      "redundant_power": false
     },
     {
       "vendor": "Fortinet",
@@ -1007,7 +1042,8 @@
       "management_port": false,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-90g-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-90g-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-90g-series.pdf",
+      "redundant_power": false
     },
     {
       "vendor": "Fortinet",
@@ -1033,7 +1069,8 @@
       "management_port": false,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-fortiwifi-80f-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-fortiwifi-80f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-fortiwifi-80f-series.pdf",
+      "redundant_power": false
     },
     {
       "vendor": "Fortinet",
@@ -1058,7 +1095,8 @@
       "management_port": false,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-fortiwifi-70g-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-fortiwifi-70g-series.pdf",
+      "redundant_power": false
     },
     {
       "vendor": "Fortinet",
@@ -1083,7 +1121,8 @@
       "management_port": false,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-70f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-70f-series.pdf",
+      "redundant_power": false
     },
     {
       "vendor": "Fortinet",
@@ -1108,7 +1147,8 @@
       "management_port": false,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-fortiwifi-60f-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-fortiwifi-60f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-fortiwifi-60f-series.pdf",
+      "redundant_power": false
     },
     {
       "vendor": "Fortinet",
@@ -1133,7 +1173,8 @@
       "management_port": false,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-fortiwifi-50g-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-fortiwifi-50g-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-fortiwifi-50g-series.pdf",
+      "redundant_power": false
     },
     {
       "vendor": "Fortinet",
@@ -1158,7 +1199,8 @@
       "management_port": false,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-fortiwifi-40f-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-fortiwifi-40f-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-fortiwifi-40f-series.pdf",
+      "redundant_power": false
     },
     {
       "vendor": "Fortinet",
@@ -1183,7 +1225,8 @@
       "management_port": false,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortigate-fortiwifi-30g-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-fortiwifi-30g-series.pdf"
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortigate-fortiwifi-30g-series.pdf",
+      "redundant_power": false
     },
     {
       "vendor": "Fortinet",

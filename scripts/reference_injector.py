@@ -250,7 +250,7 @@ class HardwareReferenceInjector:
         requirement_keys = set(normalized.keys()) - {"device_type", "requirements", "source_text"}
         if not requirement_keys:
             return False
-        if requirement_keys == {"ha_port"} or requirement_keys == {"management_port"} or requirement_keys == {"console_port"}:
+        if requirement_keys in ({"ha_port"}, {"management_port"}, {"console_port"}, {"redundant_power"}):
             return False
         return True
 
@@ -307,6 +307,8 @@ class HardwareReferenceInjector:
             for key, value in (fallback.get("requirements") or {}).items():
                 if key == "interfaces":
                     effective["interfaces"] = self._merge_interface_dicts(effective.get("interfaces") or {}, value)
+                elif key in ("ha_port", "management_port", "console_port", "redundant_power") and value is True:
+                    effective[key] = True
                 elif detected.get(key) in (None, "") and value not in (None, ""):
                     detected[key] = value
             if self._text_requires_catalog_reference(text, fallback):
@@ -362,7 +364,7 @@ class HardwareReferenceInjector:
     @staticmethod
     def _has_measurable_constraints(normalized: Dict[str, Any]) -> bool:
         ignored = {"device_type", "source_text", "requirements", "fortinet_feature_candidates"}
-        ignored_boolean_only = {"ha_port", "management_port", "console_port"}
+        ignored_boolean_only = {"ha_port", "management_port", "console_port", "redundant_power"}
         for key, value in normalized.items():
             if key in ignored:
                 continue
@@ -431,7 +433,7 @@ class HardwareReferenceInjector:
             if key.startswith("interfaces_") and value not in (None, ""):
                 current = detected.get(key)
                 detected[key] = max(current, value) if isinstance(current, int) and isinstance(value, int) else value
-        for key in ("ha_port", "management_port", "console_port"):
+        for key in ("ha_port", "management_port", "console_port", "redundant_power"):
             if incoming.get(key) is True:
                 merged[key] = True
         return merged

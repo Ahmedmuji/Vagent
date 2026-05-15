@@ -308,8 +308,12 @@ class ProductMatcher:
         feature_candidates = metadata.get("fortinet_feature_candidates")
         if isinstance(feature_candidates, list):
             normalized["fortinet_feature_candidates"] = [str(item) for item in feature_candidates if str(item).strip()]
-        for field in ("ha_port", "management_port", "console_port"):
-            if metadata.get(field) is True:
+        for field in ("ha_port", "management_port", "console_port", "redundant_power"):
+            if (
+                metadata.get(field) is True
+                or detected_specs.get(field) is True
+                or nested_requirements.get(field) is True
+            ):
                 normalized[field] = True
         requirements = {k: v for k, v in normalized.items() if k not in ("device_type", "source_text", "fortinet_feature_candidates")}
         normalized["requirements"] = requirements
@@ -444,7 +448,7 @@ class ProductMatcher:
                 missing.append(f"interfaces.{name}")
             else:
                 matched.append(f"interfaces.{name}")
-        for field in ("ha_port", "management_port", "console_port"):
+        for field in ("ha_port", "management_port", "console_port", "redundant_power"):
             if requirements.get(field) is True:
                 details["requirements"][field] = {
                     "required": True,
@@ -506,7 +510,7 @@ class ProductMatcher:
             fit_scores.append(ratio)
             overprovision_factors.append(max(1.0, int(available_count) / int(required_interface_count)))
 
-        for field in ("ha_port", "management_port", "console_port"):
+        for field in ("ha_port", "management_port", "console_port", "redundant_power"):
             if requirements.get(field) is True:
                 required_count += 1
 
@@ -684,8 +688,10 @@ class ProductMatcher:
         interfaces = cls._extract_interfaces(normalized)
         if interfaces:
             flat["interfaces"] = interfaces
-        if re.search(r"\bha\s+(?:port|interface)\b|(?:port|interface)\s+(?:for\s+)?ha\b|dedicated\s+ha\b", normalized):
+        if re.search(r"\bha\s+(?:port|interface|configuration)\b|(?:port|interface)\s+(?:for\s+)?ha\b|dedicated\s+ha\b|high availability|active[\s/-]*passive|active[\s/-]*active", normalized):
             flat["ha_port"] = True
+        if re.search(r"redundant\s+power|dual\s+(?:ac\s+)?power|dual\s+psu|1\+1\s+redundancy", normalized):
+            flat["redundant_power"] = True
         if " management port" in normalized or "mgmt port" in normalized:
             flat["management_port"] = True
         if " console port" in normalized:
