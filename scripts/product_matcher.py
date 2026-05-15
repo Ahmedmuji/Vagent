@@ -334,6 +334,8 @@ class ProductMatcher:
             return None
         categories = self._candidate_categories(category)
         candidates = [p for p in self.catalog.by_vendor(vendor) if p.get("category") in categories]
+        if not self._has_hard_constraints(requirements):
+            return None
 
         # ----------------------------------------------------------------
         # STRICT PHASE: only consider products that meet ALL hard constraints.
@@ -367,6 +369,7 @@ class ProductMatcher:
                 item[2]["overprovision_penalty"],
                 item[2]["max_overprovision"],
                 -item[2]["coverage"],
+                item[2]["hardware_scale"],
             )
         )
         product, matched, breakdown, details = viable[0]
@@ -400,6 +403,15 @@ class ProductMatcher:
         if category == "CENTRALIZED_MANAGEMENT":
             return ["CENTRALIZED_MANAGEMENT", "SIEM_SOC"]
         return [category]
+
+    @staticmethod
+    def _has_hard_constraints(requirements: Dict[str, Any]) -> bool:
+        for field in NUMERIC_REQUIREMENT_FIELDS:
+            if requirements.get(field) not in (None, "", 0):
+                return True
+        if requirements.get("interfaces"):
+            return True
+        return any(requirements.get(field) is True for field in ("ha_port", "management_port", "console_port", "redundant_power"))
 
     @staticmethod
     def _passes_hard_filters(product: Dict[str, Any], requirements: Dict[str, Any]) -> Tuple[bool, List[str], List[str], Dict[str, Any]]:
@@ -522,6 +534,7 @@ class ProductMatcher:
             if overprovision_factors else 0.0
         )
         max_overprovision = max(overprovision_factors) if overprovision_factors else 1.0
+        hardware_scale = ProductMatcher._product_scale_score(product)
 
         context = " ".join([
             str(requirements.get("source_text") or ""),
@@ -546,7 +559,25 @@ class ProductMatcher:
             "fit_quality": fit_quality,
             "overprovision_penalty": overprovision_penalty,
             "max_overprovision": max_overprovision,
+            "hardware_scale": hardware_scale,
         }
+
+    @staticmethod
+    def _product_scale_score(product: Dict[str, Any]) -> float:
+        model = str(product.get("model") or "")
+        numbers = [float(match) for match in re.findall(r"\d+", model)]
+        if numbers:
+            return max(numbers)
+        numeric_values: List[float] = []
+        for field in (
+            "firewall_throughput_gbps", "ipsec_vpn_throughput_gbps",
+            "ngfw_throughput_gbps", "ips_throughput_gbps",
+            "concurrent_sessions", "ssl_vpn_users",
+        ):
+            value = ProductMatcher._parse_catalog_number(product.get(field))
+            if value is not None:
+                numeric_values.append(value)
+        return sum(math.log(max(1.0, value)) for value in numeric_values)
 
     @staticmethod
     def _total_interfaces(product: Dict[str, Any]) -> Optional[int]:
@@ -688,7 +719,7 @@ class ProductMatcher:
         interfaces = cls._extract_interfaces(normalized)
         if interfaces:
             flat["interfaces"] = interfaces
-        if re.search(r"\bha\s+(?:port|interface|configuration)\b|(?:port|interface)\s+(?:for\s+)?ha\b|dedicated\s+ha\b|high availability|active[\s/-]*passive|active[\s/-]*active", normalized):
+        if re.search(r"\bha\s+(?:port|interface|configuration|in)\b|(?:port|interface)\s+(?:for\s+)?ha\b|dedicated\s+ha\b|high availability|active[\s/-]*passive|active[\s/-]*active", normalized):
             flat["ha_port"] = True
         if re.search(r"redundant\s+power|dual\s+(?:ac\s+)?power|dual\s+psu|1\+1\s+redundancy", normalized):
             flat["redundant_power"] = True
@@ -746,7 +777,14 @@ class ProductMatcher:
             else:
                 values["throughput_gbps"] = max(values.get("throughput_gbps", 0), value)
         cls._extract_count(text, values, "concurrent_sessions", ("concurrent sessions", "sessions"))
-        cls._extract_count(text, values, "ssl_vpn_users", ("ssl vpn users", "ssl-vpn users", "vpn users", "concurrent users"))
+        cls._extract_count(text, values, "ssl_vpn_users", (
+            "ssl vpn users", "ssl-vpn users",
+            "ssl vpn concurrent users", "ssl-vpn concurrent users",
+            "ssl vpn concurrent user", "ssl-vpn concurrent user",
+            "ssl vpn user license", "ssl-vpn user license",
+            "ssl vpn concurrent user license", "ssl-vpn concurrent user license",
+            "vpn users", "concurrent users",
+        ))
         cls._extract_count(text, values, "connections_per_second", ("connections per second", "connections per seconds", "cps", "new sessions per second"))
         cls._extract_count(text, values, "policies", ("policies", "firewall policies"))
         cls._extract_count(text, values, "logs_per_day_gb", ("gb logs per day", "gb/day", "logs per day"))
@@ -784,15 +822,16 @@ class ProductMatcher:
 
     @staticmethod
     def _extract_count(text: str, values: Dict[str, Any], field: str, labels: Tuple[str, ...]) -> None:
+        found: List[int] = []
         for label in labels:
             pattern_before = rf"(?P<num>\d[\d,]*(?:\.\d+)?)\s*(?:k|m|million|thousand)?\s+{re.escape(label)}"
             pattern_after = rf"{re.escape(label)}(?:\s|\||:|=|-|>|of|at least|minimum|min)*?(?P<num>\d[\d,]*(?:\.\d+)?)\s*(?P<suffix>k|m|million|thousand)?"
             for pattern in (pattern_before, pattern_after):
-                match = re.search(pattern, text)
-                if match:
+                for match in re.finditer(pattern, text):
                     suffix = match.groupdict().get("suffix") or ""
-                    values[field] = ProductMatcher._parse_count(match.group("num"), suffix)
-                    return
+                    found.append(ProductMatcher._parse_count(match.group("num"), suffix))
+        if found:
+            values[field] = max(values.get(field, 0), max(found))
 
     @staticmethod
     def _parse_count(raw: str, suffix: str = "") -> int:
