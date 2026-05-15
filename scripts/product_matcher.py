@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 NUMERIC_REQUIREMENT_FIELDS = (
     "ports",
+    "max_ports",
     "ngfw_throughput_gbps",
     "ips_throughput_gbps",
     "ssl_tls_inspection_gbps",
@@ -18,6 +19,19 @@ NUMERIC_REQUIREMENT_FIELDS = (
     "concurrent_sessions",
     "ssl_vpn_users",
     "connections_per_second",
+    "logs_per_day_gb",
+    "analytic_rate_logs_sec",
+    "collector_rate_logs_sec",
+    "performance_eps",
+    "email_routing_per_hour",
+    "atp_per_hour",
+    "email_domains",
+    "server_mode_mailboxes",
+    "max_devices_vdoms",
+    "max_local_remote_users",
+    "max_user_groups",
+    "max_nas_devices",
+    "max_fortitokens",
     "policies",
     "storage_tb",
 )
@@ -28,6 +42,8 @@ PRODUCT_SPEC_ALIASES = {
     "switching_capacity_gbps": ("throughput_gbps",),
     "throughput_gbps": ("switching_capacity_gbps", "ngfw_throughput_gbps"),
     "connections_per_second": ("cps",),
+    "performance_eps": ("analytic_rate_logs_sec", "collector_rate_logs_sec"),
+    "max_ports": ("ports",),
 }
 
 INTERFACE_METADATA_FIELDS = {
@@ -71,6 +87,27 @@ DEVICE_CATEGORY_MAP = {
     "identity_access": "IDENTITY_ACCESS",
     "identity_and_access": "IDENTITY_ACCESS",
     "pam": "PAM",
+    "sandbox": "SANDBOX",
+    "fortisandbox": "SANDBOX",
+    "email_security": "EMAIL_SECURITY",
+    "email": "EMAIL_SECURITY",
+    "mail_security": "EMAIL_SECURITY",
+    "nac": "NAC",
+    "network_access_control": "NAC",
+    "deception": "DECEPTION",
+    "soar": "SOAR",
+    "sase": "SASE",
+    "secure_web_gateway": "SECURE_WEB_GATEWAY",
+    "swg": "SECURE_WEB_GATEWAY",
+    "ddos_mitigation": "DDOS_MITIGATION",
+    "ddos": "DDOS_MITIGATION",
+    "digital_risk_protection": "DIGITAL_RISK_PROTECTION",
+    "network_performance_monitoring": "NETWORK_PERFORMANCE_MONITORING",
+    "ai_network_operations": "AI_NETWORK_OPERATIONS",
+    "cloud_security": "CLOUD_SECURITY",
+    "wan_extender": "WAN_EXTENDER",
+    "voip_security": "VOIP_SECURITY",
+    "video_security": "VIDEO_SECURITY",
     "routing": "ROUTER",
     "router": "ROUTER",
     "sdn_automation": "SDN_AUTOMATION",
@@ -93,6 +130,21 @@ CATEGORY_KEYWORDS = {
     "ENDPOINT_SECURITY": ("fortiedr", "fortixdr", "forticlient", "endpoint security", "edr", "xdr"),
     "IDENTITY_ACCESS": ("fortiauthenticator", "identity access", "identity and access", "radius server", "authentication appliance"),
     "PAM": ("fortipam", "privileged access", "pam"),
+    "SANDBOX": ("fortisandbox", "sandbox", "malware analysis", "file analysis"),
+    "EMAIL_SECURITY": ("fortimail", "email security", "mail security", "secure email gateway"),
+    "NAC": ("fortinac", "network access control", " nac ", "control and application server"),
+    "DECEPTION": ("fortideceptor", "deception"),
+    "SOAR": ("fortisoar", "soar", "orchestration automation response"),
+    "SASE": ("fortisase", "sase"),
+    "SECURE_WEB_GATEWAY": ("fortiproxy", "secure web gateway", "web proxy", "swg"),
+    "DDOS_MITIGATION": ("fortiddos", "ddos"),
+    "DIGITAL_RISK_PROTECTION": ("fortirecon", "digital risk protection", "external attack surface"),
+    "NETWORK_PERFORMANCE_MONITORING": ("fortimonitor", "network performance monitoring", "monitoring"),
+    "AI_NETWORK_OPERATIONS": ("fortiaiops", "aiops", "ai network operations"),
+    "CLOUD_SECURITY": ("forticnapp", "cnapp", "cloud security"),
+    "WAN_EXTENDER": ("fortiextender", "wan extender", "lte wan", "5g wan"),
+    "VOIP_SECURITY": ("fortivoice", "voip", "voice security"),
+    "VIDEO_SECURITY": ("fortirecorder", "video security", "nvr"),
     "SDN_AUTOMATION": ("apstra", "sdn", "automation", "intent-based networking"),
     "WAF": ("web application firewall", " waf ", "fortiweb"),
     "ADC": ("load balancer", "application delivery", " adc ", "fortiadc"),
@@ -106,7 +158,7 @@ CATEGORY_KEYWORDS = {
 EXCLUDED_KEYWORDS = (
     "ups", "generator", "cooling", "hvac", "fire suppression", "cctv", "camera",
     "rack", "cabinet", "pdu", "patch cord", "cabling", "civil work", "electrical",
-    "server", "storage array", "san switch", "gpu", "license only", "subscription only",
+    "storage array", "san switch", "gpu", "license only", "subscription only",
 )
 
 
@@ -202,6 +254,12 @@ class ProductMatcher:
                 normalized[field] = value
         if detected_specs.get("switching_capacity_tbps") not in (None, ""):
             normalized["switching_capacity_gbps"] = float(detected_specs["switching_capacity_tbps"]) * 1000
+        throughput_mbps = metadata.get("throughput_mbps", detected_specs.get("throughput_mbps", nested_requirements.get("throughput_mbps")))
+        if throughput_mbps not in (None, "") and "throughput_gbps" not in normalized:
+            normalized["throughput_gbps"] = float(throughput_mbps) / 1000
+        storage_gb = metadata.get("storage_gb", metadata.get("local_storage_gb", detected_specs.get("storage_gb", detected_specs.get("local_storage_gb", nested_requirements.get("storage_gb", nested_requirements.get("local_storage_gb"))))))
+        if storage_gb not in (None, "") and "storage_tb" not in normalized:
+            normalized["storage_tb"] = float(storage_gb) / 1024
         if detected_specs.get("cps", nested_requirements.get("cps")) not in (None, ""):
             normalized["connections_per_second"] = detected_specs.get("cps", nested_requirements.get("cps"))
         interfaces: Dict[str, int] = {}
@@ -287,6 +345,8 @@ class ProductMatcher:
             return ["DATACENTER_SWITCH", "ACCESS_SWITCH", "SWITCH"]
         if category in ("DATACENTER_SWITCH", "ACCESS_SWITCH"):
             return [category, "SWITCH"]
+        if category == "CENTRALIZED_MANAGEMENT":
+            return ["CENTRALIZED_MANAGEMENT", "SIEM_SOC"]
         return [category]
 
     @staticmethod
@@ -297,7 +357,7 @@ class ProductMatcher:
             required = requirements.get(field)
             if required in (None, ""):
                 continue
-            available = ProductMatcher._product_numeric_value(product, field)
+            available = ProductMatcher._product_numeric_value(product, field, required)
             if available is None:
                 missing.append(field)
                 continue
@@ -310,7 +370,7 @@ class ProductMatcher:
         for name, required_count in required_interfaces.items():
             if required_count in (None, ""):
                 continue
-            available_count = ProductMatcher._compatible_interface_count(product_interfaces, name)
+            available_count = ProductMatcher._compatible_interface_count(product, name, required_count)
             if int(available_count) < int(required_count):
                 missing.append(f"interfaces.{name}")
             else:
@@ -342,7 +402,7 @@ class ProductMatcher:
 
         for field in NUMERIC_REQUIREMENT_FIELDS:
             required = requirements.get(field)
-            available = ProductMatcher._product_numeric_value(product, field)
+            available = ProductMatcher._product_numeric_value(product, field, required)
             if required in (None, "") or available in (None, ""):
                 continue
             required_count += 1
@@ -359,7 +419,7 @@ class ProductMatcher:
         product_interfaces = product.get("interfaces") or {}
         for name, required_interface_count in required_interfaces.items():
             required_count += 1
-            available_count = ProductMatcher._compatible_interface_count(product_interfaces, name)
+            available_count = ProductMatcher._compatible_interface_count(product, name, required_interface_count)
             if not required_interface_count or not available_count:
                 continue
             ratio = int(required_interface_count) / int(available_count)
@@ -408,9 +468,20 @@ class ProductMatcher:
         return total
 
     @staticmethod
-    def _product_numeric_value(product: Dict[str, Any], field: str) -> Optional[float]:
+    def _product_numeric_value(product: Dict[str, Any], field: str, required: Any = None) -> Optional[float]:
         if field == "ports":
-            return ProductMatcher._total_interfaces(product)
+            return ProductMatcher._available_port_count(product, required)
+        if field == "max_ports":
+            value = product.get("max_ports")
+            if value not in (None, ""):
+                return float(value)
+            return ProductMatcher._available_port_count(product, required)
+        if field == "storage_tb":
+            return ProductMatcher._product_storage_tb(product)
+        if field == "throughput_gbps":
+            mbps = product.get("throughput_mbps")
+            if mbps not in (None, ""):
+                return float(mbps) / 1000
         value = product.get(field)
         if value not in (None, ""):
             return float(value)
@@ -421,15 +492,67 @@ class ProductMatcher:
         return None
 
     @staticmethod
-    def _compatible_interface_count(product_interfaces: Dict[str, Any], required_name: str) -> int:
+    def _available_port_count(product: Dict[str, Any], required: Any = None) -> Optional[int]:
+        direct_ports = product.get("ports") or product.get("max_ports")
+        if direct_ports not in (None, ""):
+            return int(direct_ports)
+        options = product.get("main_port_options")
+        if isinstance(options, list) and options:
+            numeric_options = sorted(int(option) for option in options if option not in (None, ""))
+            if required not in (None, ""):
+                required_count = int(required)
+                for option in numeric_options:
+                    if option >= required_count:
+                        return option
+            return max(numeric_options)
+        return ProductMatcher._total_interfaces(product)
+
+    @staticmethod
+    def _product_storage_tb(product: Dict[str, Any]) -> Optional[float]:
+        for field in ("storage_tb", "storage_gb", "local_storage_gb"):
+            value = product.get(field)
+            if value in (None, ""):
+                continue
+            value = float(value)
+            return value if field == "storage_tb" else value / 1024
+        return None
+
+    @staticmethod
+    def _compatible_interface_count(product: Dict[str, Any], required_name: str, required_count: Any = None) -> int:
+        product_interfaces = product.get("interfaces") or {}
         if not isinstance(product_interfaces, dict):
-            return 0
+            product_interfaces = {}
         compatible_names = INTERFACE_COMPATIBILITY.get(required_name, (required_name,))
         total = 0
         for name in compatible_names:
             value = product_interfaces.get(name, 0)
             if value not in (None, ""):
                 total += int(value)
+        if total:
+            return total
+
+        main_speed = ProductMatcher._max_speed_gbps(product.get("main_port_speed"))
+        required_speed = ProductMatcher._interface_speed_gbps(required_name)
+        if main_speed is None or required_speed is None or main_speed < required_speed:
+            return 0
+        port_count = ProductMatcher._available_port_count(product, required_count)
+        return int(port_count or 0)
+
+    @staticmethod
+    def _interface_speed_gbps(interface_name: str) -> Optional[float]:
+        match = re.match(r"(?P<num>\d+)(?:_(?P<num2>\d+))?g", str(interface_name).lower())
+        if not match:
+            return None
+        if match.group("num2"):
+            return float(match.group("num2"))
+        return float(match.group("num"))
+
+    @staticmethod
+    def _max_speed_gbps(raw_speed: Any) -> Optional[float]:
+        if raw_speed in (None, ""):
+            return None
+        speeds = [float(match.group(1)) for match in re.finditer(r"(\d+(?:\.\d+)?)\s*G(?:bps)?", str(raw_speed), re.IGNORECASE)]
+        return max(speeds) if speeds else None
         return total
 
     @classmethod
@@ -497,6 +620,20 @@ class ProductMatcher:
         cls._extract_count(text, values, "ssl_vpn_users", ("ssl vpn users", "ssl-vpn users", "vpn users", "concurrent users"))
         cls._extract_count(text, values, "connections_per_second", ("connections per second", "cps", "new sessions per second"))
         cls._extract_count(text, values, "policies", ("policies", "firewall policies"))
+        cls._extract_count(text, values, "logs_per_day_gb", ("gb logs per day", "gb/day", "logs per day"))
+        cls._extract_count(text, values, "analytic_rate_logs_sec", ("analytics logs/sec", "analytic logs/sec", "analytics rate"))
+        cls._extract_count(text, values, "collector_rate_logs_sec", ("collector logs/sec", "collection logs/sec", "collector rate"))
+        cls._extract_count(text, values, "performance_eps", ("eps", "events per second"))
+        cls._extract_count(text, values, "email_routing_per_hour", ("email routing per hour", "messages per hour", "emails per hour"))
+        cls._extract_count(text, values, "atp_per_hour", ("atp per hour", "atp scans per hour"))
+        cls._extract_count(text, values, "email_domains", ("email domains", "domains"))
+        cls._extract_count(text, values, "server_mode_mailboxes", ("mailboxes", "server mode mailboxes"))
+        cls._extract_count(text, values, "max_ports", ("managed ports", "ports"))
+        cls._extract_count(text, values, "max_devices_vdoms", ("devices", "vdoms", "managed devices"))
+        cls._extract_count(text, values, "max_local_remote_users", ("local users", "remote users", "users"))
+        cls._extract_count(text, values, "max_user_groups", ("user groups", "groups"))
+        cls._extract_count(text, values, "max_nas_devices", ("nas devices", "radius clients"))
+        cls._extract_count(text, values, "max_fortitokens", ("fortitokens", "tokens"))
         storage = re.search(r"(?:(?:storage|ssd|disk|hdd)\s*(?:of|:)?\s*)?(\d+(?:\.\d+)?)\s*(tb|gb)\s*(?:storage|ssd|disk|hdd)", text)
         if storage:
             number = float(storage.group(1))

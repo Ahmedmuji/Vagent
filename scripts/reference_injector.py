@@ -155,7 +155,11 @@ class HardwareReferenceInjector:
             return False
         if device_type in {
             "CENTRALIZED_MANAGEMENT", "SIEM_SOC", "NDR", "ENDPOINT_SECURITY",
-            "IDENTITY_ACCESS", "PAM", "SDN_AUTOMATION",
+            "IDENTITY_ACCESS", "PAM", "SDN_AUTOMATION", "SANDBOX",
+            "EMAIL_SECURITY", "NAC", "DECEPTION", "SOAR", "SASE",
+            "SECURE_WEB_GATEWAY", "DDOS_MITIGATION", "DIGITAL_RISK_PROTECTION",
+            "NETWORK_PERFORMANCE_MONITORING", "AI_NETWORK_OPERATIONS",
+            "CLOUD_SECURITY", "WAN_EXTENDER", "VOIP_SECURITY", "VIDEO_SECURITY",
         }:
             return True
         requirement_keys = set(normalized.keys()) - {"device_type", "requirements", "source_text"}

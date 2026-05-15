@@ -1,17 +1,198 @@
 {
+  "metadata": {
+    "source": "Fortinet Product Matrix (February 2026)",
+    "source_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf",
+    "last_updated": "2026-05-15"
+  },
   "products": [
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 30G",
+      "category": "NGFW",
+      "form_factor": "Desktop",
+      "ngfw_throughput_gbps": 0.57,
+      "ips_throughput_gbps": 0.8,
+      "ssl_tls_inspection_gbps": 0.4,
+      "concurrent_sessions": 600000,
+      "connections_per_second": 30000,
+      "policies": 2000,
+      "interfaces": {
+        "1g_rj45": 4
+      },
+      "local_storage_gb": 0,
+      "variants": [
+        "WiFi"
+      ],
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 40F",
+      "category": "NGFW",
+      "form_factor": "Desktop",
+      "ngfw_throughput_gbps": 0.8,
+      "ips_throughput_gbps": 1.0,
+      "ssl_tls_inspection_gbps": 0.31,
+      "concurrent_sessions": 700000,
+      "connections_per_second": 35000,
+      "policies": 2000,
+      "interfaces": {
+        "1g_rj45": 5
+      },
+      "local_storage_gb": 0,
+      "variants": [
+        "WiFi",
+        "3G4G"
+      ],
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 50G",
+      "category": "NGFW",
+      "form_factor": "Desktop",
+      "ngfw_throughput_gbps": 1.25,
+      "ips_throughput_gbps": 2.25,
+      "ssl_tls_inspection_gbps": 1.3,
+      "concurrent_sessions": 720000,
+      "connections_per_second": 85000,
+      "policies": 2000,
+      "interfaces": {
+        "1g_rj45": 5
+      },
+      "local_storage_gb": 64,
+      "variants": [
+        "WiFi",
+        "DSL",
+        "SFP",
+        "POE",
+        "5G"
+      ],
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 60F",
+      "category": "NGFW",
+      "form_factor": "Desktop",
+      "ngfw_throughput_gbps": 1.0,
+      "ips_throughput_gbps": 1.4,
+      "ssl_tls_inspection_gbps": 0.63,
+      "concurrent_sessions": 700000,
+      "connections_per_second": 35000,
+      "policies": 2000,
+      "interfaces": {
+        "1g_rj45": 10
+      },
+      "local_storage_gb": 128,
+      "variants": [
+        "WiFi",
+        "Storage"
+      ],
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 70F",
+      "category": "NGFW",
+      "form_factor": "Desktop",
+      "ngfw_throughput_gbps": 1.0,
+      "ips_throughput_gbps": 1.4,
+      "ssl_tls_inspection_gbps": 0.7,
+      "concurrent_sessions": 1500000,
+      "connections_per_second": 35000,
+      "policies": 5000,
+      "interfaces": {
+        "1g_rj45": 10
+      },
+      "local_storage_gb": 128,
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 70G",
+      "category": "NGFW",
+      "form_factor": "Desktop",
+      "ngfw_throughput_gbps": 1.5,
+      "ips_throughput_gbps": 2.5,
+      "ssl_tls_inspection_gbps": 1.4,
+      "concurrent_sessions": 1400000,
+      "connections_per_second": 100000,
+      "policies": 5000,
+      "interfaces": {
+        "1g_rj45": 10
+      },
+      "local_storage_gb": 64,
+      "variants": [
+        "WiFi",
+        "POE"
+      ],
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 80F",
+      "category": "NGFW",
+      "form_factor": "Desktop",
+      "ngfw_throughput_gbps": 1.0,
+      "ips_throughput_gbps": 1.4,
+      "ssl_tls_inspection_gbps": 0.715,
+      "concurrent_sessions": 1500000,
+      "connections_per_second": 45000,
+      "policies": 5000,
+      "interfaces": {
+        "1g_rj45": 8,
+        "shared_port_pairs": 2
+      },
+      "local_storage_gb": 128,
+      "variants": [
+        "WiFi",
+        "3G4G",
+        "DSL",
+        "Bypass",
+        "Storage"
+      ],
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 90G",
+      "category": "NGFW",
+      "form_factor": "Desktop",
+      "ngfw_throughput_gbps": 2.5,
+      "ips_throughput_gbps": 4.5,
+      "ssl_tls_inspection_gbps": 2.6,
+      "concurrent_sessions": 3000000,
+      "connections_per_second": 124000,
+      "policies": 5000,
+      "interfaces": {
+        "1g_rj45": 8,
+        "10g_shared_port_pairs": 2
+      },
+      "local_storage_gb": 120,
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
     {
       "vendor": "Fortinet",
       "model": "FortiGate 120G",
       "category": "NGFW",
+      "form_factor": "1RU",
       "ngfw_throughput_gbps": 3.1,
       "ips_throughput_gbps": 5.3,
-      "ssl_tls_inspection_gbps": 2.8,
+      "ssl_tls_inspection_gbps": 3.0,
       "concurrent_sessions": 3000000,
       "ssl_vpn_users": 500,
-      "connections_per_second": 56000,
+      "connections_per_second": 140000,
       "policies": 10000,
-      "storage_tb": 0,
+      "storage_gb": 480,
       "interfaces": {
         "10g_sfp_plus": 4,
         "1g_sfp": 8,
@@ -27,18 +208,20 @@
       "vendor": "Fortinet",
       "model": "FortiGate 200G",
       "category": "NGFW",
+      "form_factor": "1RU",
       "ngfw_throughput_gbps": 7,
       "ips_throughput_gbps": 9,
-      "ssl_tls_inspection_gbps": 5,
-      "concurrent_sessions": 4000000,
-      "ssl_vpn_users": 5000,
-      "connections_per_second": 300000,
+      "ssl_tls_inspection_gbps": 7.0,
+      "concurrent_sessions": 11000000,
+      "ssl_vpn_users": 500,
+      "connections_per_second": 400000,
       "policies": 10000,
-      "storage_tb": 0,
+      "storage_gb": 480,
       "interfaces": {
         "10g_sfp_plus": 8,
-        "1g_sfp": 4,
-        "1g_rj45": 18
+        "5g_rj45": 8,
+        "1g_rj45": 10,
+        "1g_sfp": 4
       },
       "ha_port": true,
       "management_port": true,
@@ -50,18 +233,19 @@
       "vendor": "Fortinet",
       "model": "FortiGate 400F",
       "category": "NGFW",
-      "ngfw_throughput_gbps": 20,
-      "ips_throughput_gbps": 20,
-      "ssl_tls_inspection_gbps": 15,
-      "concurrent_sessions": 12000000,
-      "ssl_vpn_users": 10000,
+      "form_factor": "1RU",
+      "ngfw_throughput_gbps": 10,
+      "ips_throughput_gbps": 12,
+      "ssl_tls_inspection_gbps": 8.0,
+      "concurrent_sessions": 7800000,
+      "ssl_vpn_users": 5000,
       "connections_per_second": 500000,
-      "policies": 100000,
-      "storage_tb": 1,
+      "policies": 10000,
+      "storage_gb": 960,
       "interfaces": {
-        "25g_sfp28": 4,
         "10g_sfp_plus": 8,
-        "1_10g_rj45": 2
+        "1g_sfp": 8,
+        "1g_rj45": 18
       },
       "ha_port": true,
       "management_port": true,
@@ -71,44 +255,103 @@
     },
     {
       "vendor": "Fortinet",
-      "model": "FortiGate 600F",
+      "model": "FortiGate 700G",
       "category": "NGFW",
-      "ngfw_throughput_gbps": 39,
-      "ips_throughput_gbps": 30,
-      "ssl_tls_inspection_gbps": 20,
-      "concurrent_sessions": 18000000,
+      "form_factor": "1RU",
+      "ngfw_throughput_gbps": 29,
+      "ips_throughput_gbps": 38,
+      "ssl_tls_inspection_gbps": 14.0,
+      "concurrent_sessions": 16000000,
       "ssl_vpn_users": 10000,
-      "connections_per_second": 800000,
-      "policies": 100000,
-      "storage_tb": 1,
+      "connections_per_second": 700000,
+      "policies": 10000,
+      "storage_gb": 960,
       "interfaces": {
         "25g_sfp28": 4,
-        "10g_sfp_plus": 8,
-        "1_10g_rj45": 2
+        "10g_sfp_plus": 4,
+        "1g_sfp": 16,
+        "5g_rj45": 8,
+        "2_5g_rj45": 1,
+        "1g_rj45": 1
       },
       "ha_port": true,
       "management_port": true,
       "console_port": true,
-      "product_url": "https://www.fortinet.com/products/next-generation-firewall/fortigate-600f",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-600f-series.pdf"
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 900G",
+      "category": "NGFW",
+      "form_factor": "1RU",
+      "ngfw_throughput_gbps": 31,
+      "ips_throughput_gbps": 42,
+      "ssl_tls_inspection_gbps": 16.7,
+      "concurrent_sessions": 16000000,
+      "ssl_vpn_users": 10000,
+      "connections_per_second": 720000,
+      "policies": 50000,
+      "storage_gb": 960,
+      "interfaces": {
+        "25g_sfp28": 4,
+        "10g_sfp_plus": 4,
+        "1g_sfp": 8,
+        "2_5g_rj45": 1,
+        "1g_rj45": 17
+      },
+      "ha_port": true,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 1000F",
+      "category": "NGFW",
+      "form_factor": "2RU",
+      "ngfw_throughput_gbps": 15,
+      "ips_throughput_gbps": 19,
+      "ssl_tls_inspection_gbps": 10.0,
+      "concurrent_sessions": 7500000,
+      "ssl_vpn_users": 10000,
+      "connections_per_second": 650000,
+      "policies": 100000,
+      "storage_gb": 960,
+      "interfaces": {
+        "100g_qsfp28": 2,
+        "25g_sfp28": 8,
+        "10g_sfp_plus": 16,
+        "10g_rj45": 8,
+        "2_5g_rj45": 1,
+        "1g_rj45": 1
+      },
+      "ha_port": true,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
     },
     {
       "vendor": "Fortinet",
       "model": "FortiGate 1800F",
       "category": "NGFW",
-      "ngfw_throughput_gbps": 198,
-      "ips_throughput_gbps": 30,
-      "ssl_tls_inspection_gbps": 25,
-      "concurrent_sessions": 20000000,
-      "ssl_vpn_users": 50000,
-      "connections_per_second": 1600000,
+      "form_factor": "2RU",
+      "ngfw_throughput_gbps": 17,
+      "ips_throughput_gbps": 22,
+      "ssl_tls_inspection_gbps": 12.0,
+      "concurrent_sessions": 12000000,
+      "ssl_vpn_users": 10000,
+      "connections_per_second": 750000,
       "policies": 100000,
-      "storage_tb": 2,
+      "storage_gb": 1920,
       "interfaces": {
         "100g_qsfp28": 4,
-        "40g_qsfp_plus": 4,
         "25g_sfp28": 12,
-        "10g_sfp_plus": 16
+        "10g_sfp_plus": 2,
+        "1g_sfp": 8,
+        "1g_rj45": 18
       },
       "ha_port": true,
       "management_port": true,
@@ -118,27 +361,364 @@
     },
     {
       "vendor": "Fortinet",
+      "model": "FortiGate 2600F",
+      "category": "NGFW",
+      "form_factor": "2RU",
+      "ngfw_throughput_gbps": 27,
+      "ips_throughput_gbps": 31,
+      "ssl_tls_inspection_gbps": 20.0,
+      "concurrent_sessions": 24000000,
+      "ssl_vpn_users": 30000,
+      "connections_per_second": 1000000,
+      "policies": 100000,
+      "storage_gb": 1920,
+      "interfaces": {
+        "100g_qsfp28_40g_qsfp_plus": 4,
+        "25g_sfp28": 16,
+        "10g_rj45": 16,
+        "10g_sfp_plus": 2,
+        "1g_rj45": 2
+      },
+      "ha_port": true,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
       "model": "FortiGate 3000F",
       "category": "NGFW",
-      "ngfw_throughput_gbps": 350,
-      "ips_throughput_gbps": 75,
-      "ssl_tls_inspection_gbps": 45,
-      "concurrent_sessions": 50000000,
-      "ssl_vpn_users": 50000,
-      "connections_per_second": 3000000,
-      "policies": 100000,
-      "storage_tb": 2,
+      "form_factor": "2RU",
+      "ngfw_throughput_gbps": 34,
+      "ips_throughput_gbps": 36,
+      "ssl_tls_inspection_gbps": 29.0,
+      "concurrent_sessions": 70000000,
+      "ssl_vpn_users": 30000,
+      "connections_per_second": 870000,
+      "policies": 200000,
+      "storage_gb": 1920,
       "interfaces": {
-        "100g_qsfp28": 6,
-        "40g_qsfp_plus": 6,
+        "100g_qsfp28_40g_qsfp_plus": 6,
         "25g_sfp28": 16,
-        "10g_sfp_plus": 16
+        "10g_rj45": 18,
+        "1g_rj45": 2
       },
       "ha_port": true,
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/next-generation-firewall/fortigate-3000f",
       "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortigate-3000f-series.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 3200F",
+      "category": "NGFW",
+      "form_factor": "2RU",
+      "ngfw_throughput_gbps": 47,
+      "ips_throughput_gbps": 63,
+      "ssl_tls_inspection_gbps": 29.0,
+      "concurrent_sessions": 70000000,
+      "ssl_vpn_users": 30000,
+      "connections_per_second": 800000,
+      "policies": 200000,
+      "storage_gb": 1920,
+      "interfaces": {
+        "400g_qsfp_dd": 4,
+        "50g_sfp56": 12,
+        "25g_sfp28": 4,
+        "10g_rj45": 2
+      },
+      "ha_port": true,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 3500F",
+      "category": "NGFW",
+      "form_factor": "2RU",
+      "ngfw_throughput_gbps": 65,
+      "ips_throughput_gbps": 72,
+      "ssl_tls_inspection_gbps": 63.0,
+      "concurrent_sessions": 140000000,
+      "ssl_vpn_users": 30000,
+      "connections_per_second": 1000000,
+      "policies": 200000,
+      "storage_gb": 3840,
+      "interfaces": {
+        "100g_qsfp28_40g_qsfp_plus": 6,
+        "25g_sfp28": 32,
+        "1g_rj45": 2
+      },
+      "ha_port": true,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 3700F",
+      "category": "NGFW",
+      "form_factor": "2RU",
+      "ngfw_throughput_gbps": 80,
+      "ips_throughput_gbps": 86,
+      "ssl_tls_inspection_gbps": 55.0,
+      "concurrent_sessions": 140000000,
+      "ssl_vpn_users": 30000,
+      "connections_per_second": 930000,
+      "policies": 200000,
+      "storage_gb": 3840,
+      "interfaces": {
+        "400g_qsfp_dd": 4,
+        "25g_sfp28_ull": 4,
+        "50g_sfp56": 20,
+        "10g_rj45": 2
+      },
+      "ha_port": true,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 3800G",
+      "category": "NGFW",
+      "form_factor": "3RU",
+      "ngfw_throughput_gbps": 210,
+      "ips_throughput_gbps": 250,
+      "ssl_tls_inspection_gbps": 120.0,
+      "concurrent_sessions": 210000000,
+      "ssl_vpn_users": 30000,
+      "connections_per_second": 1100000,
+      "policies": 400000,
+      "storage_gb": 3840,
+      "interfaces": {
+        "400g": 4,
+        "200g_qsfp56": 6,
+        "50g_sfp56": 18,
+        "10g_rj45": 2
+      },
+      "ha_port": true,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 4200F",
+      "category": "NGFW",
+      "form_factor": "3RU",
+      "ngfw_throughput_gbps": 47,
+      "ips_throughput_gbps": 52,
+      "ssl_tls_inspection_gbps": 50.0,
+      "concurrent_sessions": 210000000,
+      "ssl_vpn_users": 30000,
+      "connections_per_second": 1000000,
+      "policies": 400000,
+      "storage_gb": 3840,
+      "interfaces": {
+        "100g_qsfp28_40g_qsfp_plus": 8,
+        "25g_sfp28": 18,
+        "1g_rj45": 2
+      },
+      "ha_port": true,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 4400F",
+      "category": "NGFW",
+      "form_factor": "4RU",
+      "ngfw_throughput_gbps": 82,
+      "ips_throughput_gbps": 94,
+      "ssl_tls_inspection_gbps": 86.0,
+      "concurrent_sessions": 210000000,
+      "ssl_vpn_users": 30000,
+      "connections_per_second": 1000000,
+      "policies": 400000,
+      "storage_gb": 3840,
+      "interfaces": {
+        "100g_qsfp28_40g_qsfp_plus": 12,
+        "25g_sfp28": 20,
+        "1g_rj45": 2
+      },
+      "ha_port": true,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 4800F",
+      "category": "NGFW",
+      "form_factor": "4RU",
+      "ngfw_throughput_gbps": 77,
+      "ips_throughput_gbps": 87,
+      "ssl_tls_inspection_gbps": 63.0,
+      "concurrent_sessions": 280000000,
+      "ssl_vpn_users": 30000,
+      "connections_per_second": 915000,
+      "policies": 400000,
+      "storage_gb": 3840,
+      "interfaces": {
+        "400g": 8,
+        "200g_qsfp56": 12,
+        "50g_sfp56": 12,
+        "10g_rj45": 2
+      },
+      "ha_port": true,
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 7081F",
+      "category": "NGFW",
+      "form_factor": "12RU Chassis",
+      "ngfw_throughput_gbps": 330,
+      "ips_throughput_gbps": 405,
+      "ssl_tls_inspection_gbps": 324.0,
+      "concurrent_sessions": 600000000,
+      "ssl_vpn_users": 30000,
+      "connections_per_second": 5400000,
+      "policies": 200000,
+      "storage_gb": 16000,
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiGate 7121F",
+      "category": "NGFW",
+      "form_factor": "16RU Chassis",
+      "ngfw_throughput_gbps": 550,
+      "ips_throughput_gbps": 675,
+      "ssl_tls_inspection_gbps": 540.0,
+      "concurrent_sessions": 1000000000,
+      "ssl_vpn_users": 30000,
+      "connections_per_second": 9000000,
+      "policies": 200000,
+      "storage_gb": 16000,
+      "product_url": "https://www.fortinet.com/products/next-generation-firewall",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiSwitch 100 Series",
+      "category": "ACCESS_SWITCH",
+      "main_port_speed": "1 Gbps",
+      "main_port_options": [
+        8,
+        24,
+        48
+      ],
+      "uplink_speed": "1 or 10 Gbps",
+      "poe": true,
+      "redundant_psu": false,
+      "product_url": "https://www.fortinet.com/products/fortiswitch",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortiswitch-secure-access-series.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiSwitch 200 Series",
+      "category": "ACCESS_SWITCH",
+      "main_port_speed": "1 Gbps",
+      "main_port_options": [
+        24,
+        48
+      ],
+      "uplink_speed": "1 Gbps",
+      "poe": true,
+      "redundant_psu": false,
+      "product_url": "https://www.fortinet.com/products/fortiswitch",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortiswitch-secure-access-series.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiSwitch 400 Series",
+      "category": "ACCESS_SWITCH",
+      "main_port_speed": "1 Gbps",
+      "main_port_options": [
+        24,
+        48
+      ],
+      "uplink_speed": "10 Gbps",
+      "poe": true,
+      "redundant_psu": "Some Models",
+      "product_url": "https://www.fortinet.com/products/fortiswitch",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortiswitch-secure-access-series.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiSwitch 500 Series",
+      "category": "ACCESS_SWITCH",
+      "main_port_speed": "1 Gbps",
+      "main_port_options": [
+        24,
+        48
+      ],
+      "uplink_speed": "10 Gbps",
+      "poe": true,
+      "redundant_psu": "Optional",
+      "product_url": "https://www.fortinet.com/products/fortiswitch",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortiswitch-secure-access-series.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiSwitch 600 Series",
+      "category": "ACCESS_SWITCH",
+      "main_port_speed": "2.5/5 Gbps",
+      "main_port_options": [
+        24,
+        48
+      ],
+      "uplink_speed": "25 Gbps",
+      "poe": true,
+      "redundant_psu": true,
+      "product_url": "https://www.fortinet.com/products/fortiswitch",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortiswitch-secure-access-series.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiSwitch 148F",
+      "category": "ACCESS_SWITCH",
+      "switching_capacity_gbps": 176,
+      "throughput_gbps": 260,
+      "interfaces": {
+        "1g_rj45": 48,
+        "10g_sfp_plus": 4
+      },
+      "management_port": true,
+      "console_port": true,
+      "product_url": "https://www.fortinet.com/resources/data-sheets/fortiswitch-secure-access-series",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortiswitch-secure-access-series.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiSwitch 1000 Series",
+      "category": "DATACENTER_SWITCH",
+      "main_port_speed": "10 Gbps",
+      "main_port_options": [
+        24,
+        48
+      ],
+      "uplink_speed": "40 or 100 Gbps",
+      "poe": true,
+      "redundant_psu": true,
+      "product_url": "https://www.fortinet.com/products/fortiswitch",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/FortiSwitch_Data_Center_Series.pdf"
     },
     {
       "vendor": "Fortinet",
@@ -150,10 +730,21 @@
         "10g_sfp_plus": 48,
         "100g_qsfp28": 6
       },
-      "ha_port": false,
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortiswitch-campus-series",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/FortiSwitch_Data_Center_Series.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiSwitch 2048F",
+      "category": "DATACENTER_SWITCH",
+      "main_port_speed": "25 Gbps",
+      "main_port_count": 48,
+      "uplink_speed": "100 Gbps",
+      "poe": false,
+      "redundant_psu": true,
+      "product_url": "https://www.fortinet.com/products/fortiswitch",
       "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/FortiSwitch_Data_Center_Series.pdf"
     },
     {
@@ -166,7 +757,6 @@
         "100g_qsfp28": 32,
         "10g_sfp_plus": 2
       },
-      "ha_port": false,
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/resources/data-sheets/fortiswitch-campus-series",
@@ -174,34 +764,487 @@
     },
     {
       "vendor": "Fortinet",
-      "model": "FortiSwitch 148F",
-      "category": "ACCESS_SWITCH",
-      "switching_capacity_gbps": 176,
-      "throughput_gbps": 260,
+      "model": "FortiAnalyzer 150G",
+      "category": "CENTRALIZED_MANAGEMENT",
+      "logs_per_day_gb": 25,
+      "analytic_rate_logs_sec": 500,
+      "collector_rate_logs_sec": 750,
       "interfaces": {
-        "1g_rj45": 48,
-        "10g_sfp_plus": 4
+        "1g_rj45": 2
       },
-      "ha_port": false,
-      "management_port": true,
-      "console_port": true,
-      "product_url": "https://www.fortinet.com/resources/data-sheets/fortiswitch-secure-access-series",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/pdf/fortiswitch-secure-access-series.pdf"
+      "product_url": "https://www.fortinet.com/products/management/fortianalyzer",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortianalyzer.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiAnalyzer 300G",
+      "category": "CENTRALIZED_MANAGEMENT",
+      "logs_per_day_gb": 100,
+      "analytic_rate_logs_sec": 2000,
+      "collector_rate_logs_sec": 3000,
+      "interfaces": {
+        "1g_rj45": 4
+      },
+      "product_url": "https://www.fortinet.com/products/management/fortianalyzer",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortianalyzer.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiAnalyzer 810G",
+      "category": "CENTRALIZED_MANAGEMENT",
+      "logs_per_day_gb": 200,
+      "analytic_rate_logs_sec": 4000,
+      "collector_rate_logs_sec": 6000,
+      "interfaces": {
+        "1g_rj45": 4,
+        "1g_sfp": 2
+      },
+      "product_url": "https://www.fortinet.com/products/management/fortianalyzer",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortianalyzer.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiAnalyzer 1000G",
+      "category": "CENTRALIZED_MANAGEMENT",
+      "logs_per_day_gb": 660,
+      "analytic_rate_logs_sec": 20000,
+      "collector_rate_logs_sec": 30000,
+      "interfaces": {
+        "1g_rj45": 2,
+        "25g_sfp28": 2
+      },
+      "product_url": "https://www.fortinet.com/products/management/fortianalyzer",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortianalyzer.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiAnalyzer 3100G",
+      "category": "CENTRALIZED_MANAGEMENT",
+      "logs_per_day_gb": 3000,
+      "analytic_rate_logs_sec": 42000,
+      "collector_rate_logs_sec": 60000,
+      "interfaces": {
+        "1g_rj45": 2,
+        "25g_sfp28": 2
+      },
+      "product_url": "https://www.fortinet.com/products/management/fortianalyzer",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortianalyzer.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiAnalyzer 3510G",
+      "category": "CENTRALIZED_MANAGEMENT",
+      "logs_per_day_gb": 5000,
+      "analytic_rate_logs_sec": 60000,
+      "collector_rate_logs_sec": 90000,
+      "interfaces": {
+        "10g_rj45": 2,
+        "25g_sfp28": 2
+      },
+      "product_url": "https://www.fortinet.com/products/management/fortianalyzer",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortianalyzer.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiAnalyzer 3700G",
+      "category": "CENTRALIZED_MANAGEMENT",
+      "logs_per_day_gb": 8300,
+      "analytic_rate_logs_sec": 100000,
+      "collector_rate_logs_sec": 150000,
+      "interfaces": {
+        "10g_rj45": 2,
+        "25g_sfp28": 2
+      },
+      "product_url": "https://www.fortinet.com/products/management/fortianalyzer",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortianalyzer.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiAnalyzer VM",
+      "category": "CENTRALIZED_MANAGEMENT",
+      "form_factor": "Virtual Appliance",
+      "logs_per_day_gb_range": "1 to 2000+",
+      "product_url": "https://www.fortinet.com/products/management/fortianalyzer",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortianalyzer.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiManager 200G",
+      "category": "CENTRALIZED_MANAGEMENT",
+      "max_devices_vdoms": 30,
+      "interfaces": {
+        "1g_rj45": 4
+      },
+      "product_url": "https://www.fortinet.com/products/management/fortimanager",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortimanager.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiManager 410G",
+      "category": "CENTRALIZED_MANAGEMENT",
+      "max_devices_vdoms": 150,
+      "interfaces": {
+        "1g_rj45": 4,
+        "1g_sfp": 2
+      },
+      "product_url": "https://www.fortinet.com/products/management/fortimanager",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortimanager.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiManager 1000G",
+      "category": "CENTRALIZED_MANAGEMENT",
+      "max_devices_vdoms": 1000,
+      "interfaces": {
+        "1g_rj45": 2,
+        "25g_sfp28": 2
+      },
+      "product_url": "https://www.fortinet.com/products/management/fortimanager",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortimanager.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiManager 3100G",
+      "category": "CENTRALIZED_MANAGEMENT",
+      "max_devices_vdoms": "4000+",
+      "interfaces": {
+        "1g_rj45": 2,
+        "25g_sfp28": 2
+      },
+      "product_url": "https://www.fortinet.com/products/management/fortimanager",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortimanager.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiManager 3700G",
+      "category": "CENTRALIZED_MANAGEMENT",
+      "max_devices_vdoms": "10000+",
+      "interfaces": {
+        "10g_rj45": 2,
+        "25g_sfp28": 2
+      },
+      "product_url": "https://www.fortinet.com/products/management/fortimanager",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortimanager.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiManager VM",
+      "category": "CENTRALIZED_MANAGEMENT",
+      "form_factor": "Virtual Appliance",
+      "max_devices_vdoms": "10 to Unlimited",
+      "product_url": "https://www.fortinet.com/products/management/fortimanager",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortimanager.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiAuthenticator 300F",
+      "category": "IDENTITY_ACCESS",
+      "max_local_remote_users": 1500,
+      "max_user_groups": 150,
+      "max_nas_devices": 500,
+      "max_fortitokens": 3000,
+      "interfaces": {
+        "1g_rj45": 4
+      },
+      "product_url": "https://www.fortinet.com/products/identity-access-management/fortiauthenticator",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortiauthenticator.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiAuthenticator 800F",
+      "category": "IDENTITY_ACCESS",
+      "max_local_remote_users": 8000,
+      "max_user_groups": 800,
+      "max_nas_devices": 2666,
+      "max_fortitokens": 16000,
+      "interfaces": {
+        "1g_rj45": 4,
+        "1g_sfp": 2
+      },
+      "product_url": "https://www.fortinet.com/products/identity-access-management/fortiauthenticator",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortiauthenticator.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiAuthenticator 3000F",
+      "category": "IDENTITY_ACCESS",
+      "max_local_remote_users": 40000,
+      "max_user_groups": 240000,
+      "max_nas_devices": 80000,
+      "max_fortitokens": 480000,
+      "interfaces": {
+        "1g_rj45": 4,
+        "1g_sfp": 2
+      },
+      "product_url": "https://www.fortinet.com/products/identity-access-management/fortiauthenticator",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortiauthenticator.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiAuthenticator VM",
+      "category": "IDENTITY_ACCESS",
+      "form_factor": "Virtual Appliance",
+      "max_local_remote_users_range": "100 to 10000+",
+      "product_url": "https://www.fortinet.com/products/identity-access-management/fortiauthenticator",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortiauthenticator.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiSIEM 500G",
+      "category": "SIEM_SOC",
+      "role": "Collector",
+      "performance_eps": 8000,
+      "product_url": "https://www.fortinet.com/products/siem/fortisiem",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortisiem.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiSIEM 2200G",
+      "category": "SIEM_SOC",
+      "role": "Supervisor",
+      "performance_eps": 20000,
+      "max_ueba_users": 10000,
+      "product_url": "https://www.fortinet.com/products/siem/fortisiem",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortisiem.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiSIEM 3600G",
+      "category": "SIEM_SOC",
+      "role": "Supervisor",
+      "performance_eps": 50000,
+      "max_ueba_users": 10000,
+      "product_url": "https://www.fortinet.com/products/siem/fortisiem",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortisiem.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiSandbox Cloud",
+      "category": "SANDBOX",
+      "form_factor": "PaaS/Cloud",
+      "files_per_hour_range": "20-4000",
+      "product_url": "https://www.fortinet.com/products/sandbox/fortisandbox",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiSandbox VM",
+      "category": "SANDBOX",
+      "form_factor": "Virtual Appliance",
+      "files_per_hour_range": "100-1000",
+      "max_local_vms": 8,
+      "product_url": "https://www.fortinet.com/products/sandbox/fortisandbox",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiSandbox 500G",
+      "category": "SANDBOX",
+      "files_per_hour": 10000,
+      "max_users": 1400,
+      "local_vms": 14,
+      "product_url": "https://www.fortinet.com/products/sandbox/fortisandbox",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiSandbox 1500G",
+      "category": "SANDBOX",
+      "files_per_hour": 32000,
+      "max_users": 4000,
+      "local_vms": 28,
+      "product_url": "https://www.fortinet.com/products/sandbox/fortisandbox",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiSandbox 3000G",
+      "category": "SANDBOX",
+      "files_per_hour": 160000,
+      "max_users": 20000,
+      "local_vms": 150,
+      "product_url": "https://www.fortinet.com/products/sandbox/fortisandbox",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiWeb 100F",
+      "category": "WAF",
+      "throughput_mbps": 100,
+      "interfaces": {
+        "1g_rj45": 4
+      },
+      "product_url": "https://www.fortinet.com/products/web-application-firewall/fortiweb",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortiweb.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiWeb 400F",
+      "category": "WAF",
+      "throughput_mbps": 500,
+      "interfaces": {
+        "1g_rj45": 4,
+        "1g_sfp": 4
+      },
+      "product_url": "https://www.fortinet.com/products/web-application-firewall/fortiweb",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortiweb.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiWeb 600F",
+      "category": "WAF",
+      "throughput_gbps": 1,
+      "interfaces": {
+        "1g_rj45": 2,
+        "1g_sfp": 4
+      },
+      "product_url": "https://www.fortinet.com/products/web-application-firewall/fortiweb",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortiweb.pdf"
     },
     {
       "vendor": "Fortinet",
       "model": "FortiWeb 1000F",
       "category": "WAF",
-      "throughput_gbps": 5,
+      "throughput_gbps": 2.5,
       "interfaces": {
-        "10g_sfp_plus": 4,
-        "1g_rj45": 4
+        "10g_sfp_plus": 2,
+        "1g_rj45_bypass": 4,
+        "1g_sfp": 4
       },
       "ha_port": true,
       "management_port": true,
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/web-application-firewall/fortiweb",
       "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortiweb.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiWeb 2000F",
+      "category": "WAF",
+      "throughput_gbps": 5,
+      "interfaces": {
+        "10g_sfp_plus": 4,
+        "1g_rj45_bypass": 4,
+        "1g_sfp": 4
+      },
+      "product_url": "https://www.fortinet.com/products/web-application-firewall/fortiweb",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortiweb.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiWeb 3000F",
+      "category": "WAF",
+      "throughput_gbps": 10,
+      "interfaces": {
+        "10g_sfp_plus": 10,
+        "1g_rj45_bypass": 8
+      },
+      "product_url": "https://www.fortinet.com/products/web-application-firewall/fortiweb",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortiweb.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiWeb 4000F",
+      "category": "WAF",
+      "throughput_gbps": 70,
+      "interfaces": {
+        "40g_qsfp_bypass": 2,
+        "10g_sfp_plus": 10,
+        "1g_rj45_bypass": 8
+      },
+      "product_url": "https://www.fortinet.com/products/web-application-firewall/fortiweb",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortiweb.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiMail 200F",
+      "category": "EMAIL_SECURITY",
+      "email_routing_per_hour": 50000,
+      "atp_per_hour": 30000,
+      "email_domains": 20,
+      "server_mode_mailboxes": 150,
+      "product_url": "https://www.fortinet.com/products/email-security/fortimail",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiMail 400F",
+      "category": "EMAIL_SECURITY",
+      "email_routing_per_hour": 250000,
+      "atp_per_hour": 150000,
+      "email_domains": 70,
+      "server_mode_mailboxes": 400,
+      "product_url": "https://www.fortinet.com/products/email-security/fortimail",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiMail 900G",
+      "category": "EMAIL_SECURITY",
+      "email_routing_per_hour": 1300000,
+      "atp_per_hour": 650000,
+      "email_domains": 500,
+      "server_mode_mailboxes": 1500,
+      "product_url": "https://www.fortinet.com/products/email-security/fortimail",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiMail 2000F",
+      "category": "EMAIL_SECURITY",
+      "email_routing_per_hour": 1600000,
+      "atp_per_hour": 800000,
+      "email_domains": 1000,
+      "server_mode_mailboxes": 2000,
+      "product_url": "https://www.fortinet.com/products/email-security/fortimail",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiMail 3000F",
+      "category": "EMAIL_SECURITY",
+      "email_routing_per_hour": 3500000,
+      "atp_per_hour": 2100000,
+      "email_domains": 2000,
+      "server_mode_mailboxes": 3000,
+      "product_url": "https://www.fortinet.com/products/email-security/fortimail",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiNAC CA-500F",
+      "category": "NAC",
+      "role": "Control and Application Server (Mid-range)",
+      "max_ports": 5000,
+      "product_url": "https://www.fortinet.com/products/network-access-control/fortinac",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiNAC CA-600F",
+      "category": "NAC",
+      "role": "Control and Application Server (High Performance)",
+      "max_ports": 15000,
+      "product_url": "https://www.fortinet.com/products/network-access-control/fortinac",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiNAC CA-700C",
+      "category": "NAC",
+      "role": "Control and Application Server (Ultra High Performance)",
+      "max_ports": 25000,
+      "product_url": "https://www.fortinet.com/products/network-access-control/fortinac",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiNAC M-550F",
+      "category": "NAC",
+      "role": "Centralized Management Appliance",
+      "max_ca_servers": 50,
+      "product_url": "https://www.fortinet.com/products/network-access-control/fortinac",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
     },
     {
       "vendor": "Fortinet",
@@ -217,34 +1260,6 @@
       "console_port": true,
       "product_url": "https://www.fortinet.com/products/application-delivery-controller/fortiadc",
       "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortiadc.pdf"
-    },
-    {
-      "vendor": "Fortinet",
-      "model": "FortiManager",
-      "category": "CENTRALIZED_MANAGEMENT",
-      "product_url": "https://www.fortinet.com/products/management/fortimanager",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortimanager.pdf"
-    },
-    {
-      "vendor": "Fortinet",
-      "model": "FortiSIEM",
-      "category": "SIEM_SOC",
-      "product_url": "https://www.fortinet.com/products/siem/fortisiem",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortisiem.pdf"
-    },
-    {
-      "vendor": "Fortinet",
-      "model": "FortiAnalyzer",
-      "category": "CENTRALIZED_MANAGEMENT",
-      "product_url": "https://www.fortinet.com/products/management/fortianalyzer",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortianalyzer.pdf"
-    },
-    {
-      "vendor": "Fortinet",
-      "model": "FortiNDR",
-      "category": "NDR",
-      "product_url": "https://www.fortinet.com/products/network-detection-and-response/fortindr",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortindr.pdf"
     },
     {
       "vendor": "Fortinet",
@@ -264,6 +1279,14 @@
       "vendor": "Fortinet",
       "model": "FortiClient",
       "category": "ENDPOINT_SECURITY",
+      "supported_platforms": [
+        "Windows",
+        "macOS",
+        "Linux",
+        "Android",
+        "iOS",
+        "Chromebook"
+      ],
       "product_url": "https://www.fortinet.com/products/endpoint-security/forticlient",
       "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/forticlient.pdf"
     },
@@ -276,10 +1299,10 @@
     },
     {
       "vendor": "Fortinet",
-      "model": "FortiAuthenticator",
-      "category": "IDENTITY_ACCESS",
-      "product_url": "https://www.fortinet.com/products/identity-access-management/fortiauthenticator",
-      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortiauthenticator.pdf"
+      "model": "FortiDLP",
+      "category": "ENDPOINT_SECURITY",
+      "product_url": "https://www.fortinet.com/products/fortidlp",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
     },
     {
       "vendor": "Fortinet",
@@ -287,6 +1310,115 @@
       "category": "PAM",
       "product_url": "https://www.fortinet.com/products/identity-access-management/fortipam",
       "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortipam.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiToken",
+      "category": "IDENTITY_ACCESS",
+      "notes": "Hardware TOTP token; integrates with FortiGate and FortiAuthenticator",
+      "product_url": "https://www.fortinet.com/products/identity-access-management/fortitoken",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiNDR",
+      "category": "NDR",
+      "product_url": "https://www.fortinet.com/products/network-detection-and-response/fortindr",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/fortindr.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiDeceptor",
+      "category": "DECEPTION",
+      "product_url": "https://www.fortinet.com/products/fortiDeceptor",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiSOAR",
+      "category": "SOAR",
+      "product_url": "https://www.fortinet.com/products/fortisoar",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiSASE",
+      "category": "SASE",
+      "form_factor": "Cloud",
+      "product_url": "https://www.fortinet.com/products/sase/fortisase",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiProxy",
+      "category": "SECURE_WEB_GATEWAY",
+      "product_url": "https://www.fortinet.com/products/secure-web-gateway/fortiproxy",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiDDoS",
+      "category": "DDOS_MITIGATION",
+      "product_url": "https://www.fortinet.com/products/ddos/fortiddos",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiRecon",
+      "category": "DIGITAL_RISK_PROTECTION",
+      "product_url": "https://www.fortinet.com/products/fortirecon",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiMonitor",
+      "category": "NETWORK_PERFORMANCE_MONITORING",
+      "product_url": "https://www.fortinet.com/products/fortimonitor",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiAIOps",
+      "category": "AI_NETWORK_OPERATIONS",
+      "product_url": "https://www.fortinet.com/products/fortiaiops",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiCNAPP",
+      "category": "CLOUD_SECURITY",
+      "product_url": "https://www.fortinet.com/products/forticnapp",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiAppSec Cloud",
+      "category": "WAF",
+      "form_factor": "Cloud",
+      "product_url": "https://www.fortinet.com/products/fortiappsec",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiExtender",
+      "category": "WAN_EXTENDER",
+      "notes": "3G/4G/5G LTE WAN extender with dual SIM support",
+      "product_url": "https://www.fortinet.com/products/fortiextender",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiVoice",
+      "category": "VOIP_SECURITY",
+      "product_url": "https://www.fortinet.com/products/fortivoice",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
+    },
+    {
+      "vendor": "Fortinet",
+      "model": "FortiRecorder",
+      "category": "VIDEO_SECURITY",
+      "product_url": "https://www.fortinet.com/products/fortirecorder",
+      "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/Fortinet_Product_Matrix.pdf"
     }
   ]
 }
