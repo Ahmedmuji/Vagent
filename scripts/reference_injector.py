@@ -74,6 +74,8 @@ class HardwareReferenceInjector:
             if direct_reference:
                 effective_metadata["direct_reference"] = direct_reference
                 effective_metadata["requires_reference"] = True
+            if not direct_reference and not self._should_hardware_reference(text, effective_metadata):
+                continue
             if not self._requires_reference(effective_metadata):
                 continue
             group_id = effective_metadata.get("requirement_group_id") or f"ROW_{row_idx + 1}"
@@ -269,16 +271,65 @@ class HardwareReferenceInjector:
         normalized = ProductMatcher.normalize_requirements(metadata)
         if not normalized.get("device_type"):
             return False
+        if HardwareReferenceInjector._has_measurable_constraints(normalized):
+            return True
         lowered = str(text or "").lower()
         procurement_terms = (
-            "required", "requirement", "supply", "provide", "proposed",
-            "recommended", "solution", "appliance", "hardware", "device",
-            "equipment", "license", "subscription", "bom", "boq",
-            "must comply", "must support", "must have", "shall comply",
-            "shall support", "should provide", "capacity", "throughput",
-            "interfaces", "sessions", "redundant", "firewall",
+            "supply", "provide", "proposed", "procure", "recommended solution",
+            "appliance", "hardware", "equipment", "bom", "boq",
+            "total remote sites", "aggregation firewalls", "remote site equipment",
         )
         return any(term in lowered for term in procurement_terms)
+
+    @staticmethod
+    def _should_hardware_reference(text: str, metadata: Dict[str, Any]) -> bool:
+        normalized = ProductMatcher.normalize_requirements(metadata)
+        if not normalized.get("device_type"):
+            return False
+        if metadata.get("direct_reference"):
+            return True
+        if HardwareReferenceInjector._is_bullet_fragment(text) and not HardwareReferenceInjector._has_standalone_procurement_context(text):
+            return False
+        if HardwareReferenceInjector._has_measurable_constraints(normalized):
+            return True
+        if HardwareReferenceInjector._is_service_only_requirement(text):
+            return False
+        return HardwareReferenceInjector._text_requires_catalog_reference(text, metadata)
+
+    @staticmethod
+    def _has_measurable_constraints(normalized: Dict[str, Any]) -> bool:
+        ignored = {"device_type", "source_text", "requirements", "fortinet_feature_candidates"}
+        ignored_boolean_only = {"ha_port", "management_port", "console_port"}
+        for key, value in normalized.items():
+            if key in ignored:
+                continue
+            if key in ignored_boolean_only:
+                continue
+            if key == "interfaces" and isinstance(value, dict) and any(v not in (None, "", 0) for v in value.values()):
+                return True
+            if key in NUMERIC_REQUIREMENT_FIELDS and value not in (None, "", 0):
+                return True
+        return False
+
+    @staticmethod
+    def _is_bullet_fragment(text: str) -> bool:
+        return bool(re.match(r"^\s*[a-z]\)", str(text or ""), re.IGNORECASE))
+
+    @staticmethod
+    def _has_standalone_procurement_context(text: str) -> bool:
+        lowered = str(text or "").lower()
+        return any(term in lowered for term in (
+            "equipment hardware", "appliance", "hardware capacity", "firewall capacity",
+            "total remote sites", "aggregation firewalls", "remote site equipment",
+            "bidder should provide", "supply", "proposed solution",
+        ))
+
+    @staticmethod
+    def _is_service_only_requirement(text: str) -> bool:
+        lowered = str(text or "").lower()
+        service_terms = ("support", "warranty", "nbd", "principal", "rma", "sla", "training", "delivery")
+        hardware_terms = ("throughput", "interfaces", "sessions", "ports", "gbps", "mbps", "capacity")
+        return any(term in lowered for term in service_terms) and not any(term in lowered for term in hardware_terms)
 
     def _merge_metadata(self, base: Dict[str, Any], incoming: Dict[str, Any]) -> Dict[str, Any]:
         merged = copy.deepcopy(base)

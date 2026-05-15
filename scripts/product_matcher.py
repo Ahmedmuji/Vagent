@@ -123,6 +123,15 @@ INTERFACE_PATTERNS = {
     "1g_rj45": r"(?P<count>\d+)\s*(?:x|×)?\s*(?:1\s*g|1gbe|gigabit).*?(?:rj45|base-t|copper)",
 }
 
+INTERFACE_REVERSE_PATTERNS = {
+    "100g_qsfp28": r"(?:interfaces?|ports?).{0,50}(?:100\s*(?:g|gig|gbe|gbps)|hundred\s*gigabit).{0,35}(?:qsfp28|qsfp)?.{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
+    "40g_qsfp_plus": r"(?:interfaces?|ports?).{0,50}40\s*(?:g|gig|gbe|gbps).{0,35}(?:qsfp\+|qsfp)?.{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
+    "25g_sfp28": r"(?:interfaces?|ports?).{0,50}25\s*(?:g|gig|gbe|gbps).{0,35}(?:sfp28)?.{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
+    "10g_sfp_plus": r"(?:interfaces?|ports?).{0,50}10\s*(?:g|gig|gbe|gbps).{0,35}(?:sfp\+|sfp plus|sfp)?.{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
+    "1_10g_rj45": r"(?:interfaces?|ports?).{0,50}(?:1/10\s*g|1g/10g).{0,35}(?:rj45|base-t|copper)?.{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
+    "1g_rj45": r"(?:interfaces?|ports?).{0,50}(?:copper|rj45|base-t).{0,25}(?:1\s*(?:g|gig|gbe|gbps)|gigabit).{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
+}
+
 CATEGORY_KEYWORDS = {
     "CENTRALIZED_MANAGEMENT": ("fortimanager", "centralized management", "firewall manager", "security management"),
     "SIEM_SOC": ("fortisiem", " siem ", "soc platform", "security information and event management"),
@@ -656,7 +665,7 @@ class ProductMatcher:
         interfaces = cls._extract_interfaces(normalized)
         if interfaces:
             flat["interfaces"] = interfaces
-        if " ha " in normalized or "high availability" in normalized:
+        if re.search(r"\bha\s+(?:port|interface)\b|(?:port|interface)\s+(?:for\s+)?ha\b|dedicated\s+ha\b", normalized):
             flat["ha_port"] = True
         if " management port" in normalized or "mgmt port" in normalized:
             flat["management_port"] = True
@@ -767,6 +776,8 @@ class ProductMatcher:
         for name, pattern in INTERFACE_PATTERNS.items():
             total = 0
             for match in re.finditer(pattern, text):
+                total += int(match.group("count"))
+            for match in re.finditer(INTERFACE_REVERSE_PATTERNS.get(name, ""), text):
                 total += int(match.group("count"))
             if total:
                 interfaces[name] = total
