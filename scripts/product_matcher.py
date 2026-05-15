@@ -173,6 +173,7 @@ class ProductMatch:
     matched_requirements: List[str]
     missing_requirements: List[str]
     score_breakdown: Dict[str, float]
+    match_details: Dict[str, Any]
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -185,6 +186,7 @@ class ProductMatch:
             "matched_requirements": self.matched_requirements,
             "missing_requirements": self.missing_requirements,
             "score_breakdown": self.score_breakdown,
+            "match_details": self.match_details,
         }
 
 
@@ -322,12 +324,18 @@ class ProductMatcher:
         # A hard constraint fails when candidate_spec < required_spec.
         # We NEVER fall back to under-spec hardware.
         # ----------------------------------------------------------------
-        viable: List[Tuple[Dict[str, Any], List[str], Dict[str, float]]] = []
+        viable: List[Tuple[Dict[str, Any], List[str], Dict[str, float], Dict[str, Any]]] = []
+        rejected: List[Dict[str, Any]] = []
         for product in candidates:
-            ok, matched, missing = self._passes_hard_filters(product, requirements)
+            ok, matched, missing, details = self._passes_hard_filters(product, requirements)
             if ok:
                 score = self._score_product(product, requirements, matched)
-                viable.append((product, matched, score))
+                viable.append((product, matched, score, details))
+            elif missing:
+                rejected.append({
+                    "model": product.get("model"),
+                    "missing_or_under_spec": missing[:8],
+                })
 
         if not viable:
             # No product satisfies all requirements → return None rather than
@@ -339,7 +347,14 @@ class ProductMatcher:
         # (minimise over-provisioning) using fit_quality score.
         # ----------------------------------------------------------------
         viable.sort(key=lambda item: item[2]["fit_quality"], reverse=True)
-        product, matched, breakdown = viable[0]
+        product, matched, breakdown, details = viable[0]
+        details["selected_model"] = product.get("model")
+        details["valid_candidates_considered"] = len(viable)
+        details["rejected_candidates_sample"] = rejected[:8]
+        details["selection_reason"] = (
+            "Selected closest valid candidate after hard filtering. "
+            "Every listed matched constraint has candidate value >= required value."
+        )
         confidence = round(max(0.5, min(0.99, breakdown["total"])), 2)
         return ProductMatch(
             vendor=str(product.get("vendor", vendor)),
@@ -351,6 +366,7 @@ class ProductMatcher:
             matched_requirements=matched,
             missing_requirements=[],
             score_breakdown={k: round(v, 4) for k, v in breakdown.items()},
+            match_details=details,
         )
 
     @staticmethod
@@ -364,14 +380,24 @@ class ProductMatcher:
         return [category]
 
     @staticmethod
-    def _passes_hard_filters(product: Dict[str, Any], requirements: Dict[str, Any]) -> Tuple[bool, List[str], List[str]]:
+    def _passes_hard_filters(product: Dict[str, Any], requirements: Dict[str, Any]) -> Tuple[bool, List[str], List[str], Dict[str, Any]]:
         matched: List[str] = []
         missing: List[str] = []
+        details: Dict[str, Any] = {
+            "device_type": requirements.get("device_type") or requirements.get("category"),
+            "requirements": {},
+            "interfaces": {},
+        }
         for field in NUMERIC_REQUIREMENT_FIELDS:
             required = requirements.get(field)
             if required in (None, ""):
                 continue
             available = ProductMatcher._product_numeric_value(product, field, required)
+            details["requirements"][field] = {
+                "required": required,
+                "candidate": available,
+                "passes": False,
+            }
             if available is None:
                 missing.append(field)
                 continue
@@ -384,23 +410,36 @@ class ProductMatcher:
                 missing.append(field)
             else:
                 matched.append(field)
+                details["requirements"][field]["passes"] = True
         required_interfaces = requirements.get("interfaces") or {}
         product_interfaces = product.get("interfaces") or {}
         for name, required_count in required_interfaces.items():
             if required_count in (None, ""):
                 continue
             available_count = ProductMatcher._compatible_interface_count(product, name, required_count)
+            details["interfaces"][name] = {
+                "required": required_count,
+                "candidate": available_count,
+                "passes": int(available_count) >= int(required_count),
+            }
             if int(available_count) < int(required_count):
                 missing.append(f"interfaces.{name}")
             else:
                 matched.append(f"interfaces.{name}")
         for field in ("ha_port", "management_port", "console_port"):
             if requirements.get(field) is True:
+                details["requirements"][field] = {
+                    "required": True,
+                    "candidate": product.get(field),
+                    "passes": product.get(field) is True,
+                }
                 if product.get(field) is True:
                     matched.append(field)
                 else:
                     missing.append(field)
-        return not missing, matched, missing
+        details["requirements"] = {k: v for k, v in details["requirements"].items() if v.get("required") not in (None, "")}
+        details["interfaces"] = {k: v for k, v in details["interfaces"].items() if v.get("required") not in (None, "")}
+        return not missing, matched, missing, details
 
     @staticmethod
     def _score_product(product: Dict[str, Any], requirements: Dict[str, Any], matched: List[str]) -> Dict[str, float]:

@@ -10,6 +10,7 @@ from product_matcher import NUMERIC_REQUIREMENT_FIELDS, ProductMatcher, format_r
 REFERENCE_COLUMN = "References"
 ADMIN_REFERENCE_COLUMN = "Admin_Guide_Reference"
 ADMIN_TAG_COLUMN = "Admin_Guide_Reference_Tag"
+MATCH_DETAILS_COLUMN = "Reference_Match_Details"
 
 
 class HardwareReferenceInjector:
@@ -46,6 +47,9 @@ class HardwareReferenceInjector:
         if ADMIN_TAG_COLUMN not in headers:
             headers.append(ADMIN_TAG_COLUMN)
         tag_idx = headers.index(ADMIN_TAG_COLUMN)
+        if MATCH_DETAILS_COLUMN not in headers:
+            headers.append(MATCH_DETAILS_COLUMN)
+        details_idx = headers.index(MATCH_DETAILS_COLUMN)
         rows = sheet.get("rows") or []
         groups: Dict[str, Dict[str, Any]] = {}
         for row_idx, row in enumerate(rows):
@@ -55,6 +59,7 @@ class HardwareReferenceInjector:
             row_data[ref_idx] = ""
             row_data[admin_ref_idx] = ""
             row_data[tag_idx] = ""
+            row_data[details_idx] = ""
             self._set_legacy_reference(row, "")
             if row_type == "section":
                 self.stats["sections_skipped"] += 1
@@ -107,10 +112,17 @@ class HardwareReferenceInjector:
                     self.stats["unmatched_rows"] += 1
                     continue
                 self.stats["direct_model_reference_rows"] += 1
+                match_details = json.dumps({
+                    "source": "direct_model_reference",
+                    "selected_reference": reference,
+                    "note": "Used direct model mention because no measurable catalog constraints were available.",
+                }, ensure_ascii=False, indent=2)
             else:
                 match_result = self.matcher.match(metadata)
                 reference = format_reference(match_result)
+                match_details = self._format_match_details(match_result)
             primary_data[ref_idx] = reference
+            primary_data[details_idx] = match_details
             self._set_legacy_reference(primary[0], reference)
             self.stats["sibling_rows_suppressed"] += max(0, len(group["rows"]) - 1)
             if reference:
@@ -118,6 +130,25 @@ class HardwareReferenceInjector:
             else:
                 self.stats["unmatched_rows"] += len(group["rows"])
         sheet["headers"] = headers
+
+    @staticmethod
+    def _format_match_details(match_result: Dict[str, Any]) -> str:
+        details = {
+            "normalized_requirements": match_result.get("requirements", {}),
+            "vendors": {},
+        }
+        for vendor, match in (match_result.get("matches") or {}).items():
+            if not match:
+                details["vendors"][vendor] = {"selected_model": None, "reason": "No valid catalog candidate met all hard constraints."}
+                continue
+            details["vendors"][vendor] = {
+                "selected_model": match.get("matched_product"),
+                "category": match.get("category"),
+                "matched_requirements": match.get("matched_requirements", []),
+                "score_breakdown": match.get("score_breakdown", {}),
+                "match_details": match.get("match_details", {}),
+            }
+        return json.dumps(details, ensure_ascii=False, indent=2)
 
     @staticmethod
     def _get_row_parts(row: Any) -> Tuple[str, List[Any], Dict[str, Any]]:

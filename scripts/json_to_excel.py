@@ -116,7 +116,7 @@ def create_formatted_excel(data, output_path):
         raw_title = sheet_data.get("title", "Data")
         title = sanitize_title(raw_title, used_titles)
         headers = list(sheet_data.get("headers", []))
-        for required_header in ("References", "Admin_Guide_Reference"):
+        for required_header in ("References", "Admin_Guide_Reference", "Reference_Match_Details"):
             if required_header not in headers:
                 headers.append(required_header)
         rows = sheet_data.get("rows", [])
@@ -203,7 +203,7 @@ def create_formatted_excel(data, output_path):
                 header_val = str(headers[col[0].column - 1]).strip() if (col[0].column - 1) < len(headers) else ""
                 if header_val in ("References", "Admin_Guide_Reference"):
                     ws.column_dimensions[column_letter].width = 80 # Much wider for references
-                elif header_val == "Admin_Guide_Reference_Tag":
+                elif header_val in ("Admin_Guide_Reference_Tag", "Reference_Match_Details"):
                     ws.column_dimensions[column_letter].width = 20
                     ws.column_dimensions[column_letter].hidden = True
                 else:
