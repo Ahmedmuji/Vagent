@@ -136,7 +136,8 @@
       color: var(--text-muted);
     }
 
-    .input-field input {
+    .input-field input,
+    .input-field select {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--card-border);
       border-radius: 0.75rem;
@@ -147,7 +148,13 @@
       transition: all 0.2s;
     }
 
-    .input-field input:focus {
+    .input-field select option {
+      background: #1a1f2e;
+      color: var(--text-main);
+    }
+
+    .input-field input:focus,
+    .input-field select:focus {
       outline: none;
       border-color: var(--primary);
       box-shadow: 0 0 0 4px var(--primary-glow);
@@ -326,6 +333,12 @@
 
         <div class="options-grid">
           <div class="input-field">
+            <label for="modelName">Gemini Model</label>
+            <select id="modelName">
+              <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+            </select>
+          </div>
+          <div class="input-field">
             <label for="startPage">Start Page (Optional)</label>
             <input type="number" id="startPage" placeholder="e.g. 55" min="1">
           </div>
@@ -377,8 +390,11 @@
     <div style="background:#1a1f2e; border:1px solid rgba(255,255,255,0.15); border-radius:1.25rem; padding:2rem 2.5rem; max-width:420px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
       <h2 style="margin:0 0 1.25rem; font-size:1.3rem; color:#fff;">💰 API Cost Estimate</h2>
       <table id="costTable" style="width:100%; border-collapse:collapse; font-size:0.9rem; color:#ccc; margin-bottom:1.5rem;">
+        <tr><td style="padding:0.3rem 0;">Model</td><td id="cModel" style="text-align:right; color:#fff; font-weight:600;"></td></tr>
         <tr><td style="padding:0.3rem 0;">Pages</td><td id="cPages" style="text-align:right; color:#fff; font-weight:600;"></td></tr>
         <tr><td style="padding:0.3rem 0;">Chunks</td><td id="cChunks" style="text-align:right; color:#fff; font-weight:600;"></td></tr>
+        <tr><td style="padding:0.3rem 0;">Input price / 1M</td><td id="cInputRate" style="text-align:right; color:#fff; font-weight:600;"></td></tr>
+        <tr><td style="padding:0.3rem 0;">Output price / 1M</td><td id="cOutputRate" style="text-align:right; color:#fff; font-weight:600;"></td></tr>
         <tr><td style="padding:0.3rem 0;">Est. input tokens</td><td id="cInputTok" style="text-align:right; color:#fff; font-weight:600;"></td></tr>
         <tr><td style="padding:0.3rem 0;">Est. output tokens</td><td id="cOutputTok" style="text-align:right; color:#fff; font-weight:600;"></td></tr>
         <tr><td style="padding:0.3rem 0;">Input cost</td><td id="cInputCost" style="text-align:right; color:#fff; font-weight:600;"></td></tr>
@@ -404,6 +420,7 @@
       currentStep: 0,
       pendingStoredName: null,   // set after /estimate_cost succeeds
       pendingOriginalName: null,
+      pendingModelName: null,
     };
 
     // ─── DOM refs ────────────────────────────────────────────────────────────
@@ -419,6 +436,7 @@
     const statusArea       = document.getElementById('statusArea');
     const statusTitle      = document.getElementById('statusTitle');
     const statusDesc       = document.getElementById('statusDesc');
+    const modelNameInput   = document.getElementById('modelName');
     const startPageInput   = document.getElementById('startPage');
     const endPageInput     = document.getElementById('endPage');
     const skipEnrichmentInput = document.getElementById('skipEnrichment');
@@ -427,6 +445,25 @@
     const costModal       = document.getElementById('costModal');
     const costConfirmBtn  = document.getElementById('costConfirmBtn');
     const costCancelBtn   = document.getElementById('costCancelBtn');
+
+    async function loadModelOptions() {
+      try {
+        const res = await fetch('/models');
+        const data = await res.json();
+        if (!res.ok || !data.models) return;
+        modelNameInput.innerHTML = '';
+        data.models.forEach(model => {
+          const option = document.createElement('option');
+          option.value = model.id;
+          option.textContent = `${model.label} ($${model.input_per_1m}/$${model.output_per_1m} per 1M)`;
+          modelNameInput.appendChild(option);
+        });
+      } catch (err) {
+        console.warn('Could not load model options:', err);
+      }
+    }
+
+    loadModelOptions();
 
     // ─── Drag & Drop ─────────────────────────────────────────────────────────
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -454,6 +491,7 @@
       }
       state.file = file;
       state.pendingStoredName = null;
+      state.pendingModelName = null;
       selectedFileName.textContent = file.name;
       dropZoneContent.style.display = 'none';
       filePreview.style.display = 'flex';
@@ -464,6 +502,7 @@
       e.stopPropagation();
       state.file = null;
       state.pendingStoredName = null;
+      state.pendingModelName = null;
       fileInput.value = '';
       dropZoneContent.style.display = 'block';
       filePreview.style.display = 'none';
@@ -479,6 +518,7 @@
 
       const formData = new FormData();
       formData.append('rfp_file', state.file);
+      formData.append('model_name', modelNameInput.value);
       formData.append('start_page', startPageInput.value);
       formData.append('end_page', endPageInput.value);
 
@@ -490,11 +530,15 @@
         // Store file reference for Step 2
         state.pendingStoredName   = data.stored_name;
         state.pendingOriginalName = data.original_name;
+        state.pendingModelName    = data.model_name;
 
         // Populate modal
         const c = data.cost;
+        document.getElementById('cModel').textContent      = c.model_label || c.model;
         document.getElementById('cPages').textContent      = c.num_pages.toLocaleString();
         document.getElementById('cChunks').textContent     = c.num_chunks.toLocaleString();
+        document.getElementById('cInputRate').textContent  = '$' + c.input_price_per_1m.toFixed(2);
+        document.getElementById('cOutputRate').textContent = '$' + c.output_price_per_1m.toFixed(2);
         document.getElementById('cInputTok').textContent   = c.estimated_input_tokens.toLocaleString();
         document.getElementById('cOutputTok').textContent  = c.estimated_output_tokens.toLocaleString();
         document.getElementById('cInputCost').textContent  = '$' + c.input_cost_usd.toFixed(6);
@@ -513,6 +557,7 @@
     costCancelBtn.addEventListener('click', () => {
       costModal.style.display = 'none';
       state.pendingStoredName = null;
+      state.pendingModelName = null;
       clearStatus();
     });
 
@@ -528,6 +573,7 @@
       const formData = new FormData();
       formData.append('stored_name',   state.pendingStoredName);
       formData.append('original_name', state.pendingOriginalName);
+      formData.append('model_name', state.pendingModelName || modelNameInput.value);
       formData.append('start_page', startPageInput.value);
       formData.append('end_page', endPageInput.value);
       if (skipEnrichmentInput.checked) formData.append('skip_enrichment', 'on');

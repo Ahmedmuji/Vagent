@@ -103,7 +103,7 @@ def prepare_admin_guide_index(project_root, skip_enrichment=False):
     print("  Skipping Admin Guide enrichment.")
     return None, paths["admin_guide_pdf_path"]
 
-def process_pdf_section(filename, input_path, start_page, end_page, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path=None, admin_guide_pdf_path=None):
+def process_pdf_section(filename, input_path, start_page, end_page, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path=None, admin_guide_pdf_path=None, model_name=None):
     base_name = os.path.splitext(filename)[0].replace("_Requirements", "")
     print(f"\n--- Processing: {base_name} pages {start_page}-{end_page} ---")
 
@@ -122,10 +122,10 @@ def process_pdf_section(filename, input_path, start_page, end_page, extracted_pd
     # COST GATE: estimate API cost and require operator confirmation
     # before making any LLM calls.
     # ------------------------------------------------------------------
-    cost_info = estimate_cost(extracted_pdf_path)
+    cost_info = estimate_cost(extracted_pdf_path, model_name=model_name)
     confirm_execution(cost_info)
 
-    technical_data = get_technical_data_from_gemini(extracted_pdf_path, chunk_output_dir=pdf_json_dir)
+    technical_data = get_technical_data_from_gemini(extracted_pdf_path, model_name=cost_info["model"], chunk_output_dir=pdf_json_dir)
 
     print("Resolving hardware references from deterministic product catalogs...")
     technical_data, hardware_stats = inject_hardware_references(technical_data)
@@ -175,7 +175,7 @@ def process_pdf_section(filename, input_path, start_page, end_page, extracted_pd
         "enrichment_stats": enrichment_stats,
     }
 
-def process_single_file(filename, input_path, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path=None, admin_guide_pdf_path=None):
+def process_single_file(filename, input_path, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path=None, admin_guide_pdf_path=None, model_name=None):
 
     """Orchestrates the full extraction for a single PDF file."""
     base_name = os.path.splitext(filename)[0].replace("_Requirements", "")
@@ -195,6 +195,7 @@ def process_single_file(filename, input_path, extracted_pdf_dir, json_results_di
             excel_results_dir,
             toc_index_path,
             admin_guide_pdf_path,
+            model_name,
         )
         print(f"SUCCESS: Generated reports for {base_name}:")
         print(f"  JSON:  {outputs['json_path']}")
@@ -208,6 +209,8 @@ def main():
     parser.add_argument("--input", help="Path to a specific PDF to process. If omitted, runs batch mode.")
     parser.add_argument("--skip-enrichment", action="store_true",
                         help="Skip the Fortinet Admin Guide enrichment step.")
+    parser.add_argument("--model", default=None,
+                        help="Gemini model to use for extraction and cost estimation.")
     args = parser.parse_args()
 
     print("=== STARTING RFP EXTRACTION PIPELINE ===\n")
@@ -245,7 +248,7 @@ def main():
             print(f"Error: File not found: {args.input}")
             return
         filename = os.path.basename(args.input)
-        process_single_file(filename, args.input, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path, admin_guide_pdf_path)
+        process_single_file(filename, args.input, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path, admin_guide_pdf_path, args.model)
     else:
         # BATCH MODE
         if not os.path.exists(input_dir):
@@ -257,7 +260,7 @@ def main():
         
         for filename in files:
             input_path = os.path.join(input_dir, filename)
-            process_single_file(filename, input_path, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path, admin_guide_pdf_path)
+            process_single_file(filename, input_path, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path, admin_guide_pdf_path, args.model)
 
     print("\n=== PIPELINE COMPLETE ===")
     print(f"JSON Results:  {json_results_dir}")
@@ -265,6 +268,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 

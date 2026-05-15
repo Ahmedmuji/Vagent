@@ -10,7 +10,7 @@ from pypdf import PdfReader
 from werkzeug.utils import secure_filename
 
 from main_pipeline import ensure_runtime_dirs, get_project_paths, local_detect_requirements, prepare_admin_guide_index, process_pdf_section
-from cost_estimator import AbortedByUser, estimate_cost
+from cost_estimator import AbortedByUser, estimate_cost, get_supported_models, resolve_model_pricing
 
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -55,6 +55,11 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/models", methods=["GET"])
+def list_models():
+    return jsonify({"models": get_supported_models()})
+
+
 @app.route("/reference_pdf", methods=["GET"])
 def serve_reference_pdf():
     paths = get_project_paths(PROJECT_ROOT)
@@ -81,6 +86,8 @@ def estimate_cost_route():
 
     paths = get_project_paths(PROJECT_ROOT)
     ensure_runtime_dirs(paths)
+    model_name = request.form.get("model_name")
+    selected_model = resolve_model_pricing(model_name)
 
     original_name = secure_filename(uploaded_file.filename) or "uploaded_rfp.pdf"
     run_id = uuid.uuid4().hex[:8]
@@ -91,18 +98,24 @@ def estimate_cost_route():
 
     try:
         total_pages = len(PdfReader(input_path).pages)
-        start_page, end_page = parse_page_range(
+        page_range = parse_page_range(
             request.form.get("start_page"),
             request.form.get("end_page"),
             total_pages,
         )
+        if page_range is None:
+            detected = local_detect_requirements(input_path)
+            start_page = detected["start_page"]
+            end_page = detected["end_page"]
+        else:
+            start_page, end_page = page_range
         # Extract just the relevant pages so the estimate matches what will be processed
         from pdf_segmenter import extract_pages as _extract
         import tempfile, pathlib
         tmp_path = os.path.join(paths["extracted_pdf_dir"], f"cost_check_{run_id}.pdf")
         _extract(input_path, tmp_path, int(start_page), int(end_page))
 
-        cost_info = estimate_cost(tmp_path)
+        cost_info = estimate_cost(tmp_path, model_name=selected_model["id"])
         # Clean up the temp file
         try:
             os.remove(tmp_path)
@@ -112,6 +125,7 @@ def estimate_cost_route():
         return jsonify({
             "stored_name": stored_name,   # client passes this back to /process
             "original_name": original_name,
+            "model_name": selected_model["id"],
             "cost": cost_info,
         })
     except Exception as exc:
@@ -123,6 +137,8 @@ def estimate_cost_route():
 def process_upload():
     paths = get_project_paths(PROJECT_ROOT)
     ensure_runtime_dirs(paths)
+    model_name = request.form.get("model_name")
+    selected_model = resolve_model_pricing(model_name)
 
     # Two-step flow: /estimate_cost already saved the file; client passes stored_name back.
     pre_stored_name = request.form.get("stored_name")
@@ -174,6 +190,7 @@ def process_upload():
             paths["excel_results_dir"],
             toc_index_path,
             admin_guide_pdf_path,
+            selected_model["id"],
         )
         final_excel_path = outputs["final_excel_path"]
         download_name = f"{Path(original_name).stem}_enriched_requirements.xlsx"

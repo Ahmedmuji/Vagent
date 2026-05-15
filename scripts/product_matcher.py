@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 
 NUMERIC_REQUIREMENT_FIELDS = (
+    "ports",
     "ngfw_throughput_gbps",
     "ips_throughput_gbps",
     "ssl_tls_inspection_gbps",
@@ -196,6 +197,9 @@ class ProductMatcher:
                 interfaces[target_key] = max(interfaces.get(target_key, 0), int(value))
         if interfaces:
             normalized["interfaces"] = interfaces
+        ports = metadata.get("ports", detected_specs.get("ports", nested_requirements.get("ports")))
+        if ports not in (None, ""):
+            normalized["ports"] = int(ports)
         feature_candidates = metadata.get("fortinet_feature_candidates")
         if isinstance(feature_candidates, list):
             normalized["fortinet_feature_candidates"] = [str(item) for item in feature_candidates if str(item).strip()]
@@ -275,6 +279,8 @@ class ProductMatcher:
             if required in (None, ""):
                 continue
             available = product.get(field)
+            if field == "ports" and available is None:
+                available = ProductMatcher._total_interfaces(product)
             if available is None:
                 missing.append(field)
                 continue
@@ -320,6 +326,8 @@ class ProductMatcher:
         for field in NUMERIC_REQUIREMENT_FIELDS:
             required = requirements.get(field)
             available = product.get(field)
+            if field == "ports" and available is None:
+                available = ProductMatcher._total_interfaces(product)
             if required in (None, "") or available in (None, ""):
                 continue
             required_count += 1
@@ -372,6 +380,17 @@ class ProductMatcher:
             "total":       total,
             "fit_quality": fit_quality,
         }
+
+    @staticmethod
+    def _total_interfaces(product: Dict[str, Any]) -> Optional[int]:
+        interfaces = product.get("interfaces")
+        if not isinstance(interfaces, dict):
+            return None
+        total = 0
+        for value in interfaces.values():
+            if value not in (None, ""):
+                total += int(value)
+        return total
 
     @classmethod
     def extract_requirement_metadata(cls, text: str) -> Dict[str, Any]:

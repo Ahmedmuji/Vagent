@@ -6,33 +6,84 @@ Pre-processing API Cost Estimator for the RFP pipeline.
 Usage:
     from cost_estimator import estimate_cost, confirm_execution
 
-    cost_info = estimate_cost(pdf_path)
-    confirm_execution(cost_info)   # raises AbortedByUser if user declines
+    cost_info = estimate_cost(pdf_path, model_name="gemini-3-flash-preview")
+    confirm_execution(cost_info)
 """
 
 import os
 import sys
-from typing import Optional
+from typing import Dict, Optional
 
 from pypdf import PdfReader
 
 # ---------------------------------------------------------------------------
-# Pricing config (Gemini Flash 2.0 defaults — override via env vars)
+# Pricing config. Paid-tier text/image/video prices are per 1M tokens in USD.
+# Source checked 2026-05-15: https://ai.google.dev/gemini-api/docs/pricing
 # ---------------------------------------------------------------------------
-# Price per 1,000 tokens in USD
-PRICE_PER_1K_INPUT: float  = float(os.getenv("PRICE_PER_1K_INPUT",  "0.00010"))   # $0.10 / 1M tokens
-PRICE_PER_1K_OUTPUT: float = float(os.getenv("PRICE_PER_1K_OUTPUT", "0.00040"))   # $0.40 / 1M tokens
+DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
 
-# Output tokens are estimated as a fraction of input tokens
+MODEL_PRICING: Dict[str, Dict[str, object]] = {
+    "gemini-3-flash-preview": {
+        "label": "Gemini 3 Flash Preview",
+        "input_per_1m": 0.50,
+        "output_per_1m": 3.00,
+    },
+    "gemini-3.1-flash-lite-preview": {
+        "label": "Gemini 3.1 Flash-Lite Preview",
+        "input_per_1m": 0.25,
+        "output_per_1m": 1.50,
+    },
+    "gemini-2.5-flash": {
+        "label": "Gemini 2.5 Flash",
+        "input_per_1m": 0.30,
+        "output_per_1m": 2.50,
+    },
+    "gemini-2.5-flash-lite": {
+        "label": "Gemini 2.5 Flash-Lite",
+        "input_per_1m": 0.10,
+        "output_per_1m": 0.40,
+    },
+    "gemini-2.5-pro": {
+        "label": "Gemini 2.5 Pro",
+        "input_per_1m": 1.25,
+        "output_per_1m": 10.00,
+    },
+}
+
+# Output tokens are estimated as a fraction of input tokens.
 OUTPUT_TOKEN_RATIO: float = float(os.getenv("OUTPUT_TOKEN_RATIO", "0.30"))
 
-# Characters per token — a safe approximation for multilingual/technical PDFs.
-# tiktoken is Gemini-incompatible; Gemini uses ~3.5–4 chars/token for English text.
+# Characters per token. Gemini uses roughly 3.5-4 chars/token for English text;
+# this is only an estimate and actual billing may differ.
 CHARS_PER_TOKEN: float = float(os.getenv("CHARS_PER_TOKEN", "3.8"))
 
 
 class AbortedByUser(RuntimeError):
     """Raised when the user explicitly declines to proceed."""
+
+
+def get_supported_models() -> list:
+    """Return model choices for the UI/API."""
+    return [
+        {
+            "id": model_id,
+            "label": str(config["label"]),
+            "input_per_1m": float(config["input_per_1m"]),
+            "output_per_1m": float(config["output_per_1m"]),
+        }
+        for model_id, config in MODEL_PRICING.items()
+    ]
+
+
+def resolve_model_pricing(model_name: Optional[str]) -> Dict[str, object]:
+    """Validate a selected model and return its pricing config."""
+    selected = (model_name or DEFAULT_MODEL).strip()
+    if selected not in MODEL_PRICING:
+        valid = ", ".join(MODEL_PRICING)
+        raise ValueError(f"Unsupported model '{selected}'. Choose one of: {valid}")
+    pricing = dict(MODEL_PRICING[selected])
+    pricing["id"] = selected
+    return pricing
 
 
 def _extract_text_from_pdf(pdf_path: str) -> str:
@@ -46,94 +97,78 @@ def _extract_text_from_pdf(pdf_path: str) -> str:
     return "\n".join(pages_text)
 
 
-def estimate_cost(pdf_path: str, extra_prompt_chars: int = 4500) -> dict:
+def estimate_cost(pdf_path: str, extra_prompt_chars: int = 4500, model_name: Optional[str] = None) -> dict:
     """
     Estimate the LLM API cost for processing an RFP PDF.
 
     The estimate accounts for:
     - Full text extracted from the PDF
-    - A fixed overhead for the system prompt (~4,500 chars by default)
-    - Per-chunk overhead since the PDF is split into 10-page chunks
-
-    Parameters
-    ----------
-    pdf_path : str
-        Absolute path to the uploaded RFP PDF.
-    extra_prompt_chars : int
-        Estimated size of the system prompt injected per chunk in characters.
-
-    Returns
-    -------
-    dict with keys:
-        num_pages, num_chunks, total_input_chars, estimated_input_tokens,
-        estimated_output_tokens, input_cost_usd, output_cost_usd, total_cost_usd
+    - A fixed overhead for the system prompt, per chunk
+    - 10-page chunking used by gemini_extractor.py
     """
-    # Step 1 — Count pages to calculate chunking overhead
     reader = PdfReader(pdf_path)
     num_pages = len(reader.pages)
-    # Each chunk processes up to 10 pages (mirrors chunk_pdf in gemini_extractor.py)
-    PAGES_PER_CHUNK = 10
-    num_chunks = max(1, -(-num_pages // PAGES_PER_CHUNK))  # ceiling division
+    pages_per_chunk = 10
+    num_chunks = max(1, -(-num_pages // pages_per_chunk))
 
-    # Step 2 — Extract raw text and count characters
     raw_text = _extract_text_from_pdf(pdf_path)
     pdf_chars = len(raw_text)
-
-    # Step 3 — Add prompt overhead per chunk
     total_input_chars = pdf_chars + (extra_prompt_chars * num_chunks)
 
-    # Step 4 — Convert characters → tokens using our approximation ratio
     estimated_input_tokens = int(total_input_chars / CHARS_PER_TOKEN)
     estimated_output_tokens = int(estimated_input_tokens * OUTPUT_TOKEN_RATIO)
 
-    # Step 5 — Calculate cost
-    input_cost  = (estimated_input_tokens  / 1000) * PRICE_PER_1K_INPUT
-    output_cost = (estimated_output_tokens / 1000) * PRICE_PER_1K_OUTPUT
-    total_cost  = input_cost + output_cost
+    pricing = resolve_model_pricing(model_name)
+    input_per_1m = float(pricing["input_per_1m"])
+    output_per_1m = float(pricing["output_per_1m"])
+    input_cost = (estimated_input_tokens / 1_000_000) * input_per_1m
+    output_cost = (estimated_output_tokens / 1_000_000) * output_per_1m
+    total_cost = input_cost + output_cost
 
     return {
-        "num_pages":               num_pages,
-        "num_chunks":              num_chunks,
-        "total_input_chars":       total_input_chars,
-        "estimated_input_tokens":  estimated_input_tokens,
+        "num_pages": num_pages,
+        "num_chunks": num_chunks,
+        "total_input_chars": total_input_chars,
+        "estimated_input_tokens": estimated_input_tokens,
         "estimated_output_tokens": estimated_output_tokens,
-        "input_cost_usd":          round(input_cost,  6),
-        "output_cost_usd":         round(output_cost, 6),
-        "total_cost_usd":          round(total_cost,  6),
+        "model": pricing["id"],
+        "model_label": pricing["label"],
+        "input_price_per_1m": input_per_1m,
+        "output_price_per_1m": output_per_1m,
+        "input_cost_usd": round(input_cost, 6),
+        "output_cost_usd": round(output_cost, 6),
+        "total_cost_usd": round(total_cost, 6),
     }
 
 
 def confirm_execution(cost_info: dict) -> None:
     """
     Log the cost summary. In web/Gunicorn mode there is no TTY, so this
-    function simply prints the estimate and returns — the browser UI is
+    function simply prints the estimate and returns. The browser UI is
     responsible for obtaining user confirmation before calling /process.
-
-    For interactive CLI use, call confirm_execution_cli() instead.
     """
     print("\n" + "=" * 60)
-    print("  💰  API COST ESTIMATION")
+    print("  API COST ESTIMATION")
     print("=" * 60)
+    print(f"  Model              : {cost_info.get('model_label', cost_info.get('model', 'unknown'))}")
     print(f"  PDF pages          : {cost_info['num_pages']}")
     print(f"  Processing chunks  : {cost_info['num_chunks']}")
     print(f"  Est. input tokens  : {cost_info['estimated_input_tokens']:,}")
     print(f"  Est. output tokens : {cost_info['estimated_output_tokens']:,}")
     print(f"  Input cost         : ${cost_info['input_cost_usd']:.6f}")
     print(f"  Output cost        : ${cost_info['output_cost_usd']:.6f}")
-    print(f"  ─────────────────────────────────")
+    print("  ---------------------------------")
     print(f"  TOTAL ESTIMATED    : ${cost_info['total_cost_usd']:.6f} USD")
     print("=" * 60)
-    print("[Cost Gate] Web mode — confirmation handled by browser UI.\n")
+    print("[Cost Gate] Web mode - confirmation handled by browser UI.\n")
 
 
 def confirm_execution_cli(cost_info: dict) -> None:
     """
     Interactive CLI confirmation gate. Prints the cost summary and blocks
     until the operator types 'yes'. Raises AbortedByUser otherwise.
-
-    Only call this from __main__ / CLI entry points, NOT from Flask/Gunicorn.
     """
-    confirm_execution(cost_info)   # print summary first
+    confirm_execution(cost_info)
 
     try:
         answer = input(
@@ -142,11 +177,10 @@ def confirm_execution_cli(cost_info: dict) -> None:
         ).strip().lower()
     except (EOFError, KeyboardInterrupt, OSError):
         print("\n[Cost Gate] Non-interactive environment detected. Aborting for safety.")
-        raise AbortedByUser("Non-interactive environment — execution aborted automatically.")
+        raise AbortedByUser("Non-interactive environment - execution aborted automatically.")
 
     if answer != "yes":
         print("\n[Cost Gate] Execution cancelled by operator.")
         raise AbortedByUser(f"User declined to proceed (entered: '{answer}').")
 
-    print("[Cost Gate] ✅ Operator confirmed. Proceeding with RFP processing...\n")
-
+    print("[Cost Gate] Operator confirmed. Proceeding with RFP processing...\n")
