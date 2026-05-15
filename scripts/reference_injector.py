@@ -101,11 +101,13 @@ class HardwareReferenceInjector:
             if group["features"]:
                 metadata["fortinet_feature_candidates"] = group["features"]
             if not self._has_matchable_requirements(metadata):
-                self.stats["unmatched_rows"] += 1
-                continue
-            direct_references = group.get("direct_references") or []
-            reference = " | ".join(direct_references)
-            if not reference:
+                direct_references = group.get("direct_references") or []
+                reference = " | ".join(direct_references)
+                if not reference:
+                    self.stats["unmatched_rows"] += 1
+                    continue
+                self.stats["direct_model_reference_rows"] += 1
+            else:
                 match_result = self.matcher.match(metadata)
                 reference = format_reference(match_result)
             primary_data[ref_idx] = reference

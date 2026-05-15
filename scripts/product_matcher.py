@@ -22,12 +22,31 @@ NUMERIC_REQUIREMENT_FIELDS = (
     "storage_tb",
 )
 
+PRODUCT_SPEC_ALIASES = {
+    "firewall_throughput_gbps": ("ngfw_throughput_gbps", "throughput_gbps"),
+    "ngfw_throughput_gbps": ("firewall_throughput_gbps", "throughput_gbps"),
+    "switching_capacity_gbps": ("throughput_gbps",),
+    "throughput_gbps": ("switching_capacity_gbps", "ngfw_throughput_gbps"),
+    "connections_per_second": ("cps",),
+}
+
 INTERFACE_METADATA_FIELDS = {
     "interfaces_1g": "1g_rj45",
     "interfaces_10g": "10g_sfp_plus",
     "interfaces_25g": "25g_sfp28",
     "interfaces_40g": "40g_qsfp_plus",
     "interfaces_100g": "100g_qsfp28",
+}
+
+INTERFACE_COMPATIBILITY = {
+    "1g_rj45": ("1g_rj45", "1_10g_rj45"),
+    "10g_rj45": ("10g_rj45", "1_10g_rj45"),
+    "1_10g_rj45": ("1_10g_rj45",),
+    "1g_sfp": ("1g_sfp",),
+    "10g_sfp_plus": ("10g_sfp_plus",),
+    "25g_sfp28": ("25g_sfp28",),
+    "40g_qsfp_plus": ("40g_qsfp_plus",),
+    "100g_qsfp28": ("100g_qsfp28",),
 }
 
 DEVICE_CATEGORY_MAP = {
@@ -278,9 +297,7 @@ class ProductMatcher:
             required = requirements.get(field)
             if required in (None, ""):
                 continue
-            available = product.get(field)
-            if field == "ports" and available is None:
-                available = ProductMatcher._total_interfaces(product)
+            available = ProductMatcher._product_numeric_value(product, field)
             if available is None:
                 missing.append(field)
                 continue
@@ -293,7 +310,7 @@ class ProductMatcher:
         for name, required_count in required_interfaces.items():
             if required_count in (None, ""):
                 continue
-            available_count = product_interfaces.get(name, 0)
+            available_count = ProductMatcher._compatible_interface_count(product_interfaces, name)
             if int(available_count) < int(required_count):
                 missing.append(f"interfaces.{name}")
             else:
@@ -325,9 +342,7 @@ class ProductMatcher:
 
         for field in NUMERIC_REQUIREMENT_FIELDS:
             required = requirements.get(field)
-            available = product.get(field)
-            if field == "ports" and available is None:
-                available = ProductMatcher._total_interfaces(product)
+            available = ProductMatcher._product_numeric_value(product, field)
             if required in (None, "") or available in (None, ""):
                 continue
             required_count += 1
@@ -344,7 +359,7 @@ class ProductMatcher:
         product_interfaces = product.get("interfaces") or {}
         for name, required_interface_count in required_interfaces.items():
             required_count += 1
-            available_count = product_interfaces.get(name)
+            available_count = ProductMatcher._compatible_interface_count(product_interfaces, name)
             if not required_interface_count or not available_count:
                 continue
             ratio = int(required_interface_count) / int(available_count)
@@ -388,6 +403,31 @@ class ProductMatcher:
             return None
         total = 0
         for value in interfaces.values():
+            if value not in (None, ""):
+                total += int(value)
+        return total
+
+    @staticmethod
+    def _product_numeric_value(product: Dict[str, Any], field: str) -> Optional[float]:
+        if field == "ports":
+            return ProductMatcher._total_interfaces(product)
+        value = product.get(field)
+        if value not in (None, ""):
+            return float(value)
+        for alias in PRODUCT_SPEC_ALIASES.get(field, ()):
+            alias_value = product.get(alias)
+            if alias_value not in (None, ""):
+                return float(alias_value)
+        return None
+
+    @staticmethod
+    def _compatible_interface_count(product_interfaces: Dict[str, Any], required_name: str) -> int:
+        if not isinstance(product_interfaces, dict):
+            return 0
+        compatible_names = INTERFACE_COMPATIBILITY.get(required_name, (required_name,))
+        total = 0
+        for name in compatible_names:
+            value = product_interfaces.get(name, 0)
             if value not in (None, ""):
                 total += int(value)
         return total
