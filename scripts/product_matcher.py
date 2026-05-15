@@ -375,7 +375,12 @@ class ProductMatcher:
             if available is None:
                 missing.append(field)
                 continue
-            if float(available) < float(required):
+            required_value = ProductMatcher._parse_catalog_number(required)
+            available_value = ProductMatcher._parse_catalog_number(available)
+            if required_value is None or available_value is None:
+                missing.append(field)
+                continue
+            if available_value < required_value:
                 missing.append(field)
             else:
                 matched.append(field)
@@ -420,8 +425,10 @@ class ProductMatcher:
             if required in (None, "") or available in (None, ""):
                 continue
             required_count += 1
-            required_float = float(required)
-            available_float = float(available)
+            required_float = ProductMatcher._parse_catalog_number(required)
+            available_float = ProductMatcher._parse_catalog_number(available)
+            if required_float is None or available_float is None:
+                continue
             if required_float <= 0 or available_float <= 0:
                 continue
             # ratio = required / available:  1.0 = perfect, <1.0 = over-provisioned.
@@ -478,7 +485,8 @@ class ProductMatcher:
         total = 0
         for value in interfaces.values():
             if value not in (None, ""):
-                total += int(value)
+                parsed_value = ProductMatcher._parse_catalog_number(value)
+                total += int(parsed_value or 0)
         return total
 
     @staticmethod
