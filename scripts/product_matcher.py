@@ -251,15 +251,23 @@ class ProductMatcher:
         for field in NUMERIC_REQUIREMENT_FIELDS:
             value = metadata.get(field, detected_specs.get(field, nested_requirements.get(field)))
             if value not in (None, ""):
-                normalized[field] = value
+                parsed_value = cls._parse_catalog_number(value)
+                if parsed_value is not None:
+                    normalized[field] = parsed_value
         if detected_specs.get("switching_capacity_tbps") not in (None, ""):
-            normalized["switching_capacity_gbps"] = float(detected_specs["switching_capacity_tbps"]) * 1000
+            parsed_tbps = cls._parse_catalog_number(detected_specs["switching_capacity_tbps"])
+            if parsed_tbps is not None:
+                normalized["switching_capacity_gbps"] = parsed_tbps * 1000
         throughput_mbps = metadata.get("throughput_mbps", detected_specs.get("throughput_mbps", nested_requirements.get("throughput_mbps")))
         if throughput_mbps not in (None, "") and "throughput_gbps" not in normalized:
-            normalized["throughput_gbps"] = float(throughput_mbps) / 1000
+            parsed_mbps = cls._parse_catalog_number(throughput_mbps)
+            if parsed_mbps is not None:
+                normalized["throughput_gbps"] = parsed_mbps / 1000
         storage_gb = metadata.get("storage_gb", metadata.get("local_storage_gb", detected_specs.get("storage_gb", detected_specs.get("local_storage_gb", nested_requirements.get("storage_gb", nested_requirements.get("local_storage_gb"))))))
         if storage_gb not in (None, "") and "storage_tb" not in normalized:
-            normalized["storage_tb"] = float(storage_gb) / 1024
+            parsed_storage_gb = cls._parse_catalog_number(storage_gb)
+            if parsed_storage_gb is not None:
+                normalized["storage_tb"] = parsed_storage_gb / 1024
         if detected_specs.get("cps", nested_requirements.get("cps")) not in (None, ""):
             normalized["connections_per_second"] = detected_specs.get("cps", nested_requirements.get("cps"))
         interfaces: Dict[str, int] = {}
@@ -267,16 +275,22 @@ class ProductMatcher:
         if isinstance(raw_interfaces, dict):
             for key, value in raw_interfaces.items():
                 if value not in (None, ""):
-                    interfaces[key] = int(value)
+                    parsed_value = cls._parse_catalog_number(value)
+                    if parsed_value is not None:
+                        interfaces[key] = int(parsed_value)
         for source_key, target_key in INTERFACE_METADATA_FIELDS.items():
             value = metadata.get(source_key, detected_specs.get(source_key))
             if value not in (None, ""):
-                interfaces[target_key] = max(interfaces.get(target_key, 0), int(value))
+                parsed_value = cls._parse_catalog_number(value)
+                if parsed_value is not None:
+                    interfaces[target_key] = max(interfaces.get(target_key, 0), int(parsed_value))
         if interfaces:
             normalized["interfaces"] = interfaces
         ports = metadata.get("ports", detected_specs.get("ports", nested_requirements.get("ports")))
         if ports not in (None, ""):
-            normalized["ports"] = int(ports)
+            parsed_ports = cls._parse_catalog_number(ports)
+            if parsed_ports is not None:
+                normalized["ports"] = int(parsed_ports)
         feature_candidates = metadata.get("fortinet_feature_candidates")
         if isinstance(feature_candidates, list):
             normalized["fortinet_feature_candidates"] = [str(item) for item in feature_candidates if str(item).strip()]
@@ -474,31 +488,39 @@ class ProductMatcher:
         if field == "max_ports":
             value = product.get("max_ports")
             if value not in (None, ""):
-                return float(value)
+                return ProductMatcher._parse_catalog_number(value)
             return ProductMatcher._available_port_count(product, required)
         if field == "storage_tb":
             return ProductMatcher._product_storage_tb(product)
         if field == "throughput_gbps":
             mbps = product.get("throughput_mbps")
             if mbps not in (None, ""):
-                return float(mbps) / 1000
+                parsed_mbps = ProductMatcher._parse_catalog_number(mbps)
+                return parsed_mbps / 1000 if parsed_mbps is not None else None
         value = product.get(field)
         if value not in (None, ""):
-            return float(value)
+            return ProductMatcher._parse_catalog_number(value)
         for alias in PRODUCT_SPEC_ALIASES.get(field, ()):
             alias_value = product.get(alias)
             if alias_value not in (None, ""):
-                return float(alias_value)
+                return ProductMatcher._parse_catalog_number(alias_value)
         return None
 
     @staticmethod
     def _available_port_count(product: Dict[str, Any], required: Any = None) -> Optional[int]:
         direct_ports = product.get("ports") or product.get("max_ports")
         if direct_ports not in (None, ""):
-            return int(direct_ports)
+            parsed_ports = ProductMatcher._parse_catalog_number(direct_ports)
+            return int(parsed_ports) if parsed_ports is not None else None
         options = product.get("main_port_options")
         if isinstance(options, list) and options:
-            numeric_options = sorted(int(option) for option in options if option not in (None, ""))
+            numeric_options = sorted(
+                int(parsed)
+                for option in options
+                if (parsed := ProductMatcher._parse_catalog_number(option)) is not None
+            )
+            if not numeric_options:
+                return None
             if required not in (None, ""):
                 required_count = int(required)
                 for option in numeric_options:
@@ -513,8 +535,10 @@ class ProductMatcher:
             value = product.get(field)
             if value in (None, ""):
                 continue
-            value = float(value)
-            return value if field == "storage_tb" else value / 1024
+            parsed_value = ProductMatcher._parse_catalog_number(value)
+            if parsed_value is None:
+                continue
+            return parsed_value if field == "storage_tb" else parsed_value / 1024
         return None
 
     @staticmethod
@@ -527,7 +551,8 @@ class ProductMatcher:
         for name in compatible_names:
             value = product_interfaces.get(name, 0)
             if value not in (None, ""):
-                total += int(value)
+                parsed_value = ProductMatcher._parse_catalog_number(value)
+                total += int(parsed_value or 0)
         if total:
             return total
 
@@ -537,6 +562,22 @@ class ProductMatcher:
             return 0
         port_count = ProductMatcher._available_port_count(product, required_count)
         return int(port_count or 0)
+
+    @staticmethod
+    def _parse_catalog_number(value: Any) -> Optional[float]:
+        if value in (None, ""):
+            return None
+        if isinstance(value, (int, float)):
+            return float(value)
+        text = str(value).strip().replace(",", "")
+        if not text:
+            return None
+        matches = [float(match) for match in re.findall(r"\d+(?:\.\d+)?", text)]
+        if not matches:
+            return None
+        if re.search(r"\bto\b|-", text, re.IGNORECASE) and len(matches) >= 2:
+            return max(matches)
+        return matches[0]
 
     @staticmethod
     def _interface_speed_gbps(interface_name: str) -> Optional[float]:
