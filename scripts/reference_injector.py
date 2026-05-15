@@ -120,6 +120,8 @@ class HardwareReferenceInjector:
             else:
                 match_result = self.matcher.match(metadata)
                 reference = format_reference(match_result)
+                if not reference:
+                    reference = self._review_reference(metadata)
                 match_details = self._format_match_details(match_result)
             primary_data[ref_idx] = reference
             primary_data[details_idx] = match_details
@@ -149,6 +151,27 @@ class HardwareReferenceInjector:
                 "match_details": match.get("match_details", {}),
             }
         return json.dumps(details, ensure_ascii=False, indent=2)
+
+    def _review_reference(self, metadata: Dict[str, Any]) -> str:
+        normalized = ProductMatcher.normalize_requirements(metadata)
+        device_type = normalized.get("device_type")
+        if not device_type:
+            return ""
+        parts = []
+        for vendor in ("Fortinet", "Juniper"):
+            product = next(
+                (
+                    item for item in self.matcher.catalog.by_vendor(vendor)
+                    if item.get("category") in ProductMatcher._candidate_categories(device_type)
+                ),
+                None,
+            )
+            if not product:
+                continue
+            url = product.get("datasheet_url") or product.get("product_url") or ""
+            if url:
+                parts.append(f"[Review Required] {vendor} catalog ({device_type}) — {url}")
+        return " | ".join(parts)
 
     @staticmethod
     def _get_row_parts(row: Any) -> Tuple[str, List[Any], Dict[str, Any]]:
@@ -221,7 +244,7 @@ class HardwareReferenceInjector:
                     effective["interfaces"] = self._merge_interface_dicts(effective.get("interfaces") or {}, value)
                 elif detected.get(key) in (None, "") and value not in (None, ""):
                     detected[key] = value
-            if "requires_reference" not in effective and self._text_requires_catalog_reference(text, fallback):
+            if self._text_requires_catalog_reference(text, fallback):
                 effective["requires_reference"] = True
             effective["source_text"] = text[:1000]
             return effective
@@ -251,6 +274,9 @@ class HardwareReferenceInjector:
             "required", "requirement", "supply", "provide", "proposed",
             "recommended", "solution", "appliance", "hardware", "device",
             "equipment", "license", "subscription", "bom", "boq",
+            "must comply", "must support", "must have", "shall comply",
+            "shall support", "should provide", "capacity", "throughput",
+            "interfaces", "sessions", "redundant", "firewall",
         )
         return any(term in lowered for term in procurement_terms)
 

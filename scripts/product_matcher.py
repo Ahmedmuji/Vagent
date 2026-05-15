@@ -59,7 +59,7 @@ INTERFACE_COMPATIBILITY = {
     "10g_rj45": ("10g_rj45", "1_10g_rj45"),
     "1_10g_rj45": ("1_10g_rj45",),
     "1g_sfp": ("1g_sfp",),
-    "10g_sfp_plus": ("10g_sfp_plus",),
+    "10g_sfp_plus": ("10g_sfp_plus", "10g_rj45", "1_10g_rj45"),
     "25g_sfp28": ("25g_sfp28",),
     "40g_qsfp_plus": ("40g_qsfp_plus",),
     "100g_qsfp28": ("100g_qsfp28",),
@@ -694,9 +694,11 @@ class ProductMatcher:
             local_end_candidates = [idx for idx in (text.find(",", match.end()), text.find(";", match.end()), text.find("|", match.end())) if idx != -1]
             local_end = min(local_end_candidates) if local_end_candidates else min(len(text), match.end() + 60)
             local_clause = text[local_start:local_end]
-            if any(k in local_clause for k in ("ssl", "tls", "inspection", "decrypt")) and category == "NGFW":
+            if any(k in local_clause for k in ("ipsec", "vpn")) and category == "NGFW":
+                values["ngfw_throughput_gbps"] = max(values.get("ngfw_throughput_gbps", 0), value)
+            elif any(k in local_clause for k in ("ssl", "tls", "inspection", "decrypt")) and category == "NGFW":
                 values["ssl_tls_inspection_gbps"] = max(values.get("ssl_tls_inspection_gbps", 0), value)
-            elif any(k in local_clause for k in ("ips", "intrusion prevention")):
+            elif re.search(r"\bips\b|intrusion prevention", local_clause):
                 values["ips_throughput_gbps"] = max(values.get("ips_throughput_gbps", 0), value)
             elif any(k in window for k in ("switching", "backplane", "fabric")) or category in ("SWITCH", "DATACENTER_SWITCH", "ACCESS_SWITCH"):
                 values["switching_capacity_gbps"] = max(values.get("switching_capacity_gbps", 0), value)
