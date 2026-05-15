@@ -37,6 +37,8 @@ class HardwareReferenceInjector:
         return enriched
 
     def _inject_sheet(self, sheet: Dict[str, Any]) -> None:
+        if self._should_skip_sheet(sheet):
+            return
         headers = sheet.get("headers") or []
         if REFERENCE_COLUMN not in headers:
             headers.append(REFERENCE_COLUMN)
@@ -52,6 +54,9 @@ class HardwareReferenceInjector:
         details_idx = headers.index(MATCH_DETAILS_COLUMN)
         rows = sheet.get("rows") or []
         groups: Dict[str, Dict[str, Any]] = {}
+        active_auto_group_key = ""
+        active_auto_group_id = ""
+        auto_group_counter = 0
         for row_idx, row in enumerate(rows):
             self.stats["rows_seen"] += 1
             row_type, row_data, metadata = self._get_row_parts(row)
@@ -63,9 +68,12 @@ class HardwareReferenceInjector:
             self._set_legacy_reference(row, "")
             if row_type == "section":
                 self.stats["sections_skipped"] += 1
+                active_auto_group_key = ""
+                active_auto_group_id = ""
                 continue
             text = self._row_text(headers, row_data)
-            effective_metadata = self._effective_metadata(metadata, text)
+            extraction_text = self._contextual_row_text(sheet, headers, text)
+            effective_metadata = self._effective_metadata(metadata, extraction_text)
             if effective_metadata.get("excluded"):
                 self.stats["excluded"] += 1
                 continue
@@ -78,7 +86,17 @@ class HardwareReferenceInjector:
                 continue
             if not self._requires_reference(effective_metadata):
                 continue
-            group_id = effective_metadata.get("requirement_group_id") or f"ROW_{row_idx + 1}"
+            auto_group_key = self._auto_requirement_group_key(sheet, headers, row_data, text, effective_metadata)
+            if auto_group_key:
+                if auto_group_key != active_auto_group_key:
+                    auto_group_counter += 1
+                    active_auto_group_key = auto_group_key
+                    active_auto_group_id = f"AUTO_{auto_group_counter}_{auto_group_key}"
+                group_id = effective_metadata.get("requirement_group_id") or active_auto_group_id
+            else:
+                active_auto_group_key = ""
+                active_auto_group_id = ""
+                group_id = effective_metadata.get("requirement_group_id") or f"ROW_{row_idx + 1}"
             group = groups.setdefault(group_id, {
                 "rows": [],
                 "metadata": {},
@@ -204,6 +222,15 @@ class HardwareReferenceInjector:
         return " | ".join(values)
 
     @staticmethod
+    def _contextual_row_text(sheet: Dict[str, Any], headers: List[str], text: str) -> str:
+        context_parts = [
+            str(sheet.get("title") or sheet.get("name") or sheet.get("sheet_name") or ""),
+            " | ".join(str(header or "") for header in headers[:4]),
+        ]
+        context = " | ".join(part for part in context_parts if part.strip())
+        return f"{context} | {text}" if context else text
+
+    @staticmethod
     def _has_matchable_requirements(metadata: Dict[str, Any]) -> bool:
         normalized = ProductMatcher.normalize_requirements(metadata)
         device_type = normalized.get("device_type")
@@ -231,6 +258,42 @@ class HardwareReferenceInjector:
     def _set_legacy_reference(row: Any, reference: str) -> None:
         if isinstance(row, dict) and REFERENCE_COLUMN in row:
             row[REFERENCE_COLUMN] = reference
+
+    @staticmethod
+    def _should_skip_sheet(sheet: Dict[str, Any]) -> bool:
+        title = str(sheet.get("title") or sheet.get("name") or sheet.get("sheet_name") or "").lower()
+        skip_terms = (
+            "qualification", "pre-qualification", "prequalification", "eligibility",
+            "evaluation criteria", "bid evaluation", "financial criteria",
+            "commercial criteria", "mandatory criteria", "bidder qualification",
+        )
+        return any(term in title for term in skip_terms)
+
+    @staticmethod
+    def _auto_requirement_group_key(sheet: Dict[str, Any], headers: List[str], row_data: List[Any], text: str, metadata: Dict[str, Any]) -> str:
+        normalized = ProductMatcher.normalize_requirements(metadata)
+        if not normalized.get("device_type"):
+            return ""
+        if not HardwareReferenceInjector._has_measurable_constraints(normalized):
+            return ""
+        first_value = str(row_data[0]).strip() if row_data else ""
+        if first_value and not re.match(r"^\d+[\).\s-]*$", first_value):
+            return ""
+        title = str(sheet.get("title") or sheet.get("name") or sheet.get("sheet_name") or "")
+        header_context = " ".join(str(header or "") for header in headers[:4])
+        context = f"{title} {header_context}".lower()
+        if not any(term in context for term in ("firewall", "fortigate", "appliance", "switch", "router", "controller")):
+            return ""
+        label = next(
+            (
+                str(part).strip()
+                for part in (title, headers[0] if headers else "")
+                if str(part or "").strip()
+            ),
+            normalized.get("device_type") or "hardware",
+        )
+        key = re.sub(r"[^a-z0-9]+", "_", label.lower()).strip("_")
+        return key[:80] or "hardware"
 
     def _effective_metadata(self, metadata: Dict[str, Any], text: str) -> Dict[str, Any]:
         if metadata:

@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import re
 from dataclasses import dataclass
@@ -159,7 +160,7 @@ CATEGORY_KEYWORDS = {
     "SDN_AUTOMATION": ("apstra", "sdn", "automation", "intent-based networking"),
     "WAF": ("web application firewall", " waf ", "fortiweb"),
     "ADC": ("load balancer", "application delivery", " adc ", "fortiadc"),
-    "DATACENTER_SWITCH": ("data center switch", "datacenter switch", "tor", "top of rack", "leaf", "spine", "core network", "qfx", "fortiswitch 1048", "fortiswitch 3032"),
+    "DATACENTER_SWITCH": ("data center switch", "datacenter switch", " tor ", "top of rack", "leaf", "spine", "core network", "qfx", "fortiswitch 1048", "fortiswitch 3032"),
     "ACCESS_SWITCH": ("access switch", "campus switch", "edge switch", "fortiswitch 448", "ex4400"),
     "SWITCH": ("switch", "switching"),
     "ROUTER": ("router", "routing platform", "edge routing", "wan router"),
@@ -357,7 +358,13 @@ class ProductMatcher:
         # RANKING PHASE: among all valid candidates, prefer the closest fit
         # (minimise over-provisioning) using fit_quality score.
         # ----------------------------------------------------------------
-        viable.sort(key=lambda item: item[2]["fit_quality"], reverse=True)
+        viable.sort(
+            key=lambda item: (
+                item[2]["overprovision_penalty"],
+                item[2]["max_overprovision"],
+                -item[2]["coverage"],
+            )
+        )
         product, matched, breakdown, details = viable[0]
         details["selected_model"] = product.get("model")
         details["valid_candidates_considered"] = len(viable)
@@ -467,6 +474,7 @@ class ProductMatcher:
                        the tightest fit without under-sizing.
         """
         fit_scores: List[float] = []
+        overprovision_factors: List[float] = []
         required_count = 0
 
         for field in NUMERIC_REQUIREMENT_FIELDS:
@@ -485,6 +493,7 @@ class ProductMatcher:
             # Since we already passed hard filters, available >= required, so ratio ∈ (0, 1].
             ratio = required_float / available_float
             fit_scores.append(ratio)
+            overprovision_factors.append(max(1.0, available_float / required_float))
 
         required_interfaces = requirements.get("interfaces") or {}
         product_interfaces = product.get("interfaces") or {}
@@ -495,6 +504,7 @@ class ProductMatcher:
                 continue
             ratio = int(required_interface_count) / int(available_count)
             fit_scores.append(ratio)
+            overprovision_factors.append(max(1.0, int(available_count) / int(required_interface_count)))
 
         for field in ("ha_port", "management_port", "console_port"):
             if requirements.get(field) is True:
@@ -503,6 +513,11 @@ class ProductMatcher:
         # closeness: average ratio — 1.0 means every spec is exactly met
         closeness = sum(fit_scores) / len(fit_scores) if fit_scores else 0.75
         coverage  = min(1.0, len(matched) / max(1, required_count))
+        overprovision_penalty = (
+            sum(math.log(factor) for factor in overprovision_factors) / len(overprovision_factors)
+            if overprovision_factors else 0.0
+        )
+        max_overprovision = max(overprovision_factors) if overprovision_factors else 1.0
 
         context = " ".join([
             str(requirements.get("source_text") or ""),
@@ -525,6 +540,8 @@ class ProductMatcher:
             "affinity":    affinity,
             "total":       total,
             "fit_quality": fit_quality,
+            "overprovision_penalty": overprovision_penalty,
+            "max_overprovision": max_overprovision,
         }
 
     @staticmethod
@@ -705,12 +722,17 @@ class ProductMatcher:
             local_end_candidates = [idx for idx in (text.find(",", match.end()), text.find(";", match.end()), text.find("|", match.end())) if idx != -1]
             local_end = min(local_end_candidates) if local_end_candidates else min(len(text), match.end() + 60)
             local_clause = text[local_start:local_end]
-            if any(k in local_clause for k in ("ipsec", "vpn")) and category == "NGFW":
+            classification_clause = f"{local_clause} {window}"
+            if "ssl vpn" in classification_clause and category == "NGFW":
+                values["ssl_vpn_gbps"] = max(values.get("ssl_vpn_gbps", 0), value)
+            elif any(k in classification_clause for k in ("ipsec", "ipsec vpn")) and category == "NGFW":
                 values["ipsec_vpn_throughput_gbps"] = max(values.get("ipsec_vpn_throughput_gbps", 0), value)
-            elif any(k in local_clause for k in ("ssl", "tls", "inspection", "decrypt")) and category == "NGFW":
+            elif any(k in classification_clause for k in ("ssl", "tls", "inspection", "decrypt")) and category == "NGFW":
                 values["ssl_tls_inspection_gbps"] = max(values.get("ssl_tls_inspection_gbps", 0), value)
-            elif re.search(r"\bips\b|intrusion prevention", local_clause):
+            elif re.search(r"\bips\b|intrusion prevention", classification_clause):
                 values["ips_throughput_gbps"] = max(values.get("ips_throughput_gbps", 0), value)
+            elif "threat protection" in classification_clause:
+                values["threat_protection_gbps"] = max(values.get("threat_protection_gbps", 0), value)
             elif any(k in window for k in ("switching", "backplane", "fabric")) or category in ("SWITCH", "DATACENTER_SWITCH", "ACCESS_SWITCH"):
                 values["switching_capacity_gbps"] = max(values.get("switching_capacity_gbps", 0), value)
             elif category == "NGFW":
@@ -719,7 +741,7 @@ class ProductMatcher:
                 values["throughput_gbps"] = max(values.get("throughput_gbps", 0), value)
         cls._extract_count(text, values, "concurrent_sessions", ("concurrent sessions", "sessions"))
         cls._extract_count(text, values, "ssl_vpn_users", ("ssl vpn users", "ssl-vpn users", "vpn users", "concurrent users"))
-        cls._extract_count(text, values, "connections_per_second", ("connections per second", "cps", "new sessions per second"))
+        cls._extract_count(text, values, "connections_per_second", ("connections per second", "connections per seconds", "cps", "new sessions per second"))
         cls._extract_count(text, values, "policies", ("policies", "firewall policies"))
         cls._extract_count(text, values, "logs_per_day_gb", ("gb logs per day", "gb/day", "logs per day"))
         cls._extract_count(text, values, "analytic_rate_logs_sec", ("analytics logs/sec", "analytic logs/sec", "analytics rate"))
@@ -739,6 +761,10 @@ class ProductMatcher:
         if storage:
             number = float(storage.group(1))
             values["storage_tb"] = number if storage.group(2) == "tb" else number / 1024
+        storage_after_label = re.search(r"(?:storage|ssd|disk|hdd).{0,80}?(\d+(?:\.\d+)?)\s*(tb|gb)\b", text)
+        if storage_after_label:
+            number = float(storage_after_label.group(1))
+            values["storage_tb"] = max(values.get("storage_tb", 0), number if storage_after_label.group(2) == "tb" else number / 1024)
         return values
 
     @staticmethod
@@ -754,7 +780,7 @@ class ProductMatcher:
     def _extract_count(text: str, values: Dict[str, Any], field: str, labels: Tuple[str, ...]) -> None:
         for label in labels:
             pattern_before = rf"(?P<num>\d[\d,]*(?:\.\d+)?)\s*(?:k|m|million|thousand)?\s+{re.escape(label)}"
-            pattern_after = rf"{re.escape(label)}\s*(?:of|:|>=|>|at least|minimum|min)?\s*(?P<num>\d[\d,]*(?:\.\d+)?)\s*(?P<suffix>k|m|million|thousand)?"
+            pattern_after = rf"{re.escape(label)}(?:\s|\||:|=|-|>|of|at least|minimum|min)*?(?P<num>\d[\d,]*(?:\.\d+)?)\s*(?P<suffix>k|m|million|thousand)?"
             for pattern in (pattern_before, pattern_after):
                 match = re.search(pattern, text)
                 if match:
