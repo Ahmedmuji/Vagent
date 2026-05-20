@@ -202,6 +202,23 @@ SPEC_FIT_WEIGHTS = {
     "storage_tb": 0.90,
 }
 
+BOOLEAN_REQUIREMENT_FIELDS = (
+    "ha_supported",
+    "ha_port",
+    "management_port",
+    "console_port",
+    "redundant_power",
+)
+
+HA_MODE_PATTERNS = (
+    ("active-passive", r"active\s*[-/ ]\s*passive|\ba-p\b"),
+    ("active-active", r"active\s*[-/ ]\s*active|\ba-a\b"),
+    ("fgcp", r"\bfgcp\b"),
+    ("fgsp", r"\bfgsp\b"),
+    ("virtual clustering", r"virtual\s+cluster(?:ing)?"),
+    ("clustering", r"cluster(?:ing)?"),
+)
+
 
 @dataclass
 class ProductMatch:
@@ -339,13 +356,21 @@ class ProductMatcher:
         feature_candidates = metadata.get("fortinet_feature_candidates")
         if isinstance(feature_candidates, list):
             normalized["fortinet_feature_candidates"] = [str(item) for item in feature_candidates if str(item).strip()]
-        for field in ("ha_port", "management_port", "console_port", "redundant_power"):
+        for field in BOOLEAN_REQUIREMENT_FIELDS:
             if (
                 metadata.get(field) is True
                 or detected_specs.get(field) is True
                 or nested_requirements.get(field) is True
             ):
                 normalized[field] = True
+        ha_modes = cls._normalize_ha_modes(
+            metadata.get("ha_modes")
+            or detected_specs.get("ha_modes")
+            or nested_requirements.get("ha_modes")
+        )
+        if ha_modes:
+            normalized["ha_supported"] = True
+            normalized["ha_modes"] = ha_modes
         requirements = {k: v for k, v in normalized.items() if k not in ("device_type", "source_text", "fortinet_feature_candidates")}
         normalized["requirements"] = requirements
         return normalized
@@ -473,7 +498,9 @@ class ProductMatcher:
                 return True
         if requirements.get("interfaces"):
             return True
-        return any(requirements.get(field) is True for field in ("ha_port", "management_port", "console_port", "redundant_power"))
+        if requirements.get("ha_modes"):
+            return True
+        return any(requirements.get(field) is True for field in BOOLEAN_REQUIREMENT_FIELDS)
 
     @staticmethod
     def _passes_hard_filters(product: Dict[str, Any], requirements: Dict[str, Any]) -> Tuple[bool, List[str], List[str], Dict[str, Any]]:
@@ -521,17 +548,31 @@ class ProductMatcher:
                 missing.append(f"interfaces.{name}")
             else:
                 matched.append(f"interfaces.{name}")
-        for field in ("ha_port", "management_port", "console_port", "redundant_power"):
+        for field in BOOLEAN_REQUIREMENT_FIELDS:
             if requirements.get(field) is True:
+                candidate = ProductMatcher._product_boolean_value(product, field)
                 details["requirements"][field] = {
                     "required": True,
-                    "candidate": product.get(field),
-                    "passes": product.get(field) is True,
+                    "candidate": candidate,
+                    "passes": candidate is True,
                 }
-                if product.get(field) is True:
+                if candidate is True:
                     matched.append(field)
                 else:
                     missing.append(field)
+        required_ha_modes = ProductMatcher._normalize_ha_modes(requirements.get("ha_modes"))
+        if required_ha_modes:
+            candidate_modes = ProductMatcher._normalize_ha_modes(product.get("ha_modes"))
+            missing_modes = [mode for mode in required_ha_modes if mode not in candidate_modes]
+            details["requirements"]["ha_modes"] = {
+                "required": required_ha_modes,
+                "candidate": candidate_modes,
+                "passes": not missing_modes,
+            }
+            if missing_modes:
+                missing.append("ha_modes")
+            else:
+                matched.append("ha_modes")
         details["requirements"] = {k: v for k, v in details["requirements"].items() if v.get("required") not in (None, "")}
         details["interfaces"] = {k: v for k, v in details["interfaces"].items() if v.get("required") not in (None, "")}
         return not missing, matched, missing, details
@@ -613,9 +654,11 @@ class ProductMatcher:
                 "weight": weight,
             }
 
-        for field in ("ha_port", "management_port", "console_port", "redundant_power"):
+        for field in BOOLEAN_REQUIREMENT_FIELDS:
             if requirements.get(field) is True:
                 required_count += 1
+        if requirements.get("ha_modes"):
+            required_count += 1
 
         # closeness: average ratio — 1.0 means every spec is exactly met
         closeness = sum(fit_scores) / len(fit_scores) if fit_scores else 0.75
@@ -665,6 +708,41 @@ class ProductMatcher:
         if field.startswith("interfaces."):
             return SPEC_FIT_WEIGHTS["interfaces"]
         return SPEC_FIT_WEIGHTS.get(field, 1.0)
+
+    @staticmethod
+    def _normalize_ha_modes(value: Any) -> List[str]:
+        if value in (None, ""):
+            return []
+        if isinstance(value, str):
+            candidates = re.split(r"[,;/|]+", value)
+        elif isinstance(value, (list, tuple, set)):
+            candidates = [str(item) for item in value]
+        else:
+            candidates = [str(value)]
+
+        modes: List[str] = []
+        for candidate in candidates:
+            normalized = ProductMatcher._normalize_text(candidate)
+            for mode, pattern in HA_MODE_PATTERNS:
+                if re.search(pattern, normalized) and mode not in modes:
+                    modes.append(mode)
+        return modes
+
+    @staticmethod
+    def _extract_ha_modes(text: str) -> List[str]:
+        return [
+            mode
+            for mode, pattern in HA_MODE_PATTERNS
+            if re.search(pattern, text)
+        ]
+
+    @staticmethod
+    def _product_boolean_value(product: Dict[str, Any], field: str) -> bool:
+        if product.get(field) is True:
+            return True
+        if field == "ha_supported":
+            return bool(product.get("ha_port") is True or ProductMatcher._normalize_ha_modes(product.get("ha_modes")))
+        return False
 
     @staticmethod
     def _product_scale_score(product: Dict[str, Any]) -> float:
@@ -830,7 +908,13 @@ class ProductMatcher:
         interfaces = cls._extract_interfaces(normalized)
         if interfaces:
             flat["interfaces"] = interfaces
-        if re.search(r"\bha\s+(?:port|interface|configuration|in)\b|(?:port|interface)\s+(?:for\s+)?ha\b|dedicated\s+ha\b|high availability|active[\s/-]*passive|active[\s/-]*active", normalized):
+        if re.search(r"\bha\s+(?:configuration|mode|pair|cluster)\b|high availability|active[\s/-]*passive|active[\s/-]*active|\bfgcp\b|\bfgsp\b|virtual\s+cluster", normalized):
+            flat["ha_supported"] = True
+        ha_modes = cls._extract_ha_modes(normalized)
+        if ha_modes:
+            flat["ha_supported"] = True
+            flat["ha_modes"] = ha_modes
+        if re.search(r"\bha\s+(?:port|interface)\b|(?:port|interface)\s+(?:for\s+)?ha\b|dedicated\s+ha\b", normalized):
             flat["ha_port"] = True
         if re.search(r"redundant\s+power|dual\s+(?:ac\s+)?power|dual\s+psu|1\+1\s+redundancy", normalized):
             flat["redundant_power"] = True
