@@ -424,6 +424,9 @@ class HardwareReferenceInjector:
                 continue
             if key in ignored_boolean_only:
                 continue
+            # ha_modes is a real filterable constraint: it limits which products pass.
+            if key == "ha_modes" and isinstance(value, list) and value:
+                return True
             if key == "interfaces" and isinstance(value, dict) and any(v not in (None, "", 0) for v in value.values()):
                 return True
             if key in NUMERIC_REQUIREMENT_FIELDS and value not in (None, "", 0):

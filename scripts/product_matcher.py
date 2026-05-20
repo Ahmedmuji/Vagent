@@ -39,11 +39,11 @@ NUMERIC_REQUIREMENT_FIELDS = (
 )
 
 PRODUCT_SPEC_ALIASES = {
-    "ipsec_vpn_throughput_gbps": ("vpn_throughput_gbps", "firewall_throughput_gbps", "throughput_gbps"),
-    "firewall_throughput_gbps": ("ngfw_throughput_gbps", "throughput_gbps", "ipsec_vpn_throughput_gbps"),
+    "ipsec_vpn_throughput_gbps": ("vpn_throughput_gbps",),
+    "firewall_throughput_gbps": ("ngfw_throughput_gbps", "throughput_gbps"),
     "ngfw_throughput_gbps": ("firewall_throughput_gbps", "throughput_gbps"),
     "switching_capacity_gbps": ("throughput_gbps",),
-    "throughput_gbps": ("switching_capacity_gbps", "ngfw_throughput_gbps", "firewall_throughput_gbps"),
+    "throughput_gbps": ("switching_capacity_gbps", "ngfw_throughput_gbps"),
     "connections_per_second": ("cps",),
     "performance_eps": ("analytic_rate_logs_sec", "collector_rate_logs_sec"),
     "max_ports": ("ports",),
@@ -258,6 +258,7 @@ class ProductCatalog:
     @staticmethod
     def _load_catalogs(catalog_dir: str) -> List[Dict[str, Any]]:
         products: List[Dict[str, Any]] = []
+        seen_keys: set = set()
         if not os.path.isdir(catalog_dir):
             raise FileNotFoundError(f"Product catalog directory not found: {catalog_dir}")
         for filename in sorted(os.listdir(catalog_dir)):
@@ -274,6 +275,14 @@ class ProductCatalog:
                 entries = []
             for entry in entries:
                 if isinstance(entry, dict):
+                    # Deduplicate by (vendor, model) — keep first occurrence
+                    dedup_key = (
+                        str(entry.get("vendor", "")).lower(),
+                        str(entry.get("model", "")).lower(),
+                    )
+                    if dedup_key in seen_keys:
+                        continue
+                    seen_keys.add(dedup_key)
                     products.append(entry)
         return products
 
@@ -373,6 +382,27 @@ class ProductMatcher:
         if ha_modes:
             normalized["ha_supported"] = True
             normalized["ha_modes"] = ha_modes
+        # ----------------------------------------------------------------
+        # Promote generic throughput_gbps to the correct NGFW-specific
+        # field when device_type is now known (via context) but the value
+        # was originally extracted without knowing the category.
+        # ----------------------------------------------------------------
+        if normalized.get("throughput_gbps") and normalized.get("device_type") == "NGFW":
+            src = (normalized.get("source_text") or "").lower()
+            tput = normalized.pop("throughput_gbps")
+            if any(k in src for k in ("ipsec", "ipsec vpn", "ipsec vpn throughput")) and "ipsec_vpn_throughput_gbps" not in normalized:
+                normalized["ipsec_vpn_throughput_gbps"] = tput
+            elif any(k in src for k in ("ssl vpn", "ssl-vpn")) and "ssl_vpn_gbps" not in normalized:
+                normalized["ssl_vpn_gbps"] = tput
+            elif any(k in src for k in ("ssl", "tls", "inspection", "decrypt")) and "ssl_tls_inspection_gbps" not in normalized:
+                normalized["ssl_tls_inspection_gbps"] = tput
+            elif any(k in src for k in ("ips", "intrusion prevention")) and "ips_throughput_gbps" not in normalized:
+                normalized["ips_throughput_gbps"] = tput
+            elif any(k in src for k in ("threat",)) and "threat_protection_gbps" not in normalized:
+                normalized["threat_protection_gbps"] = tput
+            elif "ngfw_throughput_gbps" not in normalized and "firewall_throughput_gbps" not in normalized:
+                normalized["ngfw_throughput_gbps"] = tput
+            # else: a more specific field already holds this value; discard generic copy
         requirements = {k: v for k, v in normalized.items() if k not in ("device_type", "source_text", "fortinet_feature_candidates")}
         normalized["requirements"] = requirements
         return normalized
@@ -388,37 +418,30 @@ class ProductMatcher:
 
     def _match_vendor(self, requirements: Dict[str, Any], vendor: str) -> Optional[ProductMatch]:
         category = requirements.get("device_type") or requirements.get("category")
-        all_products = self.catalog.by_vendor(vendor)
-        candidates = []
-        if category:
-            categories = self._candidate_categories(category)
-            candidates = [p for p in all_products if p.get("category") in categories]
-        
+        if not category:
+            return None
+        categories = self._candidate_categories(category)
+        candidates = [p for p in self.catalog.by_vendor(vendor) if p.get("category") in categories]
         if not self._has_hard_constraints(requirements):
             return None
 
-        def _evaluate_candidates(candidate_list: List[Dict[str, Any]]) -> Tuple[List[Tuple[Dict[str, Any], List[str], Dict[str, Any], Dict[str, Any]]], List[Dict[str, Any]]]:
-            viable = []
-            rejected = []
-            for product in candidate_list:
-                ok, matched, missing, details = self._passes_hard_filters(product, requirements)
-                if ok:
-                    score = self._score_product(product, requirements, matched)
-                    viable.append((product, matched, score, details))
-                elif missing:
-                    rejected.append({
-                        "model": product.get("model"),
-                        "missing_or_under_spec": missing[:8],
-                    })
-            return viable, rejected
-
-        # Try strict category match first
-        viable, rejected = _evaluate_candidates(candidates)
-
-        # Dynamic fallback: if no candidates in the detected category passed all hard constraints,
-        # OR if category was unknown, fallback to checking ALL vendor products.
-        if not viable and (not category or candidates != all_products):
-            viable, rejected = _evaluate_candidates(all_products)
+        # ----------------------------------------------------------------
+        # STRICT PHASE: only consider products that meet ALL hard constraints.
+        # A hard constraint fails when candidate_spec < required_spec.
+        # We NEVER fall back to under-spec hardware.
+        # ----------------------------------------------------------------
+        viable: List[Tuple[Dict[str, Any], List[str], Dict[str, Any], Dict[str, Any]]] = []
+        rejected: List[Dict[str, Any]] = []
+        for product in candidates:
+            ok, matched, missing, details = self._passes_hard_filters(product, requirements)
+            if ok:
+                score = self._score_product(product, requirements, matched)
+                viable.append((product, matched, score, details))
+            elif missing:
+                rejected.append({
+                    "model": product.get("model"),
+                    "missing_or_under_spec": missing[:8],
+                })
 
         if not viable:
             # No product satisfies all requirements → return None rather than
@@ -921,13 +944,24 @@ class ProductMatcher:
             return {"device_type": None, "requirements": {}, "excluded": True}
         category = cls._detect_category(normalized)
         metadata: Dict[str, Any] = {"device_type": category, "requirements": {}, "source_text": text[:1000]}
-        if not category:
-            return metadata
-        flat = cls._extract_numeric_requirements(normalized, category)
+
+        # Extract specs unconditionally — even when category is unknown.
+        # The device_type may be supplied later via metadata context (e.g. sheet title or
+        # parent row says "Firewalls"), and we must not lose the specs in that case.
+        # Use category="" as a neutral sentinel so keyword-driven classifiers still work.
+        flat = cls._extract_numeric_requirements(normalized, category or "")
         interfaces = cls._extract_interfaces(normalized)
         if interfaces:
             flat["interfaces"] = interfaces
-        if re.search(r"\bha\s+(?:configuration|mode|pair|cluster)\b|high availability|active[\s/-]*passive|active[\s/-]*active|\bfgcp\b|\bfgsp\b|virtual\s+cluster", normalized):
+        if re.search(
+            r"\bha\s+(?:configuration|mode|pair|cluster)\b"
+            r"|high\s+availability"
+            r"|active[\s/-]*passive"
+            r"|active[\s/-]*active"
+            r"|\bfgcp\b|\bfgsp\b"
+            r"|virtual\s+cluster",
+            normalized,
+        ):
             flat["ha_supported"] = True
         ha_modes = cls._extract_ha_modes(normalized)
         if ha_modes:
@@ -935,7 +969,7 @@ class ProductMatcher:
             flat["ha_modes"] = ha_modes
         if re.search(r"\bha\s+(?:ports?|interfaces?)\b|\b(?:ports?|interfaces?)\s+(?:for\s+)?ha\b|dedicated\s+ha\b", normalized):
             flat["ha_port"] = True
-        if re.search(r"redundant\s+power|dual\s+(?:ac\s+)?power|dual\s+psu|1\+1\s+redundancy", normalized):
+        if re.search(r"redundant\s+power(?:\s+supply)?|dual\s+(?:ac\s+)?power|dual\s+psu|1\+1\s+redundancy", normalized):
             flat["redundant_power"] = True
         if " management port" in normalized or "mgmt port" in normalized:
             flat["management_port"] = True
@@ -962,6 +996,9 @@ class ProductMatcher:
     @classmethod
     def _extract_numeric_requirements(cls, text: str, category: str) -> Dict[str, Any]:
         values: Dict[str, Any] = {}
+        # Normalise category for comparisons — treat empty/None as the empty string.
+        cat = (category or "").upper()
+        ngfw_categories = {"NGFW", ""}
         speed_matches = list(re.finditer(r"(?P<num>\d+(?:\.\d+)?)\s*(?P<unit>tbps|gbps|mbps|tbit/s|gbit/s|mbit/s|g\b|t\b)", text))
         for match in speed_matches:
             prefix = text[max(0, match.start() - 12):match.start()]
@@ -974,20 +1011,27 @@ class ProductMatcher:
             local_end = min(local_end_candidates) if local_end_candidates else min(len(text), match.end() + 60)
             local_clause = text[local_start:local_end]
             classification_clause = f"{local_clause} {window}"
-            if "ssl vpn" in classification_clause and category == "NGFW":
+            # Keyword-driven classifiers: these work regardless of category so that
+            # specs in sub-items (where device_type may be inferred from context)
+            # are correctly captured.
+            if "ssl vpn" in classification_clause and cat in ngfw_categories:
                 values["ssl_vpn_gbps"] = max(values.get("ssl_vpn_gbps", 0), value)
-            elif any(k in classification_clause for k in ("ipsec", "ipsec vpn")) and category == "NGFW":
+            elif any(k in classification_clause for k in ("ipsec", "ipsec vpn", "ipsec vpn throughput")) and cat in ngfw_categories:
                 values["ipsec_vpn_throughput_gbps"] = max(values.get("ipsec_vpn_throughput_gbps", 0), value)
-            elif any(k in classification_clause for k in ("ssl", "tls", "inspection", "decrypt")) and category == "NGFW":
+            elif any(k in classification_clause for k in ("ssl", "tls", "inspection", "decrypt")) and cat in ngfw_categories:
                 values["ssl_tls_inspection_gbps"] = max(values.get("ssl_tls_inspection_gbps", 0), value)
             elif re.search(r"\bips\b|intrusion prevention", classification_clause):
                 values["ips_throughput_gbps"] = max(values.get("ips_throughput_gbps", 0), value)
             elif "threat protection" in classification_clause:
                 values["threat_protection_gbps"] = max(values.get("threat_protection_gbps", 0), value)
-            elif any(k in window for k in ("switching", "backplane", "fabric")) or category in ("SWITCH", "DATACENTER_SWITCH", "ACCESS_SWITCH"):
+            elif any(k in window for k in ("switching", "backplane", "fabric")) or cat in ("SWITCH", "DATACENTER_SWITCH", "ACCESS_SWITCH"):
                 values["switching_capacity_gbps"] = max(values.get("switching_capacity_gbps", 0), value)
-            elif category == "NGFW":
+            elif cat == "NGFW":
                 values["ngfw_throughput_gbps"] = max(values.get("ngfw_throughput_gbps", 0), value)
+            elif cat == "":
+                # Unknown category: keep as generic throughput; caller may promote it
+                # once device_type is resolved from context.
+                values["throughput_gbps"] = max(values.get("throughput_gbps", 0), value)
             else:
                 values["throughput_gbps"] = max(values.get("throughput_gbps", 0), value)
         cls._extract_count(text, values, "concurrent_sessions", ("concurrent sessions", "sessions"))
