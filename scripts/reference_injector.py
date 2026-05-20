@@ -158,15 +158,27 @@ class HardwareReferenceInjector:
                     reference = self._review_reference(metadata)
                 match_details = self._format_match_details(match_result)
                 hardware_reasoning = self._format_hardware_reasoning(match_result, bool(reference))
+            # Write reference to the primary row (with full reasoning/details)
             primary_data[ref_idx] = reference
             primary_data[hardware_reason_idx] = hardware_reasoning
             primary_data[details_idx] = match_details
             self._set_legacy_reference(primary[0], reference)
-            self.stats["sibling_rows_suppressed"] += max(0, len(group["rows"]) - 1)
-            if reference:
-                self.stats["matched_rows"] += 1
-            else:
-                self.stats["unmatched_rows"] += len(group["rows"])
+
+            # Propagate the same reference to every sibling row in the group so
+            # that the References column is filled for all requirement rows that
+            # belong to this hardware item — not just the first one.
+            for sibling_row, sibling_data, _ in group["rows"]:
+                if sibling_data is primary_data:
+                    continue  # already written above
+                sibling_data[ref_idx] = reference
+                self._set_legacy_reference(sibling_row, reference)
+
+            matched_count = len(group["rows"]) if reference else 0
+            unmatched_count = 0 if reference else len(group["rows"])
+            self.stats["matched_rows"] += matched_count
+            self.stats["unmatched_rows"] += unmatched_count
+            # No longer "suppressing" siblings — they all get the reference
+            self.stats["sibling_rows_suppressed"] += 0
         sheet["headers"] = headers
 
     @staticmethod
