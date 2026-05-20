@@ -36,6 +36,13 @@ NUMERIC_REQUIREMENT_FIELDS = (
     "max_fortitokens",
     "policies",
     "storage_tb",
+    "power_capacity_kw",
+    "power_capacity_kva",
+    "cooling_capacity_kw",
+    "rack_units",
+    "static_load_kg",
+    "sensor_capacity",
+    "outlet_count",
 )
 
 PRODUCT_SPEC_ALIASES = {
@@ -120,6 +127,22 @@ DEVICE_CATEGORY_MAP = {
     "router": "ROUTER",
     "sdn_automation": "SDN_AUTOMATION",
     "automation": "SDN_AUTOMATION",
+    "ups": "UPS",
+    "uninterruptible_power_supply": "UPS",
+    "cooling": "COOLING",
+    "precision_cooling": "COOLING",
+    "row_cooling": "COOLING",
+    "pdu": "RACK_PDU",
+    "rack_pdu": "RACK_PDU",
+    "power_distribution": "POWER_DISTRIBUTION",
+    "containment": "CONTAINMENT",
+    "rack": "RACK",
+    "monitoring": "MONITORING",
+    "fire_suppression": "FIRE_SUPPRESSION",
+    "fire_detection": "FIRE_DETECTION",
+    "fire_alarm": "FIRE_ALARM",
+    "camera": "CAMERA",
+    "display": "DISPLAY",
 }
 
 INTERFACE_PATTERNS = {
@@ -176,11 +199,22 @@ CATEGORY_KEYWORDS = {
     "SWITCH": ("switch", "switching"),
     "ROUTER": ("router", "routing platform", "edge routing", "wan router"),
     "NGFW": ("ngfw", "next generation firewall", "firewall", "security gateway", "ssl-vpn", "ssl vpn", "vpn appliance"),
+    "UPS": ("ups", "uninterruptible power", "battery backup", "kva ups", "kw ups", "liebert apm", "liebert mtp"),
+    "COOLING": ("precision cooling", "row cooling", "cooling unit", "thermal management", "crv4", "computer room air"),
+    "POWER_DISTRIBUTION": ("power distribution", "server power distribution", "spm", "distribution panel"),
+    "RACK_PDU": ("rack pdu", "rpdu", "geist", "power distribution unit"),
+    "CONTAINMENT": ("containment", "cold aisle", "hot aisle", "smartaisle"),
+    "RACK": ("rack enclosure", "server rack", "ve rack", "42u rack", "48u rack"),
+    "MONITORING": ("infrastructure monitoring", "environmental monitoring", "rdu501", "monitoring gateway"),
+    "FIRE_SUPPRESSION": ("fire suppression", "extinguishing", "fk-5-1-12", "nozzle", "check valve", "releasing control"),
+    "FIRE_DETECTION": ("smoke detector", "fire detection", "airsense", "truealarm", "aspirating smoke"),
+    "FIRE_ALARM": ("fire alarm", "manual station", "nac extender", "horn", "bacpac"),
+    "CAMERA": ("camera", "cctv", "ip camera", "image sensor"),
+    "DISPLAY": ("display", "video wall", "lcd panel", "narrow bezel"),
 }
 
 EXCLUDED_KEYWORDS = (
-    "ups", "generator", "cooling", "hvac", "fire suppression", "cctv", "camera",
-    "rack", "cabinet", "pdu", "patch cord", "cabling", "civil work", "electrical",
+    "generator", "hvac", "patch cord", "cabling", "civil work", "electrical",
     "storage array", "san switch", "gpu", "license only", "subscription only",
 )
 
@@ -208,6 +242,11 @@ BOOLEAN_REQUIREMENT_FIELDS = (
     "management_port",
     "console_port",
     "redundant_power",
+)
+
+ARCHITECTURE_CATEGORIES = (
+    "UPS", "COOLING", "POWER_DISTRIBUTION", "RACK_PDU", "CONTAINMENT", "RACK",
+    "MONITORING", "FIRE_SUPPRESSION", "FIRE_DETECTION", "FIRE_ALARM", "CAMERA", "DISPLAY",
 )
 
 HA_MODE_PATTERNS = (
@@ -300,12 +339,19 @@ class ProductMatcher:
 
     def match(self, requirements: Dict[str, Any], vendors: Optional[List[str]] = None) -> Dict[str, Any]:
         requirements = self.normalize_requirements(requirements)
-        vendors = vendors or ["Fortinet", "Juniper"]
+        vendors = vendors or self._default_vendors(requirements)
         results: Dict[str, Any] = {"requirements": requirements, "matches": {}}
         for vendor in vendors:
             match = self._match_vendor(requirements, vendor)
             results["matches"][vendor] = match.to_dict() if match else None
         return results
+
+    def _default_vendors(self, requirements: Dict[str, Any]) -> List[str]:
+        category = requirements.get("device_type") or requirements.get("category")
+        if category in {"NGFW", "SWITCH", "DATACENTER_SWITCH", "ACCESS_SWITCH", "ROUTER"}:
+            return ["Fortinet", "Juniper"]
+        vendors = sorted({str(product.get("vendor")) for product in self.catalog.products if product.get("vendor")})
+        return vendors or ["Fortinet", "Juniper"]
 
     @classmethod
     def normalize_requirements(cls, metadata: Dict[str, Any], source_text: str = "") -> Dict[str, Any]:
@@ -343,6 +389,13 @@ class ProductMatcher:
             parsed_cps = cls._parse_catalog_number(detected_specs.get("cps", nested_requirements.get("cps")))
             if parsed_cps is not None:
                 normalized["connections_per_second"] = parsed_cps
+        for range_field in ("power_capacity_kw", "power_capacity_kva", "cooling_capacity_kw"):
+            if range_field in normalized:
+                continue
+            value = metadata.get(range_field, detected_specs.get(range_field, nested_requirements.get(range_field)))
+            parsed_range = cls._parse_capacity_requirement(value)
+            if parsed_range is not None:
+                normalized[range_field] = parsed_range
         interfaces: Dict[str, int] = {}
         raw_interfaces = metadata.get("interfaces") or nested_requirements.get("interfaces")
         if isinstance(raw_interfaces, dict):
@@ -829,6 +882,10 @@ class ProductMatcher:
                 return parsed_mbps / 1000 if parsed_mbps is not None else None
         value = product.get(field)
         if value not in (None, ""):
+            if isinstance(value, dict):
+                for key in ("max", "value", "required", "min"):
+                    if value.get(key) not in (None, ""):
+                        return ProductMatcher._parse_catalog_number(value[key])
             return ProductMatcher._parse_catalog_number(value)
         for alias in PRODUCT_SPEC_ALIASES.get(field, ()):
             alias_value = product.get(alias)
@@ -917,6 +974,16 @@ class ProductMatcher:
         return matches[0]
 
     @staticmethod
+    def _parse_capacity_requirement(value: Any) -> Optional[float]:
+        if isinstance(value, dict):
+            for key in ("min", "required", "value"):
+                if value.get(key) not in (None, ""):
+                    return ProductMatcher._parse_catalog_number(value[key])
+            if value.get("max") not in (None, ""):
+                return ProductMatcher._parse_catalog_number(value["max"])
+        return ProductMatcher._parse_catalog_number(value)
+
+    @staticmethod
     def _interface_speed_gbps(interface_name: str) -> Optional[float]:
         match = re.match(r"(?P<num>\d+)(?:_(?P<num2>\d+))?g", str(interface_name).lower())
         if not match:
@@ -978,6 +1045,10 @@ class ProductMatcher:
 
     @staticmethod
     def _detect_category(text: str) -> Optional[str]:
+        for category in ARCHITECTURE_CATEGORIES:
+            keywords = CATEGORY_KEYWORDS.get(category, ())
+            if any(keyword in text for keyword in keywords):
+                return category
         for category, keywords in CATEGORY_KEYWORDS.items():
             if any(keyword in text for keyword in keywords):
                 return category
@@ -1051,7 +1122,33 @@ class ProductMatcher:
         if storage_after_label:
             number = float(storage_after_label.group(1))
             values["storage_tb"] = max(values.get("storage_tb", 0), number if storage_after_label.group(2) == "tb" else number / 1024)
+        if cat == "UPS":
+            cls._extract_capacity(text, values, "power_capacity_kva", ("kva",))
+            cls._extract_capacity(text, values, "power_capacity_kw", ("kw",))
+        elif cat == "COOLING":
+            cls._extract_capacity(text, values, "cooling_capacity_kw", ("kw",))
+        elif cat == "POWER_DISTRIBUTION":
+            cls._extract_capacity(text, values, "power_capacity_kva", ("kva",))
+        elif cat == "RACK":
+            cls._extract_count(text, values, "rack_units", ("u rack", "rack units", "u enclosure"))
+            cls._extract_count(text, values, "static_load_kg", ("kg static load", "kg load", "static load"))
+        elif cat == "MONITORING":
+            cls._extract_count(text, values, "sensor_capacity", ("sensors", "sensor"))
+        elif cat == "RACK_PDU":
+            cls._extract_count(text, values, "outlet_count", ("outlets", "sockets", "socket"))
         return values
+
+    @staticmethod
+    def _extract_capacity(text: str, values: Dict[str, Any], field: str, units: Tuple[str, ...]) -> None:
+        found: List[float] = []
+        unit_pattern = "|".join(re.escape(unit) for unit in units)
+        for match in re.finditer(rf"(?P<num>\d+(?:\.\d+)?)\s*(?P<unit>{unit_pattern})\b", text):
+            prefix = text[max(0, match.start() - 12):match.start()]
+            if re.search(r"\d+\s*(?:x|×)\s*$", prefix):
+                continue
+            found.append(float(match.group("num")))
+        if found:
+            values[field] = max(values.get(field, 0), max(found))
 
     @staticmethod
     def _to_gbps(value: float, unit: str) -> float:
@@ -1101,8 +1198,7 @@ class ProductMatcher:
 
 def format_reference(matches: Dict[str, Any]) -> str:
     parts: List[str] = []
-    for vendor in ("Fortinet", "Juniper"):
-        match = (matches.get("matches") or {}).get(vendor)
+    for vendor, match in (matches.get("matches") or {}).items():
         if not match:
             continue
         model = match.get("matched_product", "")
