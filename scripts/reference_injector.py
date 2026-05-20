@@ -158,18 +158,14 @@ class HardwareReferenceInjector:
                     reference = self._review_reference(metadata)
                 match_details = self._format_match_details(match_result)
                 hardware_reasoning = self._format_hardware_reasoning(match_result, bool(reference))
-            # Write reference to the primary row (with full reasoning/details)
             primary_data[ref_idx] = reference
             primary_data[hardware_reason_idx] = hardware_reasoning
             primary_data[details_idx] = match_details
             self._set_legacy_reference(primary[0], reference)
 
-            # Propagate the same reference to every sibling row in the group so
-            # that the References column is filled for all requirement rows that
-            # belong to this hardware item — not just the first one.
             for sibling_row, sibling_data, _ in group["rows"]:
                 if sibling_data is primary_data:
-                    continue  # already written above
+                    continue
                 sibling_data[ref_idx] = reference
                 self._set_legacy_reference(sibling_row, reference)
 
@@ -177,7 +173,6 @@ class HardwareReferenceInjector:
             unmatched_count = 0 if reference else len(group["rows"])
             self.stats["matched_rows"] += matched_count
             self.stats["unmatched_rows"] += unmatched_count
-            # No longer "suppressing" siblings — they all get the reference
             self.stats["sibling_rows_suppressed"] += 0
         sheet["headers"] = headers
 
@@ -241,21 +236,7 @@ class HardwareReferenceInjector:
         device_type = normalized.get("device_type")
         if not device_type:
             return ""
-        parts = []
-        for vendor in ("Fortinet", "Juniper"):
-            product = next(
-                (
-                    item for item in self.matcher.catalog.by_vendor(vendor)
-                    if item.get("category") in ProductMatcher._candidate_categories(device_type)
-                ),
-                None,
-            )
-            if not product:
-                continue
-            url = product.get("datasheet_url") or product.get("product_url") or ""
-            if url:
-                parts.append(f"[Review Required] {vendor} catalog ({device_type}) — {url}")
-        return " | ".join(parts)
+        return f"[Review Required] No compliant catalog match found for {device_type}."
 
     @staticmethod
     def _get_row_parts(row: Any) -> Tuple[str, List[Any], Dict[str, Any]]:
@@ -380,6 +361,7 @@ class HardwareReferenceInjector:
             if self._text_requires_catalog_reference(text, fallback):
                 effective["requires_reference"] = True
             effective["source_text"] = text[:1000]
+            self._sanitize_boolean_constraints(effective, text)
             return effective
         fallback = self.matcher.extract_requirement_metadata(text)
         fallback["requires_reference"] = (
@@ -387,6 +369,7 @@ class HardwareReferenceInjector:
             or self._text_requires_catalog_reference(text, fallback)
         )
         fallback["group_primary_row"] = True
+        self._sanitize_boolean_constraints(fallback, text)
         return fallback
 
     @staticmethod
@@ -396,6 +379,18 @@ class HardwareReferenceInjector:
         if "requires_reference" in metadata:
             return False
         return HardwareReferenceInjector._has_matchable_requirements(metadata)
+
+    @staticmethod
+    def _sanitize_boolean_constraints(metadata: Dict[str, Any], text: str) -> None:
+        normalized_text = ProductMatcher._normalize_text(text or "")
+        if metadata.get("ha_port") is True and not ProductMatcher.text_explicitly_requires_ha_port(normalized_text):
+            metadata.pop("ha_port", None)
+            requirements = metadata.get("requirements")
+            if isinstance(requirements, dict):
+                requirements.pop("ha_port", None)
+            detected_specs = metadata.get("detected_specs")
+            if isinstance(detected_specs, dict):
+                detected_specs.pop("ha_port", None)
 
     @staticmethod
     def _text_requires_catalog_reference(text: str, metadata: Dict[str, Any]) -> bool:
@@ -436,7 +431,6 @@ class HardwareReferenceInjector:
                 continue
             if key in ignored_boolean_only:
                 continue
-            # ha_modes is a real filterable constraint: it limits which products pass.
             if key == "ha_modes" and isinstance(value, list) and value:
                 return True
             if key == "interfaces" and isinstance(value, dict) and any(v not in (None, "", 0) for v in value.values()):

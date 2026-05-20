@@ -275,7 +275,7 @@ class ProductCatalog:
                 entries = []
             for entry in entries:
                 if isinstance(entry, dict):
-                    # Deduplicate by (vendor, model) — keep first occurrence
+                    # Deduplicate by (vendor, model) - keep first occurrence.
                     dedup_key = (
                         str(entry.get("vendor", "")).lower(),
                         str(entry.get("model", "")).lower(),
@@ -382,11 +382,8 @@ class ProductMatcher:
         if ha_modes:
             normalized["ha_supported"] = True
             normalized["ha_modes"] = ha_modes
-        # ----------------------------------------------------------------
-        # Promote generic throughput_gbps to the correct NGFW-specific
-        # field when device_type is now known (via context) but the value
-        # was originally extracted without knowing the category.
-        # ----------------------------------------------------------------
+        # Promote generic throughput_gbps to the right hardware-specific field
+        # once the device type is known from row, sheet, or parent context.
         if normalized.get("throughput_gbps") and normalized.get("device_type") == "NGFW":
             src = (normalized.get("source_text") or "").lower()
             tput = normalized.pop("throughput_gbps")
@@ -402,7 +399,6 @@ class ProductMatcher:
                 normalized["threat_protection_gbps"] = tput
             elif "ngfw_throughput_gbps" not in normalized and "firewall_throughput_gbps" not in normalized:
                 normalized["ngfw_throughput_gbps"] = tput
-            # else: a more specific field already holds this value; discard generic copy
         requirements = {k: v for k, v in normalized.items() if k not in ("device_type", "source_text", "fortinet_feature_candidates")}
         normalized["requirements"] = requirements
         return normalized
@@ -944,30 +940,17 @@ class ProductMatcher:
             return {"device_type": None, "requirements": {}, "excluded": True}
         category = cls._detect_category(normalized)
         metadata: Dict[str, Any] = {"device_type": category, "requirements": {}, "source_text": text[:1000]}
-
-        # Extract specs unconditionally — even when category is unknown.
-        # The device_type may be supplied later via metadata context (e.g. sheet title or
-        # parent row says "Firewalls"), and we must not lose the specs in that case.
-        # Use category="" as a neutral sentinel so keyword-driven classifiers still work.
         flat = cls._extract_numeric_requirements(normalized, category or "")
         interfaces = cls._extract_interfaces(normalized)
         if interfaces:
             flat["interfaces"] = interfaces
-        if re.search(
-            r"\bha\s+(?:configuration|mode|pair|cluster)\b"
-            r"|high\s+availability"
-            r"|active[\s/-]*passive"
-            r"|active[\s/-]*active"
-            r"|\bfgcp\b|\bfgsp\b"
-            r"|virtual\s+cluster",
-            normalized,
-        ):
+        if re.search(r"\bha\s+(?:configuration|mode|pair|cluster)\b|high availability|active[\s/-]*passive|active[\s/-]*active|\bfgcp\b|\bfgsp\b|virtual\s+cluster", normalized):
             flat["ha_supported"] = True
         ha_modes = cls._extract_ha_modes(normalized)
         if ha_modes:
             flat["ha_supported"] = True
             flat["ha_modes"] = ha_modes
-        if re.search(r"\bha\s+(?:ports?|interfaces?)\b|\b(?:ports?|interfaces?)\s+(?:for\s+)?ha\b|dedicated\s+ha\b", normalized):
+        if cls.text_explicitly_requires_ha_port(normalized):
             flat["ha_port"] = True
         if re.search(r"redundant\s+power(?:\s+supply)?|dual\s+(?:ac\s+)?power|dual\s+psu|1\+1\s+redundancy", normalized):
             flat["redundant_power"] = True
@@ -987,6 +970,13 @@ class ProductMatcher:
         return re.sub(r"\s+", " ", text)
 
     @staticmethod
+    def text_explicitly_requires_ha_port(text: str) -> bool:
+        return bool(re.search(
+            r"\bha\s+(?:ports?|interfaces?)\b|\b(?:ports?|interfaces?)\s+(?:for\s+)?ha\b|dedicated\s+ha\b",
+            text,
+        ))
+
+    @staticmethod
     def _detect_category(text: str) -> Optional[str]:
         for category, keywords in CATEGORY_KEYWORDS.items():
             if any(keyword in text for keyword in keywords):
@@ -996,7 +986,6 @@ class ProductMatcher:
     @classmethod
     def _extract_numeric_requirements(cls, text: str, category: str) -> Dict[str, Any]:
         values: Dict[str, Any] = {}
-        # Normalise category for comparisons — treat empty/None as the empty string.
         cat = (category or "").upper()
         ngfw_categories = {"NGFW", ""}
         speed_matches = list(re.finditer(r"(?P<num>\d+(?:\.\d+)?)\s*(?P<unit>tbps|gbps|mbps|tbit/s|gbit/s|mbit/s|g\b|t\b)", text))
@@ -1011,9 +1000,6 @@ class ProductMatcher:
             local_end = min(local_end_candidates) if local_end_candidates else min(len(text), match.end() + 60)
             local_clause = text[local_start:local_end]
             classification_clause = f"{local_clause} {window}"
-            # Keyword-driven classifiers: these work regardless of category so that
-            # specs in sub-items (where device_type may be inferred from context)
-            # are correctly captured.
             if "ssl vpn" in classification_clause and cat in ngfw_categories:
                 values["ssl_vpn_gbps"] = max(values.get("ssl_vpn_gbps", 0), value)
             elif any(k in classification_clause for k in ("ipsec", "ipsec vpn", "ipsec vpn throughput")) and cat in ngfw_categories:
@@ -1029,8 +1015,6 @@ class ProductMatcher:
             elif cat == "NGFW":
                 values["ngfw_throughput_gbps"] = max(values.get("ngfw_throughput_gbps", 0), value)
             elif cat == "":
-                # Unknown category: keep as generic throughput; caller may promote it
-                # once device_type is resolved from context.
                 values["throughput_gbps"] = max(values.get("throughput_gbps", 0), value)
             else:
                 values["throughput_gbps"] = max(values.get("throughput_gbps", 0), value)
