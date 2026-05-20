@@ -8,7 +8,9 @@ from product_matcher import NUMERIC_REQUIREMENT_FIELDS, ProductMatcher, format_r
 
 
 REFERENCE_COLUMN = "References"
+HARDWARE_REASONING_COLUMN = "Hardware_Reference_Reasoning"
 ADMIN_REFERENCE_COLUMN = "Admin_Guide_Reference"
+ADMIN_REASONING_COLUMN = "Admin_Guide_Reference_Reasoning"
 ADMIN_TAG_COLUMN = "Admin_Guide_Reference_Tag"
 MATCH_DETAILS_COLUMN = "Reference_Match_Details"
 
@@ -43,9 +45,15 @@ class HardwareReferenceInjector:
         if REFERENCE_COLUMN not in headers:
             headers.append(REFERENCE_COLUMN)
         ref_idx = headers.index(REFERENCE_COLUMN)
+        if HARDWARE_REASONING_COLUMN not in headers:
+            headers.append(HARDWARE_REASONING_COLUMN)
+        hardware_reason_idx = headers.index(HARDWARE_REASONING_COLUMN)
         if ADMIN_REFERENCE_COLUMN not in headers:
             headers.append(ADMIN_REFERENCE_COLUMN)
         admin_ref_idx = headers.index(ADMIN_REFERENCE_COLUMN)
+        if ADMIN_REASONING_COLUMN not in headers:
+            headers.insert(admin_ref_idx + 1, ADMIN_REASONING_COLUMN)
+        admin_reason_idx = headers.index(ADMIN_REASONING_COLUMN)
         if ADMIN_TAG_COLUMN not in headers:
             headers.append(ADMIN_TAG_COLUMN)
         tag_idx = headers.index(ADMIN_TAG_COLUMN)
@@ -62,7 +70,9 @@ class HardwareReferenceInjector:
             row_type, row_data, metadata = self._get_row_parts(row)
             self._ensure_len(row_data, len(headers))
             row_data[ref_idx] = ""
+            row_data[hardware_reason_idx] = ""
             row_data[admin_ref_idx] = ""
+            row_data[admin_reason_idx] = ""
             row_data[tag_idx] = ""
             row_data[details_idx] = ""
             self._set_legacy_reference(row, "")
@@ -137,13 +147,19 @@ class HardwareReferenceInjector:
                     "selected_reference": reference,
                     "note": "Used direct model mention because no measurable catalog constraints were available.",
                 }, ensure_ascii=False, indent=2)
+                hardware_reasoning = (
+                    "Used direct model mention from the requirement because no measurable "
+                    "catalog constraints were available for a ranked comparison."
+                )
             else:
                 match_result = self.matcher.match(metadata)
                 reference = format_reference(match_result)
                 if not reference:
                     reference = self._review_reference(metadata)
                 match_details = self._format_match_details(match_result)
+                hardware_reasoning = self._format_hardware_reasoning(match_result, bool(reference))
             primary_data[ref_idx] = reference
+            primary_data[hardware_reason_idx] = hardware_reasoning
             primary_data[details_idx] = match_details
             self._set_legacy_reference(primary[0], reference)
             self.stats["sibling_rows_suppressed"] += max(0, len(group["rows"]) - 1)
@@ -152,6 +168,42 @@ class HardwareReferenceInjector:
             else:
                 self.stats["unmatched_rows"] += len(group["rows"])
         sheet["headers"] = headers
+
+    @staticmethod
+    def _format_hardware_reasoning(match_result: Dict[str, Any], has_reference: bool) -> str:
+        if not has_reference:
+            return ""
+        lines: List[str] = []
+        for vendor, match in (match_result.get("matches") or {}).items():
+            if not match:
+                lines.append(f"{vendor}: no catalog item met all hard constraints without being under-spec.")
+                continue
+            details = match.get("match_details") or {}
+            score = match.get("score_breakdown") or {}
+            fit_details = score.get("fit_details") or {}
+            spec_parts = []
+            for field, values in fit_details.items():
+                required = values.get("required")
+                candidate = values.get("candidate")
+                over = values.get("overprovision_factor")
+                if required in (None, "") or candidate in (None, ""):
+                    continue
+                spec_parts.append(f"{field}: required {required}, candidate {candidate}, over {over}x")
+            candidate_summary = "; ".join(
+                f"{item.get('model')} (weighted closeness {item.get('weighted_closeness')}, max over {item.get('max_overprovision')}x)"
+                for item in (details.get("top_valid_candidates") or [])[:3]
+                if item.get("model")
+            )
+            reason = (
+                f"{vendor}: selected {match.get('matched_product')} because it passed every hard requirement "
+                f"and had the closest weighted fit among {details.get('valid_candidates_considered', 0)} valid catalog candidates."
+            )
+            if spec_parts:
+                reason += f" Key fit checks: {'; '.join(spec_parts[:6])}."
+            if candidate_summary:
+                reason += f" Top valid candidates considered: {candidate_summary}."
+            lines.append(reason)
+        return "\n\n".join(lines)
 
     @staticmethod
     def _format_match_details(match_result: Dict[str, Any]) -> str:

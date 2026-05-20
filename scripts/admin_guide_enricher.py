@@ -55,7 +55,8 @@ GLOBAL_EMBEDDING_MODEL = None
 TAG_COLUMN_NAME = "Admin_Guide_Reference_Tag"
 
 OUTPUT_COLUMNS = [
-    "Admin_Guide_Reference"
+    "Admin_Guide_Reference",
+    "Admin_Guide_Reference_Reasoning",
 ]
 
 # Scoring weights
@@ -688,10 +689,16 @@ class FortinetAdminGuideReferenceEnricher:
 
                 cell = ws.cell(row=row_idx, column=start_col)
                 self._write_citation_cell(cell, matches)
-                
+                 
                 cell.fill = CITATION_FILL if overall_status == "Matched" else REVIEW_FILL
                 cell.border = BORDER_THIN
                 cell.alignment = Alignment(wrap_text=True, vertical="top")
+
+                reasoning_cell = ws.cell(row=row_idx, column=start_col + 1)
+                self._write_reasoning_cell(reasoning_cell, matches)
+                reasoning_cell.fill = CITATION_FILL if overall_status == "Matched" else REVIEW_FILL
+                reasoning_cell.border = BORDER_THIN
+                reasoning_cell.alignment = Alignment(wrap_text=True, vertical="top")
 
                 enriched_count += 1
                 if overall_status == "Matched":
@@ -717,9 +724,13 @@ class FortinetAdminGuideReferenceEnricher:
                 start_col -= 1
             new_col_letter = ws.cell(row=1, column=start_col).column_letter
             ws.column_dimensions[new_col_letter].width = 80
+            reason_col_letter = ws.cell(row=1, column=start_col + 1).column_letter
+            ws.column_dimensions[reason_col_letter].width = 80
         else:
             new_col_letter = ws.cell(row=1, column=start_col).column_letter
             ws.column_dimensions[new_col_letter].width = 80
+            reason_col_letter = ws.cell(row=1, column=start_col + 1).column_letter
+            ws.column_dimensions[reason_col_letter].width = 80
 
         return enriched_count
 
@@ -750,13 +761,37 @@ class FortinetAdminGuideReferenceEnricher:
         else:
             cell.value = ""
 
+    def _write_reasoning_cell(self, cell, matches: List[Dict[str, Any]]) -> None:
+        lines = []
+        for match in matches:
+            title = match.get("title") or "No matched Admin Guide section"
+            status = match.get("status") or "Manual Review Required"
+            score = match.get("score", 0)
+            method = match.get("method") or "no scoring method"
+            confidence = match.get("confidence") or "Low"
+            rationale = match.get("rationale") or ""
+            path = match.get("section_path") or match.get("path") or ""
+            page = match.get("pdf_page") or match.get("page") or match.get("printed_page") or ""
+            line = (
+                f"Selected '{title}'"
+                f"{f' on page {page}' if page else ''}"
+                f" using {method} scoring. Status: {status}; confidence: {confidence}; score: {score}."
+            )
+            if path:
+                line += f" Section path: {path}."
+            if rationale:
+                line += f" Score breakdown: {rationale}."
+            lines.append(line)
+        cell.value = "\n\n".join(lines)
+
     def _write_not_required(self, ws, row_idx: int, start_col: int) -> None:
         """Fill output columns for a row that does not need a reference."""
-        cell = ws.cell(row=row_idx, column=start_col)
-        cell.value = ""
-        cell.fill = NOT_REQ_FILL
-        cell.border = BORDER_THIN
-        cell.alignment = Alignment(vertical="top")
+        for offset in range(len(OUTPUT_COLUMNS)):
+            cell = ws.cell(row=row_idx, column=start_col + offset)
+            cell.value = ""
+            cell.fill = NOT_REQ_FILL
+            cell.border = BORDER_THIN
+            cell.alignment = Alignment(vertical="top")
 
     def _write_error(self, ws, row_idx: int, start_col: int, error_msg: str) -> None:
         """Fill output columns for a row where processing failed."""
@@ -765,6 +800,11 @@ class FortinetAdminGuideReferenceEnricher:
         cell.fill = REVIEW_FILL
         cell.border = BORDER_THIN
         cell.alignment = Alignment(vertical="top")
+        reason_cell = ws.cell(row=row_idx, column=start_col + 1)
+        reason_cell.value = f"Admin Guide reference reasoning unavailable because enrichment failed: {error_msg}"
+        reason_cell.fill = REVIEW_FILL
+        reason_cell.border = BORDER_THIN
+        reason_cell.alignment = Alignment(wrap_text=True, vertical="top")
 
     # ------------------------------------------------------------------
     # 9. Enrich entire workbook

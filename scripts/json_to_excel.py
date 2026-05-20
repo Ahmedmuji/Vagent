@@ -29,7 +29,13 @@ def create_summary_sheet(wb, sheets_data):
     header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
     header_font = Font(color="FFFFFF", bold=True, size=14)
     
-    headers = ["Category", "Requirement Description", "Recommended Fortinet Solution", "Recommended Juniper Solution"]
+    headers = [
+        "Category",
+        "Requirement Description",
+        "Recommended Fortinet Solution",
+        "Recommended Juniper Solution",
+        "Hardware Reference Reasoning",
+    ]
     ws.append(headers)
     for cell in ws[1]:
         cell.fill = header_fill
@@ -44,6 +50,7 @@ def create_summary_sheet(wb, sheets_data):
         if "References" not in headers_list: continue
         
         ref_idx = headers_list.index("References")
+        reason_idx = headers_list.index("Hardware_Reference_Reasoning") if "Hardware_Reference_Reasoning" in headers_list else -1
         desc_idx = -1
         for i, h in enumerate(headers_list):
             h_upper = str(h).upper()
@@ -59,13 +66,14 @@ def create_summary_sheet(wb, sheets_data):
                 if ref_idx < len(data) and data[ref_idx]:
                     ref_text = str(data[ref_idx])
                     desc_text = str(data[desc_idx]) if desc_idx < len(data) else ""
+                    reason_text = str(data[reason_idx]) if reason_idx >= 0 and reason_idx < len(data) else ""
                     
                     # Parse Fortinet and Juniper
                     parts = ref_text.split('|')
                     f_sol = parts[0].replace('Fortinet:', '').strip() if len(parts) > 0 else ""
                     j_sol = parts[1].replace('Juniper:', '').strip() if len(parts) > 1 else ""
                     
-                    hardware_found.append([sheet_title, desc_text, f_sol, j_sol])
+                    hardware_found.append([sheet_title, desc_text, f_sol, j_sol, reason_text])
 
     # Write data
     border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
@@ -85,6 +93,7 @@ def create_summary_sheet(wb, sheets_data):
     ws.column_dimensions['B'].width = 50
     ws.column_dimensions['C'].width = 60
     ws.column_dimensions['D'].width = 60
+    ws.column_dimensions['E'].width = 80
 
 def create_formatted_excel(data, output_path):
     """Takes JSON data and generates a polished, premium Excel workbook with section highlighting."""
@@ -116,7 +125,13 @@ def create_formatted_excel(data, output_path):
         raw_title = sheet_data.get("title", "Data")
         title = sanitize_title(raw_title, used_titles)
         headers = list(sheet_data.get("headers", []))
-        for required_header in ("References", "Admin_Guide_Reference", "Reference_Match_Details"):
+        for required_header in (
+            "References",
+            "Hardware_Reference_Reasoning",
+            "Admin_Guide_Reference",
+            "Admin_Guide_Reference_Reasoning",
+            "Reference_Match_Details",
+        ):
             if required_header not in headers:
                 headers.append(required_header)
         rows = sheet_data.get("rows", [])
@@ -201,7 +216,12 @@ def create_formatted_excel(data, output_path):
                         if line_max > max_length: max_length = line_max
                 
                 header_val = str(headers[col[0].column - 1]).strip() if (col[0].column - 1) < len(headers) else ""
-                if header_val in ("References", "Admin_Guide_Reference"):
+                if header_val in (
+                    "References",
+                    "Hardware_Reference_Reasoning",
+                    "Admin_Guide_Reference",
+                    "Admin_Guide_Reference_Reasoning",
+                ):
                     ws.column_dimensions[column_letter].width = 80 # Much wider for references
                 elif header_val in ("Admin_Guide_Reference_Tag", "Reference_Match_Details"):
                     ws.column_dimensions[column_letter].width = 20
