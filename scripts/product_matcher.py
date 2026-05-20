@@ -39,11 +39,11 @@ NUMERIC_REQUIREMENT_FIELDS = (
 )
 
 PRODUCT_SPEC_ALIASES = {
-    "ipsec_vpn_throughput_gbps": ("vpn_throughput_gbps",),
-    "firewall_throughput_gbps": ("ngfw_throughput_gbps", "throughput_gbps"),
+    "ipsec_vpn_throughput_gbps": ("vpn_throughput_gbps", "firewall_throughput_gbps", "throughput_gbps"),
+    "firewall_throughput_gbps": ("ngfw_throughput_gbps", "throughput_gbps", "ipsec_vpn_throughput_gbps"),
     "ngfw_throughput_gbps": ("firewall_throughput_gbps", "throughput_gbps"),
     "switching_capacity_gbps": ("throughput_gbps",),
-    "throughput_gbps": ("switching_capacity_gbps", "ngfw_throughput_gbps"),
+    "throughput_gbps": ("switching_capacity_gbps", "ngfw_throughput_gbps", "firewall_throughput_gbps"),
     "connections_per_second": ("cps",),
     "performance_eps": ("analytic_rate_logs_sec", "collector_rate_logs_sec"),
     "max_ports": ("ports",),
@@ -388,30 +388,37 @@ class ProductMatcher:
 
     def _match_vendor(self, requirements: Dict[str, Any], vendor: str) -> Optional[ProductMatch]:
         category = requirements.get("device_type") or requirements.get("category")
-        if not category:
-            return None
-        categories = self._candidate_categories(category)
-        candidates = [p for p in self.catalog.by_vendor(vendor) if p.get("category") in categories]
+        all_products = self.catalog.by_vendor(vendor)
+        candidates = []
+        if category:
+            categories = self._candidate_categories(category)
+            candidates = [p for p in all_products if p.get("category") in categories]
+        
         if not self._has_hard_constraints(requirements):
             return None
 
-        # ----------------------------------------------------------------
-        # STRICT PHASE: only consider products that meet ALL hard constraints.
-        # A hard constraint fails when candidate_spec < required_spec.
-        # We NEVER fall back to under-spec hardware.
-        # ----------------------------------------------------------------
-        viable: List[Tuple[Dict[str, Any], List[str], Dict[str, Any], Dict[str, Any]]] = []
-        rejected: List[Dict[str, Any]] = []
-        for product in candidates:
-            ok, matched, missing, details = self._passes_hard_filters(product, requirements)
-            if ok:
-                score = self._score_product(product, requirements, matched)
-                viable.append((product, matched, score, details))
-            elif missing:
-                rejected.append({
-                    "model": product.get("model"),
-                    "missing_or_under_spec": missing[:8],
-                })
+        def _evaluate_candidates(candidate_list: List[Dict[str, Any]]) -> Tuple[List[Tuple[Dict[str, Any], List[str], Dict[str, Any], Dict[str, Any]]], List[Dict[str, Any]]]:
+            viable = []
+            rejected = []
+            for product in candidate_list:
+                ok, matched, missing, details = self._passes_hard_filters(product, requirements)
+                if ok:
+                    score = self._score_product(product, requirements, matched)
+                    viable.append((product, matched, score, details))
+                elif missing:
+                    rejected.append({
+                        "model": product.get("model"),
+                        "missing_or_under_spec": missing[:8],
+                    })
+            return viable, rejected
+
+        # Try strict category match first
+        viable, rejected = _evaluate_candidates(candidates)
+
+        # Dynamic fallback: if no candidates in the detected category passed all hard constraints,
+        # OR if category was unknown, fallback to checking ALL vendor products.
+        if not viable and (not category or candidates != all_products):
+            viable, rejected = _evaluate_candidates(all_products)
 
         if not viable:
             # No product satisfies all requirements → return None rather than
