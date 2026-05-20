@@ -219,6 +219,8 @@ HA_MODE_PATTERNS = (
     ("clustering", r"cluster(?:ing)?"),
 )
 
+GENERIC_HA_MODES = {"active-passive", "active-active", "clustering"}
+
 
 @dataclass
 class ProductMatch:
@@ -563,11 +565,12 @@ class ProductMatcher:
         required_ha_modes = ProductMatcher._normalize_ha_modes(requirements.get("ha_modes"))
         if required_ha_modes:
             candidate_modes = ProductMatcher._normalize_ha_modes(product.get("ha_modes"))
-            missing_modes = [mode for mode in required_ha_modes if mode not in candidate_modes]
+            modes_pass = ProductMatcher._product_supports_ha_modes(product, required_ha_modes, candidate_modes)
+            missing_modes = [] if modes_pass else [mode for mode in required_ha_modes if mode not in candidate_modes]
             details["requirements"]["ha_modes"] = {
                 "required": required_ha_modes,
                 "candidate": candidate_modes,
-                "passes": not missing_modes,
+                "passes": modes_pass,
             }
             if missing_modes:
                 missing.append("ha_modes")
@@ -745,6 +748,15 @@ class ProductMatcher:
         return False
 
     @staticmethod
+    def _product_supports_ha_modes(product: Dict[str, Any], required_modes: List[str], candidate_modes: Optional[List[str]] = None) -> bool:
+        candidate_modes = candidate_modes if candidate_modes is not None else ProductMatcher._normalize_ha_modes(product.get("ha_modes"))
+        if candidate_modes:
+            return all(mode in candidate_modes for mode in required_modes)
+        if not ProductMatcher._product_boolean_value(product, "ha_supported"):
+            return False
+        return all(mode in GENERIC_HA_MODES for mode in required_modes)
+
+    @staticmethod
     def _product_scale_score(product: Dict[str, Any]) -> float:
         model = str(product.get("model") or "")
         numbers = [float(match) for match in re.findall(r"\d+", model)]
@@ -914,7 +926,7 @@ class ProductMatcher:
         if ha_modes:
             flat["ha_supported"] = True
             flat["ha_modes"] = ha_modes
-        if re.search(r"\bha\s+(?:port|interface)\b|(?:port|interface)\s+(?:for\s+)?ha\b|dedicated\s+ha\b", normalized):
+        if re.search(r"\bha\s+(?:ports?|interfaces?)\b|\b(?:ports?|interfaces?)\s+(?:for\s+)?ha\b|dedicated\s+ha\b", normalized):
             flat["ha_port"] = True
         if re.search(r"redundant\s+power|dual\s+(?:ac\s+)?power|dual\s+psu|1\+1\s+redundancy", normalized):
             flat["redundant_power"] = True
