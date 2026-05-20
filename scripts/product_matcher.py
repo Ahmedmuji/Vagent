@@ -54,7 +54,10 @@ INTERFACE_METADATA_FIELDS = {
     "interfaces_10g": "10g_sfp_plus",
     "interfaces_25g": "25g_sfp28",
     "interfaces_40g": "40g_qsfp_plus",
+    "interfaces_50g": "50g_sfp56",
     "interfaces_100g": "100g_qsfp28",
+    "interfaces_200g": "200g_qsfp56",
+    "interfaces_400g": "400g_qsfp_dd",
 }
 
 INTERFACE_COMPATIBILITY = {
@@ -62,10 +65,12 @@ INTERFACE_COMPATIBILITY = {
     "10g_rj45": ("10g_rj45", "1_10g_rj45"),
     "1_10g_rj45": ("1_10g_rj45",),
     "1g_sfp": ("1g_sfp",),
-    "10g_sfp_plus": ("10g_sfp_plus", "10g_rj45", "1_10g_rj45"),
-    "25g_sfp28": ("25g_sfp28",),
-    "40g_qsfp_plus": ("40g_qsfp_plus",),
-    "100g_qsfp28": ("100g_qsfp28",),
+    "10g_sfp_plus": ("10g_sfp_plus", "25g_sfp28"),
+    "25g_sfp28": ("25g_sfp28", "50g_sfp56"),
+    "40g_qsfp_plus": ("40g_qsfp_plus", "100g_qsfp28"),
+    "100g_qsfp28": ("100g_qsfp28", "200g_qsfp56", "400g_qsfp_dd"),
+    "200g_qsfp56": ("200g_qsfp56", "400g_qsfp_dd"),
+    "400g_qsfp_dd": ("400g_qsfp_dd",),
 }
 
 DEVICE_CATEGORY_MAP = {
@@ -118,6 +123,9 @@ DEVICE_CATEGORY_MAP = {
 }
 
 INTERFACE_PATTERNS = {
+    "400g_qsfp_dd": r"(?P<count>\d+)\s*(?:x|Ã—)?\s*(?:400\s*g|400gbe|400\s*gbps).*?(?:qsfp-dd|qsfpdd)?",
+    "200g_qsfp56": r"(?P<count>\d+)\s*(?:x|Ã—)?\s*(?:200\s*g|200gbe|200\s*gbps).*?(?:qsfp56|qsfp)?",
+    "50g_sfp56": r"(?P<count>\d+)\s*(?:x|Ã—)?\s*(?:50\s*g|50gbe|50\s*gbps).*?(?:sfp56)?",
     "100g_qsfp28": r"(?P<count>\d+)\s*(?:x|×)?\s*(?:100\s*g|100gbe|100\s*gbps|hundred\s* Gigabit).*?(?:qsfp28|qsfp)?",
     "40g_qsfp_plus": r"(?P<count>\d+)\s*(?:x|×)?\s*(?:40\s*g|40gbe|40\s*gbps).*?(?:qsfp\+|qsfp)?",
     "25g_sfp28": r"(?P<count>\d+)\s*(?:x|×)?\s*(?:25\s*g|25gbe|25\s*gbps).*?(?:sfp28)?",
@@ -127,6 +135,9 @@ INTERFACE_PATTERNS = {
 }
 
 INTERFACE_REVERSE_PATTERNS = {
+    "400g_qsfp_dd": r"(?:interfaces?|ports?).{0,50}400\s*(?:g|gig|gbe|gbps).{0,35}(?:qsfp-dd|qsfpdd)?.{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
+    "200g_qsfp56": r"(?:interfaces?|ports?).{0,50}200\s*(?:g|gig|gbe|gbps).{0,35}(?:qsfp56|qsfp)?.{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
+    "50g_sfp56": r"(?:interfaces?|ports?).{0,50}50\s*(?:g|gig|gbe|gbps).{0,35}(?:sfp56)?.{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
     "100g_qsfp28": r"(?:interfaces?|ports?).{0,50}(?:100\s*(?:g|gig|gbe|gbps)|hundred\s*gigabit).{0,35}(?:qsfp28|qsfp)?.{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
     "40g_qsfp_plus": r"(?:interfaces?|ports?).{0,50}40\s*(?:g|gig|gbe|gbps).{0,35}(?:qsfp\+|qsfp)?.{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
     "25g_sfp28": r"(?:interfaces?|ports?).{0,50}25\s*(?:g|gig|gbe|gbps).{0,35}(?:sfp28)?.{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
@@ -172,6 +183,24 @@ EXCLUDED_KEYWORDS = (
     "rack", "cabinet", "pdu", "patch cord", "cabling", "civil work", "electrical",
     "storage array", "san switch", "gpu", "license only", "subscription only",
 )
+
+SPEC_FIT_WEIGHTS = {
+    "firewall_throughput_gbps": 1.45,
+    "ngfw_throughput_gbps": 1.55,
+    "ips_throughput_gbps": 1.35,
+    "threat_protection_gbps": 1.35,
+    "ipsec_vpn_throughput_gbps": 1.25,
+    "ssl_tls_inspection_gbps": 1.25,
+    "ssl_vpn_gbps": 1.15,
+    "switching_capacity_gbps": 1.45,
+    "throughput_gbps": 1.35,
+    "concurrent_sessions": 1.15,
+    "connections_per_second": 1.10,
+    "ports": 1.20,
+    "max_ports": 1.20,
+    "interfaces": 1.35,
+    "storage_tb": 0.90,
+}
 
 
 @dataclass
@@ -283,7 +312,9 @@ class ProductMatcher:
             if parsed_storage_gb is not None:
                 normalized["storage_tb"] = parsed_storage_gb / 1024
         if detected_specs.get("cps", nested_requirements.get("cps")) not in (None, ""):
-            normalized["connections_per_second"] = detected_specs.get("cps", nested_requirements.get("cps"))
+            parsed_cps = cls._parse_catalog_number(detected_specs.get("cps", nested_requirements.get("cps")))
+            if parsed_cps is not None:
+                normalized["connections_per_second"] = parsed_cps
         interfaces: Dict[str, int] = {}
         raw_interfaces = metadata.get("interfaces") or nested_requirements.get("interfaces")
         if isinstance(raw_interfaces, dict):
@@ -342,7 +373,7 @@ class ProductMatcher:
         # A hard constraint fails when candidate_spec < required_spec.
         # We NEVER fall back to under-spec hardware.
         # ----------------------------------------------------------------
-        viable: List[Tuple[Dict[str, Any], List[str], Dict[str, float], Dict[str, Any]]] = []
+        viable: List[Tuple[Dict[str, Any], List[str], Dict[str, Any], Dict[str, Any]]] = []
         rejected: List[Dict[str, Any]] = []
         for product in candidates:
             ok, matched, missing, details = self._passes_hard_filters(product, requirements)
@@ -366,9 +397,11 @@ class ProductMatcher:
         # ----------------------------------------------------------------
         viable.sort(
             key=lambda item: (
+                item[2]["weighted_overprovision_penalty"],
+                item[2]["weighted_worst_overprovision"],
                 item[2]["overprovision_penalty"],
-                item[2]["max_overprovision"],
                 -item[2]["coverage"],
+                -item[2]["affinity"],
                 item[2]["hardware_scale"],
             )
         )
@@ -376,6 +409,15 @@ class ProductMatcher:
         details["selected_model"] = product.get("model")
         details["valid_candidates_considered"] = len(viable)
         details["rejected_candidates_sample"] = rejected[:8]
+        details["top_valid_candidates"] = [
+            {
+                "model": item[0].get("model"),
+                "weighted_overprovision_penalty": round(float(item[2]["weighted_overprovision_penalty"]), 4),
+                "weighted_closeness": round(float(item[2]["weighted_closeness"]), 4),
+                "max_overprovision": round(float(item[2]["max_overprovision"]), 4),
+            }
+            for item in viable[:5]
+        ]
         details["selection_reason"] = (
             "Selected closest valid candidate after hard filtering. "
             "Every listed matched constraint has candidate value >= required value."
@@ -390,9 +432,29 @@ class ProductMatcher:
             datasheet_url=str(product.get("datasheet_url", "")),
             matched_requirements=matched,
             missing_requirements=[],
-            score_breakdown={k: round(v, 4) for k, v in breakdown.items()},
+            score_breakdown=self._rounded_score_breakdown(breakdown),
             match_details=details,
         )
+
+    @staticmethod
+    def _rounded_score_breakdown(breakdown: Dict[str, Any]) -> Dict[str, Any]:
+        rounded: Dict[str, Any] = {}
+        for key, value in breakdown.items():
+            if isinstance(value, (int, float)):
+                rounded[key] = round(float(value), 4)
+            elif key == "fit_details" and isinstance(value, dict):
+                rounded[key] = {
+                    detail_key: {
+                        detail_field: round(float(detail_value), 4)
+                        for detail_field, detail_value in detail.items()
+                        if isinstance(detail_value, (int, float))
+                    }
+                    for detail_key, detail in value.items()
+                    if isinstance(detail, dict)
+                }
+            else:
+                rounded[key] = value
+        return rounded
 
     @staticmethod
     def _candidate_categories(category: str) -> List[str]:
@@ -446,7 +508,6 @@ class ProductMatcher:
                 matched.append(field)
                 details["requirements"][field]["passes"] = True
         required_interfaces = requirements.get("interfaces") or {}
-        product_interfaces = product.get("interfaces") or {}
         for name, required_count in required_interfaces.items():
             if required_count in (None, ""):
                 continue
@@ -476,7 +537,7 @@ class ProductMatcher:
         return not missing, matched, missing, details
 
     @staticmethod
-    def _score_product(product: Dict[str, Any], requirements: Dict[str, Any], matched: List[str]) -> Dict[str, float]:
+    def _score_product(product: Dict[str, Any], requirements: Dict[str, Any], matched: List[str]) -> Dict[str, Any]:
         """
         Score a product that has already passed all hard constraints.
 
@@ -490,7 +551,12 @@ class ProductMatcher:
                        the tightest fit without under-sizing.
         """
         fit_scores: List[float] = []
+        weighted_fit_total = 0.0
+        total_weight = 0.0
         overprovision_factors: List[float] = []
+        weighted_overprovision_total = 0.0
+        weighted_worst_overprovision = 0.0
+        fit_details: Dict[str, Dict[str, float]] = {}
         required_count = 0
 
         for field in NUMERIC_REQUIREMENT_FIELDS:
@@ -508,19 +574,44 @@ class ProductMatcher:
             # ratio = required / available:  1.0 = perfect, <1.0 = over-provisioned.
             # Since we already passed hard filters, available >= required, so ratio ∈ (0, 1].
             ratio = required_float / available_float
+            factor = max(1.0, available_float / required_float)
+            weight = ProductMatcher._constraint_weight(field)
             fit_scores.append(ratio)
-            overprovision_factors.append(max(1.0, available_float / required_float))
+            weighted_fit_total += ratio * weight
+            total_weight += weight
+            overprovision_factors.append(factor)
+            weighted_overprovision_total += math.log(factor) * weight
+            weighted_worst_overprovision = max(weighted_worst_overprovision, math.log(factor) * weight)
+            fit_details[field] = {
+                "required": required_float,
+                "candidate": available_float,
+                "fit_ratio": ratio,
+                "overprovision_factor": factor,
+                "weight": weight,
+            }
 
         required_interfaces = requirements.get("interfaces") or {}
-        product_interfaces = product.get("interfaces") or {}
         for name, required_interface_count in required_interfaces.items():
             required_count += 1
             available_count = ProductMatcher._compatible_interface_count(product, name, required_interface_count)
             if not required_interface_count or not available_count:
                 continue
             ratio = int(required_interface_count) / int(available_count)
+            factor = max(1.0, int(available_count) / int(required_interface_count))
+            weight = ProductMatcher._constraint_weight(f"interfaces.{name}")
             fit_scores.append(ratio)
-            overprovision_factors.append(max(1.0, int(available_count) / int(required_interface_count)))
+            weighted_fit_total += ratio * weight
+            total_weight += weight
+            overprovision_factors.append(factor)
+            weighted_overprovision_total += math.log(factor) * weight
+            weighted_worst_overprovision = max(weighted_worst_overprovision, math.log(factor) * weight)
+            fit_details[f"interfaces.{name}"] = {
+                "required": float(required_interface_count),
+                "candidate": float(available_count),
+                "fit_ratio": ratio,
+                "overprovision_factor": factor,
+                "weight": weight,
+            }
 
         for field in ("ha_port", "management_port", "console_port", "redundant_power"):
             if requirements.get(field) is True:
@@ -528,11 +619,13 @@ class ProductMatcher:
 
         # closeness: average ratio — 1.0 means every spec is exactly met
         closeness = sum(fit_scores) / len(fit_scores) if fit_scores else 0.75
+        weighted_closeness = weighted_fit_total / total_weight if total_weight else closeness
         coverage  = min(1.0, len(matched) / max(1, required_count))
         overprovision_penalty = (
             sum(math.log(factor) for factor in overprovision_factors) / len(overprovision_factors)
             if overprovision_factors else 0.0
         )
+        weighted_overprovision_penalty = weighted_overprovision_total / total_weight if total_weight else overprovision_penalty
         max_overprovision = max(overprovision_factors) if overprovision_factors else 1.0
         hardware_scale = ProductMatcher._product_scale_score(product)
 
@@ -543,24 +636,35 @@ class ProductMatcher:
         model_tokens = [token for token in re.findall(r"[a-z0-9]+", str(product.get("model", "")).lower()) if len(token) > 2]
         affinity = 1.0 if any(token in context for token in model_tokens) else 0.0
 
-        # Composite total (unchanged weights keep backwards compatibility)
-        total = (0.64 * closeness) + (0.18 * coverage) + (0.08 * affinity) + 0.10
+        # Higher confidence for tight, complete matches; sorting still uses the
+        # overprovision penalties above to prefer the closest compliant model.
+        total = (0.68 * weighted_closeness) + (0.16 * coverage) + (0.06 * affinity) + 0.10
 
         # fit_quality is the primary sort key: maximise closeness (i.e. prefer
         # the product that is just enough without over-provisioning), with
         # coverage as a tie-breaker.
-        fit_quality = (0.80 * closeness) + (0.20 * coverage)
+        fit_quality = (0.84 * weighted_closeness) + (0.16 * coverage)
 
         return {
             "closeness":   closeness,
+            "weighted_closeness": weighted_closeness,
             "coverage":    coverage,
             "affinity":    affinity,
             "total":       total,
             "fit_quality": fit_quality,
             "overprovision_penalty": overprovision_penalty,
+            "weighted_overprovision_penalty": weighted_overprovision_penalty,
             "max_overprovision": max_overprovision,
+            "weighted_worst_overprovision": weighted_worst_overprovision,
             "hardware_scale": hardware_scale,
+            "fit_details": fit_details,
         }
+
+    @staticmethod
+    def _constraint_weight(field: str) -> float:
+        if field.startswith("interfaces."):
+            return SPEC_FIT_WEIGHTS["interfaces"]
+        return SPEC_FIT_WEIGHTS.get(field, 1.0)
 
     @staticmethod
     def _product_scale_score(product: Dict[str, Any]) -> float:
@@ -682,6 +786,13 @@ class ProductMatcher:
         text = str(value).strip().replace(",", "")
         if not text:
             return None
+        suffixed = re.search(r"(?P<num>\d+(?:\.\d+)?)\s*(?P<suffix>k|m|million|thousand)\b", text, re.IGNORECASE)
+        if suffixed:
+            number = float(suffixed.group("num"))
+            suffix = suffixed.group("suffix").lower()
+            if suffix in ("m", "million"):
+                return number * 1_000_000
+            return number * 1_000
         matches = [float(match) for match in re.findall(r"\d+(?:\.\d+)?", text)]
         if not matches:
             return None
@@ -824,7 +935,7 @@ class ProductMatcher:
     def _extract_count(text: str, values: Dict[str, Any], field: str, labels: Tuple[str, ...]) -> None:
         found: List[int] = []
         for label in labels:
-            pattern_before = rf"(?P<num>\d[\d,]*(?:\.\d+)?)\s*(?:k|m|million|thousand)?\s+{re.escape(label)}"
+            pattern_before = rf"(?P<num>\d[\d,]*(?:\.\d+)?)\s*(?P<suffix>k|m|million|thousand)?\s+{re.escape(label)}"
             pattern_after = rf"{re.escape(label)}(?:\s|\||:|=|-|>|of|at least|minimum|min)*?(?P<num>\d[\d,]*(?:\.\d+)?)\s*(?P<suffix>k|m|million|thousand)?"
             for pattern in (pattern_before, pattern_after):
                 for match in re.finditer(pattern, text):
