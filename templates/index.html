@@ -371,15 +371,15 @@
         <div class="step" id="step4"><div class="step-num">4</div><div class="step-label">Deliver</div></div>
       </div>
       
-      <!-- Recent Downloads Section -->
+      <!-- Current Download Section -->
       <div id="downloadsArea" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-          <h3 style="margin: 0; font-size: 1.2rem; color: var(--text);">Recent Downloads</h3>
+          <h3 style="margin: 0; font-size: 1.2rem; color: var(--text);">Current Result</h3>
           <button id="refreshDownloadsBtn" style="background: rgba(255,255,255,0.1); border: none; color: var(--text); padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.9rem; transition: background 0.2s;">↻ Refresh</button>
         </div>
         <div id="downloadsList" style="display: flex; flex-direction: column; gap: 0.75rem;">
           <!-- Items will be populated here -->
-          <div style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 1rem;">No recent files found.</div>
+          <div style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 1rem;">Upload and process an RFP to see its generated Excel file here.</div>
         </div>
       </div>
     </div>
@@ -421,6 +421,7 @@
       pendingStoredName: null,   // set after /estimate_cost succeeds
       pendingOriginalName: null,
       pendingModelName: null,
+      lastCompletedDownload: null,
     };
 
     // ─── DOM refs ────────────────────────────────────────────────────────────
@@ -490,23 +491,31 @@
         return;
       }
       state.file = file;
+      revokeLastCompletedDownload();
       state.pendingStoredName = null;
+      state.pendingOriginalName = null;
       state.pendingModelName = null;
+      state.lastCompletedDownload = null;
       selectedFileName.textContent = file.name;
       dropZoneContent.style.display = 'none';
       filePreview.style.display = 'flex';
       dropZone.classList.add('has-file');
       clearStatus();
+      clearCurrentDownload();
     }
     removeFile.addEventListener('click', (e) => {
       e.stopPropagation();
+      revokeLastCompletedDownload();
       state.file = null;
       state.pendingStoredName = null;
+      state.pendingOriginalName = null;
       state.pendingModelName = null;
+      state.lastCompletedDownload = null;
       fileInput.value = '';
       dropZoneContent.style.display = 'block';
       filePreview.style.display = 'none';
       dropZone.classList.remove('has-file');
+      clearCurrentDownload();
     });
 
     // ─── Submit: Step 1 — estimate cost ──────────────────────────────────────
@@ -593,7 +602,7 @@
           } else {
             const errorText = await response.text();
             if (response.status === 504 || response.status === 503) {
-              errorMessage = 'Ngrok timed out waiting for the server, but your file is still processing in the background! Please wait 2-3 minutes, then click "Refresh" in the Recent Downloads section below to get your file.';
+              errorMessage = 'Ngrok timed out waiting for the server, but your file is still processing in the background. Please wait 2-3 minutes, then click Refresh in Current Result to get this run\'s file.';
               showStatus('processing', 'Processing in Background', errorMessage);
               updateSteps(3); // Keep it looking active
               setProcessing(false);
@@ -626,9 +635,16 @@
         a.download = filename;
         document.body.appendChild(a);
         a.click();
-        window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
 
+        state.lastCompletedDownload = {
+          name: filename,
+          path: null,
+          mtime: Date.now() / 1000,
+          size: blob.size,
+          blobUrl: url
+        };
+        renderDownloads([state.lastCompletedDownload]);
         showStatus('success', 'Processing Complete!', 'Your enriched Excel workbook has been generated and downloaded.');
         setProcessing(false);
       } catch (error) {
@@ -664,46 +680,76 @@
       }
     }
 
-    // Recent Downloads Logic
+    // Current Result Download Logic
     const downloadsList = document.getElementById('downloadsList');
     const refreshDownloadsBtn = document.getElementById('refreshDownloadsBtn');
 
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function clearCurrentDownload(message = 'Upload and process an RFP to see its generated Excel file here.') {
+      downloadsList.innerHTML = `<div style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 1rem;">${escapeHtml(message)}</div>`;
+    }
+
+    function encodeDownloadPath(path) {
+      return String(path || '').split('/').map(encodeURIComponent).join('/');
+    }
+
+    function revokeLastCompletedDownload() {
+      if (state.lastCompletedDownload && state.lastCompletedDownload.blobUrl) {
+        window.URL.revokeObjectURL(state.lastCompletedDownload.blobUrl);
+      }
+      state.lastCompletedDownload = null;
+    }
+
+    function renderDownloads(files) {
+      downloadsList.innerHTML = '';
+      if (!files || files.length === 0) {
+        clearCurrentDownload('This run is still processing. Click Refresh again in a minute.');
+        return;
+      }
+      files.slice(0, 1).forEach(file => {
+        const date = new Date(file.mtime * 1000).toLocaleString();
+        const size = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+        const href = file.blobUrl || `/download/${encodeDownloadPath(file.path)}`;
+        const item = document.createElement('div');
+        item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 0.75rem;';
+        item.innerHTML = `
+          <div style="overflow: hidden; padding-right: 1rem;">
+            <div style="font-weight: 600; color: #2dd4bf; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem;">${escapeHtml(file.name)}</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">${escapeHtml(date)} &bull; ${escapeHtml(size)}</div>
+          </div>
+          <a href="${href}" download="${escapeHtml(file.name)}" style="background: rgba(45, 212, 191, 0.2); color: #2dd4bf; text-decoration: none; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; white-space: nowrap;" onmouseover="this.style.background='rgba(45, 212, 191, 0.3)'" onmouseout="this.style.background='rgba(45, 212, 191, 0.2)'">Download</a>
+        `;
+        downloadsList.appendChild(item);
+      });
+    }
+
     async function fetchRecentDownloads() {
+      if (!state.pendingStoredName) {
+        clearCurrentDownload();
+        return;
+      }
       try {
         refreshDownloadsBtn.style.opacity = '0.5';
-        const res = await fetch('/recent_downloads');
+        const res = await fetch(`/recent_downloads?stored_name=${encodeURIComponent(state.pendingStoredName)}`);
         const data = await res.json();
-        
-        downloadsList.innerHTML = '';
-        if (data.files && data.files.length > 0) {
-          data.files.forEach(file => {
-            const date = new Date(file.mtime * 1000).toLocaleString();
-            const size = (file.size / 1024 / 1024).toFixed(2) + ' MB';
-            const item = document.createElement('div');
-            item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 0.75rem;';
-            item.innerHTML = `
-              <div style="overflow: hidden; padding-right: 1rem;">
-                <div style="font-weight: 600; color: #2dd4bf; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem;">${file.name}</div>
-                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">${date} &bull; ${size}</div>
-              </div>
-              <a href="/download/${encodeURIComponent(file.path)}" style="background: rgba(45, 212, 191, 0.2); color: #2dd4bf; text-decoration: none; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; white-space: nowrap;" onmouseover="this.style.background='rgba(45, 212, 191, 0.3)'" onmouseout="this.style.background='rgba(45, 212, 191, 0.2)'">Download</a>
-            `;
-            downloadsList.appendChild(item);
-          });
-        } else {
-          downloadsList.innerHTML = '<div style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 1rem;">No recent files found.</div>';
-        }
+        renderDownloads(data.files || []);
       } catch (err) {
         console.error('Failed to fetch downloads:', err);
+        clearCurrentDownload('Could not check this run yet. Try Refresh again.');
       } finally {
         refreshDownloadsBtn.style.opacity = '1';
       }
     }
 
     refreshDownloadsBtn.addEventListener('click', fetchRecentDownloads);
-    
-    // Initial fetch
-    fetchRecentDownloads();
   </script>
 </body>
 </html>

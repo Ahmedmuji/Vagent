@@ -211,12 +211,18 @@ def get_recent_downloads():
     if not os.path.exists(excel_dir):
         return jsonify({"files": []})
 
+    stored_name = secure_filename(request.args.get("stored_name") or "")
+    run_base = Path(stored_name).stem if stored_name else ""
+
     files = []
     for root, _, filenames in os.walk(excel_dir):
         for f in filenames:
             if f.endswith(".xlsx"):
                 filepath = os.path.join(root, f)
                 rel_path = os.path.relpath(filepath, excel_dir)
+                rel_parts = Path(rel_path).parts
+                if run_base and (not rel_parts or rel_parts[0] != run_base):
+                    continue
                 stat = os.stat(filepath)
                 files.append({
                     "name": f,
@@ -225,9 +231,9 @@ def get_recent_downloads():
                     "size": stat.st_size
                 })
     
-    # Sort by newest first, take top 10
+    # Sort by newest first. For a specific run, return the newest generated workbook only.
     files.sort(key=lambda x: x["mtime"], reverse=True)
-    return jsonify({"files": files[:10]})
+    return jsonify({"files": files[:1] if run_base else []})
 
 
 @app.route("/download/<path:filename>", methods=["GET"])
