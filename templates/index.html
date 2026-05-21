@@ -339,6 +339,13 @@
             </select>
           </div>
           <div class="input-field">
+            <label for="referenceProvider">Reference Company</label>
+            <select id="referenceProvider">
+              <option value="fortinet">Fortinet - Network & Security Hardware</option>
+              <option value="vertiv">Vertiv - Data Center Architecture Hardware</option>
+            </select>
+          </div>
+          <div class="input-field">
             <label for="startPage">Start Page (Optional)</label>
             <input type="number" id="startPage" placeholder="e.g. 55" min="1">
           </div>
@@ -421,6 +428,7 @@
       pendingStoredName: null,   // set after /estimate_cost succeeds
       pendingOriginalName: null,
       pendingModelName: null,
+      pendingReferenceProvider: null,
       lastCompletedDownload: null,
     };
 
@@ -438,6 +446,7 @@
     const statusTitle      = document.getElementById('statusTitle');
     const statusDesc       = document.getElementById('statusDesc');
     const modelNameInput   = document.getElementById('modelName');
+    const referenceProviderInput = document.getElementById('referenceProvider');
     const startPageInput   = document.getElementById('startPage');
     const endPageInput     = document.getElementById('endPage');
     const skipEnrichmentInput = document.getElementById('skipEnrichment');
@@ -495,6 +504,7 @@
       state.pendingStoredName = null;
       state.pendingOriginalName = null;
       state.pendingModelName = null;
+      state.pendingReferenceProvider = null;
       state.lastCompletedDownload = null;
       selectedFileName.textContent = file.name;
       dropZoneContent.style.display = 'none';
@@ -510,6 +520,7 @@
       state.pendingStoredName = null;
       state.pendingOriginalName = null;
       state.pendingModelName = null;
+      state.pendingReferenceProvider = null;
       state.lastCompletedDownload = null;
       fileInput.value = '';
       dropZoneContent.style.display = 'block';
@@ -540,6 +551,7 @@
         state.pendingStoredName   = data.stored_name;
         state.pendingOriginalName = data.original_name;
         state.pendingModelName    = data.model_name;
+        state.pendingReferenceProvider = referenceProviderInput.value;
 
         // Populate modal
         const c = data.cost;
@@ -567,6 +579,7 @@
       costModal.style.display = 'none';
       state.pendingStoredName = null;
       state.pendingModelName = null;
+      state.pendingReferenceProvider = null;
       clearStatus();
     });
 
@@ -583,6 +596,7 @@
       formData.append('stored_name',   state.pendingStoredName);
       formData.append('original_name', state.pendingOriginalName);
       formData.append('model_name', state.pendingModelName || modelNameInput.value);
+      formData.append('reference_provider', state.pendingReferenceProvider || referenceProviderInput.value);
       formData.append('start_page', startPageInput.value);
       formData.append('end_page', endPageInput.value);
       if (skipEnrichmentInput.checked) formData.append('skip_enrichment', 'on');

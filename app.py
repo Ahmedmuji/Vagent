@@ -139,6 +139,9 @@ def process_upload():
     ensure_runtime_dirs(paths)
     model_name = request.form.get("model_name")
     selected_model = resolve_model_pricing(model_name)
+    reference_provider = (request.form.get("reference_provider") or "fortinet").strip().lower()
+    if reference_provider not in {"fortinet", "vertiv"}:
+        return jsonify({"error": "Invalid reference provider selected."}), 400
 
     # Two-step flow: /estimate_cost already saved the file; client passes stored_name back.
     pre_stored_name = request.form.get("stored_name")
@@ -175,7 +178,7 @@ def process_upload():
             end_page = detected["end_page"]
         else:
             start_page, end_page = page_range
-        skip_enrichment = request.form.get("skip_enrichment") == "on"
+        skip_enrichment = request.form.get("skip_enrichment") == "on" or reference_provider != "fortinet"
         toc_index_path, admin_guide_pdf_path = prepare_admin_guide_index(
             PROJECT_ROOT,
             skip_enrichment=skip_enrichment,
@@ -191,6 +194,7 @@ def process_upload():
             toc_index_path,
             admin_guide_pdf_path,
             selected_model["id"],
+            reference_provider,
         )
         final_excel_path = outputs["final_excel_path"]
         download_name = f"{Path(original_name).stem}_enriched_requirements.xlsx"

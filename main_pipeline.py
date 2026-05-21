@@ -14,6 +14,7 @@ from json_to_excel import create_formatted_excel
 from admin_guide_enricher import FortinetAdminGuideReferenceEnricher
 from pdf_admin_metadata import build_admin_guide_metadata_index
 from reference_injector import inject_hardware_references
+from vertiv.reference_injector import inject_vertiv_references
 from cost_estimator import AbortedByUser, confirm_execution, estimate_cost
 
 def get_unique_dir(parent_dir, base_name):
@@ -103,7 +104,7 @@ def prepare_admin_guide_index(project_root, skip_enrichment=False):
     print("  Skipping Admin Guide enrichment.")
     return None, paths["admin_guide_pdf_path"]
 
-def process_pdf_section(filename, input_path, start_page, end_page, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path=None, admin_guide_pdf_path=None, model_name=None):
+def process_pdf_section(filename, input_path, start_page, end_page, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path=None, admin_guide_pdf_path=None, model_name=None, reference_provider="fortinet"):
     base_name = os.path.splitext(filename)[0].replace("_Requirements", "")
     print(f"\n--- Processing: {base_name} pages {start_page}-{end_page} ---")
 
@@ -127,8 +128,13 @@ def process_pdf_section(filename, input_path, start_page, end_page, extracted_pd
 
     technical_data = get_technical_data_from_gemini(extracted_pdf_path, model_name=cost_info["model"], chunk_output_dir=pdf_json_dir)
 
-    print("Resolving hardware references from deterministic product catalogs...")
-    technical_data, hardware_stats = inject_hardware_references(technical_data)
+    reference_provider = (reference_provider or "fortinet").strip().lower()
+    if reference_provider == "vertiv":
+        print("Resolving hardware references from Vertiv RAG catalog...")
+        technical_data, hardware_stats = inject_vertiv_references(technical_data)
+    else:
+        print("Resolving hardware references from deterministic Fortinet product catalogs...")
+        technical_data, hardware_stats = inject_hardware_references(technical_data)
     print(f"  Hardware reference stats: {hardware_stats}")
 
     json_filename = f"{base_name}.json"
@@ -143,7 +149,7 @@ def process_pdf_section(filename, input_path, start_page, end_page, extracted_pd
 
     final_excel_path = excel_path
     enrichment_stats = None
-    if toc_index_path and os.path.exists(toc_index_path):
+    if reference_provider == "fortinet" and toc_index_path and os.path.exists(toc_index_path):
         print("Enriching with Fortinet Admin Guide references...")
         enriched_filename = f"{base_name}_enriched_with_admin_guide_references.xlsx"
         enriched_path = os.path.join(pdf_excel_dir, enriched_filename)
@@ -162,8 +168,10 @@ def process_pdf_section(filename, input_path, start_page, end_page, extracted_pd
         enrichment_stats = enricher.stats
         print(f"  Enriched Excel: {enriched_path}")
         print(f"  Enrichment stats: {enrichment_stats}")
-    else:
+    elif reference_provider == "fortinet":
         print("  Skipping Admin Guide enrichment (no TOC index available).")
+    else:
+        print("  Skipping Fortinet Admin Guide enrichment for Vertiv reference provider.")
 
     return {
         "base_name": base_name,
@@ -175,7 +183,7 @@ def process_pdf_section(filename, input_path, start_page, end_page, extracted_pd
         "enrichment_stats": enrichment_stats,
     }
 
-def process_single_file(filename, input_path, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path=None, admin_guide_pdf_path=None, model_name=None):
+def process_single_file(filename, input_path, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path=None, admin_guide_pdf_path=None, model_name=None, reference_provider="fortinet"):
 
     """Orchestrates the full extraction for a single PDF file."""
     base_name = os.path.splitext(filename)[0].replace("_Requirements", "")
@@ -196,6 +204,7 @@ def process_single_file(filename, input_path, extracted_pdf_dir, json_results_di
             toc_index_path,
             admin_guide_pdf_path,
             model_name,
+            reference_provider,
         )
         print(f"SUCCESS: Generated reports for {base_name}:")
         print(f"  JSON:  {outputs['json_path']}")
@@ -211,6 +220,8 @@ def main():
                         help="Skip the Fortinet Admin Guide enrichment step.")
     parser.add_argument("--model", default=None,
                         help="Gemini model to use for extraction and cost estimation.")
+    parser.add_argument("--reference-provider", choices=["fortinet", "vertiv"], default="fortinet",
+                        help="Product reference provider to use for hardware references.")
     args = parser.parse_args()
 
     print("=== STARTING RFP EXTRACTION PIPELINE ===\n")
@@ -248,7 +259,7 @@ def main():
             print(f"Error: File not found: {args.input}")
             return
         filename = os.path.basename(args.input)
-        process_single_file(filename, args.input, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path, admin_guide_pdf_path, args.model)
+        process_single_file(filename, args.input, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path, admin_guide_pdf_path, args.model, args.reference_provider)
     else:
         # BATCH MODE
         if not os.path.exists(input_dir):
@@ -260,7 +271,7 @@ def main():
         
         for filename in files:
             input_path = os.path.join(input_dir, filename)
-            process_single_file(filename, input_path, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path, admin_guide_pdf_path, args.model)
+            process_single_file(filename, input_path, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path, admin_guide_pdf_path, args.model, args.reference_provider)
 
     print("\n=== PIPELINE COMPLETE ===")
     print(f"JSON Results:  {json_results_dir}")
@@ -268,5 +279,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
