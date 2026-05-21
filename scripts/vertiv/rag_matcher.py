@@ -21,7 +21,7 @@ VERTIV_CATEGORIES = {
     "BUSWAY": ("busway", "busduct"),
     "COOLING": ("cooling", "thermal", "in-row", "room cooling", "chiller", "heat rejection", "crac", "crv"),
     "COOLING_CONTROL": ("controller", "thermal control", "monitoring"),
-    "RACK": ("rack", "cabinet", "enclosure", "42u", "45u", "48u", "containment"),
+    "RACK": ("rack", "cabinet", "enclosure", "42u", "45u", "48u", "containment", "cable manager", "cable management", "blank panel"),
     "ENCLOSURE": ("outdoor enclosure", "enclosure", "cabinet"),
     "INTEGRATED_RACK_SOLUTION": ("integrated", "micro data center", "smartaisle", "smartrow", "smartcabinet"),
     "MONITORING": ("monitoring", "sensor", "environmental", "gateway", "rdu"),
@@ -119,6 +119,10 @@ class VertivRAGMatcher:
                 score += 0.3
             elif category_hint and self._category_is_compatible(category_hint, str(product.get("category") or "")):
                 score += 0.15
+            if constraints.get("rack_accessory") and str(product.get("category") or "") == "RACK":
+                score += 0.25
+                if any(term in chunk_text for term in ("cable management", "cable manager", "blank panel", "accessories")):
+                    score += 0.25
             candidates.append(VertivCandidate(product=product, chunk=chunk["text"], score=score))
         candidates.sort(key=lambda item: item.score, reverse=True)
         deduped: List[VertivCandidate] = []
@@ -135,6 +139,7 @@ class VertivRAGMatcher:
 
     def _load_products(self) -> List[Dict[str, Any]]:
         products: List[Dict[str, Any]] = []
+        public_links_by_model: Dict[str, Dict[str, Any]] = {}
         for name in ("vertiv_scraped.json", "architecture_hardware.json"):
             path = self.catalog_dir / name
             if not path.exists():
@@ -144,10 +149,23 @@ class VertivRAGMatcher:
             except Exception:
                 continue
             if isinstance(data, dict) and isinstance(data.get("products"), list):
-                products.extend(item for item in data["products"] if isinstance(item, dict))
+                entries = [item for item in data["products"] if isinstance(item, dict)]
             elif isinstance(data, dict) and isinstance(data.get("items"), list):
-                products.extend(item for item in data["items"] if isinstance(item, dict))
-        return [item for item in products if _norm(item.get("vendor")) in ("vertiv", "")]
+                entries = [item for item in data["items"] if isinstance(item, dict)]
+            else:
+                entries = []
+            if name == "vertiv_scraped.json":
+                for item in entries:
+                    if _norm(item.get("vendor")) not in ("vertiv", ""):
+                        continue
+                    if self._public_datasheet_url(item) or self._public_product_url(item):
+                        for key in self._model_keys(item.get("model")):
+                            existing = public_links_by_model.get(key)
+                            if not existing or (self._public_datasheet_url(item) and not self._public_datasheet_url(existing)):
+                                public_links_by_model[key] = item
+            products.extend(entries)
+        hydrated = [self._hydrate_public_links(item, public_links_by_model) for item in products]
+        return [item for item in hydrated if _norm(item.get("vendor")) in ("vertiv", "")]
 
     @staticmethod
     def _build_chunks(products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -186,6 +204,10 @@ class VertivRAGMatcher:
         category = self._infer_category(lowered, metadata)
         if category:
             constraints["category"] = category
+        rack_accessory = bool(re.search(r"\b(cable manager|cable management|blank panel|brush strip|mounting plastic blank|rack accessory)\b", lowered))
+        if rack_accessory:
+            constraints["category"] = "RACK"
+            constraints["rack_accessory"] = True
         for field, pattern in (
             ("power_capacity_kva", r"(\d+(?:\.\d+)?)\s*kva\b"),
             ("power_capacity_kw", r"(\d+(?:\.\d+)?)\s*kw\b"),
@@ -196,6 +218,8 @@ class VertivRAGMatcher:
         ):
             match = re.search(pattern, lowered)
             if match:
+                if rack_accessory and field == "rack_units":
+                    continue
                 constraints[field] = _parse_number(match.group(1))
         if category == "COOLING" and "power_capacity_kw" in constraints:
             constraints.setdefault("cooling_capacity_kw", constraints.pop("power_capacity_kw"))
@@ -364,8 +388,64 @@ class VertivRAGMatcher:
     @staticmethod
     def _format_reference(product: Dict[str, Any]) -> str:
         model = product.get("model")
-        datasheet = product.get("datasheet_url") or product.get("product_url") or ""
+        datasheet = VertivRAGMatcher._public_datasheet_url(product)
         return f"Vertiv: {model} — {datasheet}" if datasheet else f"Vertiv: {model}"
+
+    @staticmethod
+    def _model_keys(model: Any) -> List[str]:
+        text = _norm(model)
+        if not text:
+            return []
+        plain = re.sub(r"\bvertiv\b|™|®", " ", text)
+        plain = re.sub(r"[^a-z0-9]+", " ", plain).strip()
+        compact = re.sub(r"\s+", " ", plain)
+        keys = {text, compact}
+        if compact.startswith("vertiv "):
+            keys.add(compact[7:])
+        return [key for key in keys if key]
+
+    @staticmethod
+    def _public_datasheet_url(product: Dict[str, Any]) -> str:
+        url = str(product.get("datasheet_url") or "").strip()
+        lowered = url.lower()
+        if not lowered.startswith(("http://", "https://")):
+            return ""
+        if "partners.vertiv.com/english/directory" in lowered:
+            return ""
+        if ".pdf" not in lowered:
+            return ""
+        return url
+
+    @staticmethod
+    def _public_product_url(product: Dict[str, Any]) -> str:
+        url = str(product.get("product_url") or "").strip()
+        lowered = url.lower()
+        if not lowered.startswith(("http://", "https://")):
+            return ""
+        if "partners.vertiv.com/english/directory" in lowered:
+            return ""
+        return url
+
+    @classmethod
+    def _hydrate_public_links(cls, product: Dict[str, Any], public_links_by_model: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+        if cls._public_datasheet_url(product):
+            return product
+        linked = None
+        for key in cls._model_keys(product.get("model")):
+            linked = public_links_by_model.get(key)
+            if linked:
+                break
+        if not linked:
+            return product
+        hydrated = dict(product)
+        if cls._public_datasheet_url(linked):
+            hydrated["datasheet_url"] = linked.get("datasheet_url")
+        if cls._public_product_url(linked):
+            hydrated["product_url"] = linked.get("product_url")
+        for key in ("main_heading", "subheading"):
+            if not hydrated.get(key) and linked.get(key):
+                hydrated[key] = linked.get(key)
+        return hydrated
 
     def _format_result(
         self,
@@ -395,14 +475,14 @@ class VertivRAGMatcher:
             "constraints": constraints,
             "selected_model": product.get("model"),
             "selected_category": product.get("category"),
-            "selected_product_url": product.get("product_url"),
-            "selected_datasheet_url": product.get("datasheet_url"),
+            "selected_product_url": self._public_product_url(product),
+            "selected_datasheet_url": self._public_datasheet_url(product),
             "top_candidates": [
                 {
                     "model": c.product.get("model"),
                     "category": c.product.get("category"),
                     "score": round(c.score, 4),
-                    "datasheet_url": c.product.get("datasheet_url"),
+                    "datasheet_url": self._public_datasheet_url(c.product),
                 }
                 for c in candidates[: self.top_k]
             ],

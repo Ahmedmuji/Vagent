@@ -140,8 +140,8 @@ class VertivReferenceInjector:
                     {
                         "model": candidate.product.get("model"),
                         "category": candidate.product.get("category"),
-                        "datasheet_url": candidate.product.get("datasheet_url"),
-                        "product_url": candidate.product.get("product_url"),
+                        "datasheet_url": self.matcher._public_datasheet_url(candidate.product),
+                        "product_url": self.matcher._public_product_url(candidate.product),
                         "retrieval_score": round(candidate.score, 4),
                         "evidence": candidate.chunk[:900],
                     }
