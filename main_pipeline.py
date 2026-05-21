@@ -77,7 +77,7 @@ def get_project_paths(project_root):
         "json_results_dir": os.path.join(project_root, "data", "Extracted JSON Results"),
         "excel_results_dir": os.path.join(project_root, "data", "Extracted Excel Results"),
         "admin_guide_pdf_path": os.path.join(project_root, "data", "Reference dataset", "FortiOS-7.6.6-Administration_Guide.pdf"),
-        "toc_index_path": os.path.join(project_root, "fortinet_sidebar_flat.json"),
+        "toc_index_path": os.path.join(project_root, "data", "navigation", "fortinet_sidebar_flat.json"),
     }
 
 def ensure_runtime_dirs(paths):
@@ -279,4 +279,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

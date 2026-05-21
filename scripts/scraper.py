@@ -7,8 +7,8 @@ Uses Playwright (Python) to:
   3. Walk the DOM tree to build a hierarchical JSON structure
   4. Deduplicate URLs
   5. Output:
-       fortinet_sidebar.json       – hierarchical tree
-       fortinet_sidebar_flat.json  – flat list with breadcrumb paths
+       data/navigation/fortinet_sidebar.json       – hierarchical tree
+       data/navigation/fortinet_sidebar_flat.json  – flat list with breadcrumb paths
 
 Setup:
     pip install playwright
@@ -16,6 +16,7 @@ Setup:
 """
 
 import json
+from pathlib import Path
 import time
 from urllib.parse import urljoin, urlparse
 
@@ -29,8 +30,10 @@ START_URL = (
     "https://docs.fortinet.com/document/fortigate/7.6.6/"
     "administration-guide/954635/getting-started"
 )
-OUTPUT_TREE = "fortinet_sidebar.json"
-OUTPUT_FLAT = "fortinet_sidebar_flat.json"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+OUTPUT_DIR = PROJECT_ROOT / "data" / "navigation"
+OUTPUT_TREE = OUTPUT_DIR / "fortinet_sidebar.json"
+OUTPUT_FLAT = OUTPUT_DIR / "fortinet_sidebar_flat.json"
 
 # Selector: any <a> whose href contains the guide path segment
 GUIDE_PATH   = "/administration-guide/"
@@ -331,6 +334,7 @@ def main():
         flat_with_paths = flatten_tree(tree)
 
         # ── Save outputs ──────────────────────────────────────────────────────
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         with open(OUTPUT_TREE, "w", encoding="utf-8") as f:
             json.dump(tree, f, indent=2, ensure_ascii=False)
         print(f"\n[OK] Hierarchy tree   -> {OUTPUT_TREE}")
