@@ -1,17 +1,37 @@
 """
-Vertiv product catalog scraper.
+Vertiv website + datasheet PDF catalog scraper.
 
-This script uses Playwright because Vertiv product/category pages are rendered
-with JavaScript. It walks the main Vertiv catalog headings, collects product
-detail URLs, extracts structured technical specifications, and writes a clean
-JSON list that can be used as a product catalog.
+This scraper follows the same output shape as fortinet_scraped.json:
+
+{
+  "metadata": {...},
+  "products": [
+    {
+      "vendor": "Vertiv",
+      "model": "...",
+      "category": "UPS",
+      "main_heading": "Critical Power",
+      "subheading": "Uninterruptible Power Supplies (UPS)",
+      "technical_specifications": {...},
+      "product_url": "...",
+      "datasheet_url": "..."
+    }
+  ]
+}
+
+Flow:
+  1. Open each Vertiv main heading / subheading catalog URL with Playwright.
+  2. Collect product URLs from the product-type-results component.
+  3. Open each product page and find/click the Get Brochure / datasheet CTA.
+  4. Download the datasheet PDF.
+  5. Use pdfplumber to extract tables/text into structured technical specs.
 
 Install:
     python -m pip install -r requirements.txt
     python -m playwright install chromium
 
 Quick test:
-    python scripts/vertiv_scraper.py --max-products 10
+    python scripts/vertiv_scraper.py --max-products 5 --headful
 
 Full scrape:
     python scripts/vertiv_scraper.py --output data/product_catalogs/vertiv_scraped.json
@@ -21,24 +41,30 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import random
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 BASE_URL = "https://www.vertiv.com"
-DEFAULT_OUTPUT = Path("data/product_catalogs/vertiv_scraped.json")
+DEFAULT_OUTPUT = PROJECT_ROOT / "data" / "product_catalogs" / "vertiv_scraped.json"
+DEFAULT_CACHE_DIR = PROJECT_ROOT / "data" / "product_catalogs" / ".vertiv_scrape_cache"
+
+PRODUCT_RESULTS_XPATH = (
+    "/html/body/article[1]/div/div[2]/div/div/search-product-type/div[2]/div[2]/div[2]/div/product-type-results"
+)
+GET_BROCHURE_XPATH = "/html/body/article[1]/div[1]/div[2]/div/div/div/div[3]/div/div[1]/div/a[1]"
 
 USER_AGENTS = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -46,241 +72,59 @@ USER_AGENTS = (
 )
 
 DOCUMENT_KEYWORDS = (
+    "get brochure",
+    "brochure",
     "datasheet",
     "data sheet",
-    "brochure",
-    "technical specification",
     "technical specifications",
-    "specification sheet",
+    "technical specification",
     "spec sheet",
-    "manual",
-    "installation guide",
-    "user guide",
-)
-
-SPEC_SECTION_WORDS = (
-    "specification",
-    "specifications",
-    "technical data",
-    "technical details",
-    "product details",
 )
 
 
 @dataclass(frozen=True)
 class CategorySeed:
-    parent_category: str
-    subcategory: str
+    main_heading: str
+    subheading: str
     url: str
-    normalized_category: str
+    category: str
     is_service: bool = False
 
 
 CATALOG_SEEDS: tuple[CategorySeed, ...] = (
-    CategorySeed(
-        "Critical Power",
-        "Uninterruptible Power Supplies (UPS)",
-        "/en-us/products-catalog/critical-power/uninterruptible-power-supplies-ups/",
-        "UPS",
-    ),
-    CategorySeed(
-        "Critical Power",
-        "Energy Storage System",
-        "/en-us/products-catalog/critical-power/energy-storage-system/",
-        "ENERGY_STORAGE",
-    ),
-    CategorySeed(
-        "Critical Power",
-        "Battery Energy Storage System (BESS)",
-        "/en-us/products-catalog/critical-power/battery-energy-storage-system-bess/",
-        "ENERGY_STORAGE",
-    ),
-    CategorySeed(
-        "Critical Power",
-        "DC Power Systems",
-        "/en-us/products-catalog/critical-power/dc-power-systems/",
-        "DC_POWER",
-    ),
-    CategorySeed(
-        "Critical Power",
-        "Power Distribution",
-        "/en-us/products-catalog/critical-power/power-distribution/",
-        "POWER_DISTRIBUTION",
-    ),
-    CategorySeed(
-        "Critical Power",
-        "Static Transfer Switches",
-        "/en-us/products-catalog/critical-power/static-transfer-switches/",
-        "TRANSFER_SWITCH",
-    ),
-    CategorySeed(
-        "Critical Power",
-        "Switchgear and Switchboard",
-        "/en-us/products-catalog/critical-power/switchgear/",
-        "SWITCHGEAR",
-    ),
-    CategorySeed(
-        "Critical Power",
-        "Busway and Busduct",
-        "/en-us/products-catalog/critical-power/busway-and-busduct/",
-        "BUSWAY",
-    ),
-    CategorySeed(
-        "Thermal Management",
-        "Liquid Cooling Solutions",
-        "/en-us/products-catalog/thermal-management/liquid-cooling-solutions/",
-        "COOLING",
-    ),
-    CategorySeed(
-        "Thermal Management",
-        "High Density Solutions",
-        "/en-us/products-catalog/thermal-management/high-density-solutions/",
-        "COOLING",
-    ),
-    CategorySeed(
-        "Thermal Management",
-        "Heat Rejection",
-        "/en-us/products-catalog/thermal-management/heat-rejection/",
-        "COOLING",
-    ),
-    CategorySeed(
-        "Thermal Management",
-        "Outdoor Packaged Systems",
-        "/en-us/products-catalog/thermal-management/outdoor-packaged-systems/",
-        "COOLING",
-    ),
-    CategorySeed(
-        "Thermal Management",
-        "Room Cooling",
-        "/en-us/products-catalog/thermal-management/room-cooling/",
-        "COOLING",
-    ),
-    CategorySeed(
-        "Thermal Management",
-        "In-Row Cooling",
-        "/en-us/products-catalog/thermal-management/in-row-cooling/",
-        "COOLING",
-    ),
-    CategorySeed(
-        "Thermal Management",
-        "Rack Cooling",
-        "/en-us/products-catalog/thermal-management/rack-cooling/",
-        "COOLING",
-    ),
-    CategorySeed(
-        "Thermal Management",
-        "Free Cooling Chillers",
-        "/en-us/products-catalog/thermal-management/free-cooling-chillers/",
-        "COOLING",
-    ),
-    CategorySeed(
-        "Thermal Management",
-        "Evaporative Free Cooling",
-        "/en-us/products-catalog/thermal-management/evaporative-free-cooling/",
-        "COOLING",
-    ),
-    CategorySeed(
-        "Thermal Management",
-        "Thermal Control and Monitoring",
-        "/en-us/products-catalog/thermal-management/thermal-control-and-monitoring/",
-        "COOLING_CONTROL",
-    ),
-    CategorySeed(
-        "Thermal Management",
-        "Custom Thermal",
-        "/en-us/products-catalog/thermal-management/custom-thermal/",
-        "COOLING",
-    ),
-    CategorySeed(
-        "Racks & Enclosures",
-        "Integrated Solutions",
-        "/en-us/products-catalog/facilities-enclosures-and-racks/integrated-solutions/",
-        "INTEGRATED_RACK_SOLUTION",
-    ),
-    CategorySeed(
-        "Racks & Enclosures",
-        "Racks & Containment",
-        "/en-us/products-catalog/facilities-enclosures-and-racks/racks-and-containment/",
-        "RACK",
-    ),
-    CategorySeed(
-        "Racks & Enclosures",
-        "Racks & Containment",
-        "/en-us/products-catalog/racks-and-enclosures/racks-and-containment/",
-        "RACK",
-    ),
-    CategorySeed(
-        "Racks & Enclosures",
-        "Outdoor Enclosures",
-        "/en-us/products-catalog/facilities-enclosures-and-racks/outdoor-enclosures/",
-        "ENCLOSURE",
-    ),
-    CategorySeed(
-        "Monitoring & Management",
-        "Digital Infrastructure Solutions",
-        "/en-us/products-catalog/monitoring-control-and-management/digital-infrastructure-solutions/",
-        "MONITORING",
-    ),
-    CategorySeed(
-        "Monitoring & Management",
-        "Embedded Device Management",
-        "/en-us/products-catalog/monitoring-control-and-management/embedded-device-management/",
-        "MONITORING",
-    ),
-    CategorySeed(
-        "Monitoring & Management",
-        "Serial Console",
-        "/en-us/products-catalog/monitoring-control-and-management/serial-console/",
-        "SERIAL_CONSOLE",
-    ),
-    CategorySeed(
-        "Monitoring & Management",
-        "Serial Console and Gateways",
-        "/en-us/products-catalog/monitoring-control-and-management/serial-console-and-gateways/",
-        "SERIAL_CONSOLE",
-    ),
-    CategorySeed(
-        "Monitoring & Management",
-        "IP KVM Switches",
-        "/en-us/products-catalog/monitoring-control-and-management/ip-kvm/",
-        "KVM",
-    ),
-    CategorySeed(
-        "Monitoring & Management",
-        "High Performance KVM",
-        "/en-us/products-catalog/monitoring-control-and-management/high-performance-kvm/",
-        "KVM",
-    ),
-    CategorySeed(
-        "Monitoring & Management",
-        "LCD Tray",
-        "/en-us/products-catalog/monitoring-control-and-management/itmanagement/avocent-lcd-local-rack-access-console-/",
-        "KVM",
-    ),
-    CategorySeed(
-        "Monitoring & Management",
-        "Desktop KVM and KM",
-        "/en-us/products-catalog/monitoring-control-and-management/desktop-kvm-and-km/",
-        "KVM",
-    ),
-    CategorySeed(
-        "Monitoring & Management",
-        "Secure KVM",
-        "/en-us/products-catalog/monitoring-control-and-management/secure-kvm/",
-        "KVM",
-    ),
-    CategorySeed(
-        "Monitoring & Management",
-        "Software",
-        "/en-us/products-catalog/monitoring-control-and-management/software/",
-        "SOFTWARE",
-    ),
-    CategorySeed(
-        "Monitoring & Management",
-        "Monitoring",
-        "/en-us/products-catalog/monitoring-control-and-management/monitoring/",
-        "MONITORING",
-    ),
+    CategorySeed("Critical Power", "Uninterruptible Power Supplies (UPS)", "/en-us/products-catalog/critical-power/uninterruptible-power-supplies-ups/", "UPS"),
+    CategorySeed("Critical Power", "Energy Storage System", "/en-us/products-catalog/critical-power/energy-storage-system/", "ENERGY_STORAGE"),
+    CategorySeed("Critical Power", "Battery Energy Storage System (BESS)", "/en-us/products-catalog/critical-power/battery-energy-storage-system-bess/", "ENERGY_STORAGE"),
+    CategorySeed("Critical Power", "DC Power Systems", "/en-us/products-catalog/critical-power/dc-power-systems/", "DC_POWER"),
+    CategorySeed("Critical Power", "Power Distribution", "/en-us/products-catalog/critical-power/power-distribution/", "POWER_DISTRIBUTION"),
+    CategorySeed("Critical Power", "Static Transfer Switches", "/en-us/products-catalog/critical-power/static-transfer-switches/", "TRANSFER_SWITCH"),
+    CategorySeed("Critical Power", "Switchgear and Switchboard", "/en-us/products-catalog/critical-power/switchgear/", "SWITCHGEAR"),
+    CategorySeed("Critical Power", "Busway and Busduct", "/en-us/products-catalog/critical-power/busway-and-busduct/", "BUSWAY"),
+    CategorySeed("Thermal Management", "Liquid Cooling Solutions", "/en-us/products-catalog/thermal-management/liquid-cooling-solutions/", "COOLING"),
+    CategorySeed("Thermal Management", "High Density Solutions", "/en-us/products-catalog/thermal-management/high-density-solutions/", "COOLING"),
+    CategorySeed("Thermal Management", "Heat Rejection", "/en-us/products-catalog/thermal-management/heat-rejection/", "COOLING"),
+    CategorySeed("Thermal Management", "Outdoor Packaged Systems", "/en-us/products-catalog/thermal-management/outdoor-packaged-systems/", "COOLING"),
+    CategorySeed("Thermal Management", "Room Cooling", "/en-us/products-catalog/thermal-management/room-cooling/", "COOLING"),
+    CategorySeed("Thermal Management", "In-Row Cooling", "/en-us/products-catalog/thermal-management/in-row-cooling/", "COOLING"),
+    CategorySeed("Thermal Management", "Rack Cooling", "/en-us/products-catalog/thermal-management/rack-cooling/", "COOLING"),
+    CategorySeed("Thermal Management", "Free Cooling Chillers", "/en-us/products-catalog/thermal-management/free-cooling-chillers/", "COOLING"),
+    CategorySeed("Thermal Management", "Evaporative Free Cooling", "/en-us/products-catalog/thermal-management/evaporative-free-cooling/", "COOLING"),
+    CategorySeed("Thermal Management", "Thermal Control and Monitoring", "/en-us/products-catalog/thermal-management/thermal-control-and-monitoring/", "COOLING_CONTROL"),
+    CategorySeed("Thermal Management", "Custom Thermal", "/en-us/products-catalog/thermal-management/custom-thermal/", "COOLING"),
+    CategorySeed("Racks & Enclosures", "Integrated Solutions", "/en-us/products-catalog/facilities-enclosures-and-racks/integrated-solutions/", "INTEGRATED_RACK_SOLUTION"),
+    CategorySeed("Racks & Enclosures", "Racks & Containment", "/en-us/products-catalog/facilities-enclosures-and-racks/racks-and-containment/", "RACK"),
+    CategorySeed("Racks & Enclosures", "Outdoor Enclosures", "/en-us/products-catalog/facilities-enclosures-and-racks/outdoor-enclosures/", "ENCLOSURE"),
+    CategorySeed("Monitoring & Management", "Digital Infrastructure Solutions", "/en-us/products-catalog/monitoring-control-and-management/digital-infrastructure-solutions/", "MONITORING"),
+    CategorySeed("Monitoring & Management", "Embedded Device Management", "/en-us/products-catalog/monitoring-control-and-management/embedded-device-management/", "MONITORING"),
+    CategorySeed("Monitoring & Management", "Serial Console", "/en-us/products-catalog/monitoring-control-and-management/serial-console/", "SERIAL_CONSOLE"),
+    CategorySeed("Monitoring & Management", "Serial Console and Gateways", "/en-us/products-catalog/monitoring-control-and-management/serial-console-and-gateways/", "SERIAL_CONSOLE"),
+    CategorySeed("Monitoring & Management", "IP KVM Switches", "/en-us/products-catalog/monitoring-control-and-management/ip-kvm/", "KVM"),
+    CategorySeed("Monitoring & Management", "High Performance KVM", "/en-us/products-catalog/monitoring-control-and-management/high-performance-kvm/", "KVM"),
+    CategorySeed("Monitoring & Management", "LCD Tray", "/en-us/products-catalog/monitoring-control-and-management/itmanagement/avocent-lcd-local-rack-access-console-/", "KVM"),
+    CategorySeed("Monitoring & Management", "Desktop KVM and KM", "/en-us/products-catalog/monitoring-control-and-management/desktop-kvm-and-km/", "KVM"),
+    CategorySeed("Monitoring & Management", "Secure KVM", "/en-us/products-catalog/monitoring-control-and-management/secure-kvm/", "KVM"),
+    CategorySeed("Monitoring & Management", "Software", "/en-us/products-catalog/monitoring-control-and-management/software/", "SOFTWARE"),
+    CategorySeed("Monitoring & Management", "Monitoring", "/en-us/products-catalog/monitoring-control-and-management/monitoring/", "MONITORING"),
     CategorySeed("Services", "Project Services", "/en-us/services/project-services/", "SERVICE", True),
     CategorySeed("Services", "Thermal Services", "/en-us/services/thermal-services/", "SERVICE", True),
     CategorySeed("Services", "UPS & Battery Services", "/en-us/services/ups-and-battery-services/", "SERVICE", True),
@@ -289,10 +133,11 @@ CATALOG_SEEDS: tuple[CategorySeed, ...] = (
 )
 
 
-def clean_text(value: str | None) -> str:
-    if not value:
-        return ""
-    return re.sub(r"\s+", " ", value.replace("\xa0", " ")).strip()
+def clean_text(value: Any) -> str:
+    text = "" if value is None else str(value)
+    text = text.replace("\xa0", " ").replace("\u2122", "").replace("\u00ae", "")
+    text = re.sub(r"\(cid:\d+\)", "", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def absolute_url(url: str, base: str = BASE_URL) -> str:
@@ -310,80 +155,197 @@ def path_depth(url: str) -> int:
     return len([part for part in urlparse(url).path.split("/") if part])
 
 
-def is_probable_product_url(url: str, seed_url: str) -> bool:
+def is_product_url(url: str, seed_url: str) -> bool:
     parsed = urlparse(url)
     if parsed.netloc and "vertiv.com" not in parsed.netloc:
         return False
     if "/products-catalog/" not in parsed.path:
         return False
-    if any(bad in parsed.path.lower() for bad in ("/search/", "/support/", "/services/")):
-        return False
     if canonical_url(url) == canonical_url(seed_url):
+        return False
+    if any(skip in parsed.path.lower() for skip in ("/search/", "/support/", "/services/")):
         return False
     return path_depth(url) > path_depth(seed_url)
 
 
-def detect_model(name: str | None, url: str) -> str | None:
-    text = clean_text(name)
-    candidates = re.findall(r"\b(?:[A-Z]{2,}[A-Z0-9-]*\d+[A-Z0-9-]*|\d+[A-Z]{1,}[A-Z0-9-]*)\b", text)
-    if candidates:
-        return max(candidates, key=len)
-
+def detect_model(name: str | None, url: str) -> str:
+    name = clean_text(name)
+    if name:
+        name = re.sub(r"^Vertiv\s+", "", name, flags=re.IGNORECASE)
+        name = re.sub(r"^(?:™|®|\s)+", "", name)
+        return name
     slug = urlparse(url).path.strip("/").split("/")[-1]
-    slug = re.sub(r"[-_]+", " ", slug).strip()
-    return slug.title() if slug else None
+    return re.sub(r"[-_]+", " ", slug).title()
 
 
-def parse_numeric_value(raw_value: str) -> float | None:
-    match = re.search(r"[-+]?\d+(?:,\d{3})*(?:\.\d+)?", raw_value)
+def cache_path_for_url(cache_dir: Path, url: str) -> Path:
+    digest = hashlib.sha256(url.encode("utf-8")).hexdigest()[:18]
+    suffix = ".pdf" if urlparse(url).path.lower().endswith(".pdf") else ".bin"
+    return cache_dir / f"{digest}{suffix}"
+
+
+def parse_number(value: str) -> float | None:
+    match = re.search(r"\d+(?:,\d{3})*(?:\.\d+)?", value)
     if not match:
         return None
-    try:
-        return float(match.group(0).replace(",", ""))
-    except ValueError:
+    return float(match.group(0).replace(",", ""))
+
+
+def normalize_table_rows(table: list[list[Any]]) -> list[list[str]]:
+    rows: list[list[str]] = []
+    for row in table:
+        cells = [clean_text(cell) for cell in row]
+        while cells and not cells[-1]:
+            cells.pop()
+        if any(cells):
+            rows.append(cells)
+    return rows
+
+
+def row_as_pair(row: list[str]) -> tuple[str, str] | None:
+    cells = [clean_text(cell) for cell in row if clean_text(cell)]
+    if len(cells) != 2:
+        return None
+    key, value = cells
+    if not key or not value or len(key) > 140 or key.lower() in {"model", "models", "description"}:
+        return None
+    return key.rstrip(":"), value
+
+
+def looks_like_header(row: list[str]) -> bool:
+    joined = " ".join(row).lower()
+    return any(word in joined for word in ("model", "description", "part number", "capacity", "rating", "input", "output"))
+
+
+def table_to_structure(table: list[list[Any]], page_number: int, table_number: int) -> dict[str, Any] | None:
+    rows = normalize_table_rows(table)
+    if not rows:
         return None
 
+    pairs: dict[str, str] = {}
+    all_pairs = True
+    for row in rows:
+        pair = row_as_pair(row)
+        if not pair:
+            all_pairs = False
+            break
+        pairs[pair[0]] = pair[1]
+    if pairs and all_pairs:
+        return {"page": page_number, "table_number": table_number, "type": "key_value", "specifications": pairs}
 
-def extract_normalized_specs(specs: dict[str, Any] | None) -> dict[str, Any]:
-    if not specs:
-        return {}
+    header = rows[0]
+    body = rows[1:]
+    if body and looks_like_header(header):
+        max_cols = max(len(header), *(len(row) for row in body))
+        headers = [clean_text(cell) or f"Column {idx + 1}" for idx, cell in enumerate(header)]
+        headers.extend(f"Column {idx + 1}" for idx in range(len(headers), max_cols))
+        matrix_rows = []
+        for row in body:
+            padded = row + [""] * (max_cols - len(row))
+            record = {headers[idx]: clean_text(value) for idx, value in enumerate(padded[:max_cols]) if clean_text(value)}
+            if record:
+                matrix_rows.append(record)
+        return {"page": page_number, "table_number": table_number, "type": "matrix", "headers": headers, "rows": matrix_rows}
 
-    flat: dict[str, str] = {}
-    for key, value in specs.items():
-        if isinstance(value, dict):
-            for inner_key, inner_value in value.items():
-                flat[f"{key} {inner_key}".lower()] = clean_text(str(inner_value))
-        elif isinstance(value, list):
-            flat[key.lower()] = " ".join(clean_text(str(item)) for item in value)
-        else:
-            flat[key.lower()] = clean_text(str(value))
+    return {"page": page_number, "table_number": table_number, "type": "raw_table", "rows": rows}
 
-    joined = " | ".join(f"{key}: {value}" for key, value in flat.items())
+
+def merge_key_values(tables: list[dict[str, Any]]) -> dict[str, str]:
+    merged: dict[str, str] = {}
+    for table in tables:
+        if table.get("type") != "key_value":
+            continue
+        for key, value in table.get("specifications", {}).items():
+            if key not in merged:
+                merged[key] = value
+            elif merged[key] != value:
+                index = 2
+                candidate = f"{key} ({index})"
+                while candidate in merged:
+                    index += 1
+                    candidate = f"{key} ({index})"
+                merged[candidate] = value
+    return merged
+
+
+def extract_features(text: str, limit: int = 25) -> list[str]:
+    features: list[str] = []
+    for raw in re.split(r"\n|•|·|\by\s+", text):
+        item = clean_text(raw)
+        if len(item) < 18 or len(item) > 220:
+            continue
+        lowered = item.lower()
+        if any(skip in lowered for skip in ("all rights reserved", "vertiv.com", "copyright")):
+            continue
+        if any(word in lowered for word in ("efficiency", "modular", "redundant", "cooling", "rack", "power", "battery", "voltage", "sensor", "network", "controller", "outlet", "pdu", "static load", "temperature", "monitor")):
+            if item not in features:
+                features.append(item)
+        if len(features) >= limit:
+            break
+    return features
+
+
+def normalized_specs_from_pdf(text: str, specs: dict[str, Any]) -> dict[str, Any]:
+    joined = clean_text(json.dumps(specs, ensure_ascii=False) + " " + text).lower()
     normalized: dict[str, Any] = {}
-
     patterns = {
-        "power_capacity_kva": r"(?:capacity|power rating|output power)[^|]{0,80}?(\d+(?:\.\d+)?)\s*kva",
-        "power_capacity_kw": r"(?:capacity|power rating|output power|cooling capacity)[^|]{0,80}?(\d+(?:\.\d+)?)\s*kw",
-        "cooling_capacity_kw": r"(?:cooling capacity|total cooling|net sensible)[^|]{0,80}?(\d+(?:\.\d+)?)\s*kw",
-        "rack_units": r"(?:rack units|height|u space)[^|]{0,40}?(\d+)\s*u\b",
-        "outlet_count": r"(?:outlets|receptacles)[^|]{0,80}?(\d+)",
-        "static_load_kg": r"(?:static load|load capacity|weight capacity)[^|]{0,80}?(\d+(?:,\d{3})*(?:\.\d+)?)\s*kg",
+        "power_capacity_kw": r"(\d+(?:\.\d+)?)\s*(?:-|to|&)\s*(\d+(?:\.\d+)?)\s*kw|(\d+(?:\.\d+)?)\s*kw",
+        "power_capacity_kva": r"(\d+(?:\.\d+)?)\s*(?:-|to|&)\s*(\d+(?:\.\d+)?)\s*kva|(\d+(?:\.\d+)?)\s*kva",
+        "cooling_capacity_kw": r"(?:cooling|capacity)[^.]{0,100}?(\d+(?:\.\d+)?)\s*(?:-|to)\s*(\d+(?:\.\d+)?)\s*kw|(?:cooling|capacity)[^.]{0,100}?(\d+(?:\.\d+)?)\s*kw",
+        "rack_units": r"\b(\d+)u\b",
+        "static_load_kg": r"static load[^.]{0,80}?([\d,]+)\s*kg",
+        "dynamic_load_kg": r"dynamic load[^.]{0,80}?([\d,]+)\s*kg",
+        "outlet_count": r"outlets?[^.]{0,80}?(\d+)",
+        "efficiency_percent": r"efficiency[^.]{0,80}?(\d+(?:\.\d+)?)\s*%",
     }
-
-    lower_joined = joined.lower()
     for field, pattern in patterns.items():
-        match = re.search(pattern, lower_joined, flags=re.IGNORECASE)
-        if match:
-            value = parse_numeric_value(match.group(1))
-            if value is not None:
-                normalized[field] = int(value) if value.is_integer() else value
+        match = re.search(pattern, joined, re.IGNORECASE)
+        if not match:
+            continue
+        groups = [group for group in match.groups() if group]
+        values = [parse_number(group) for group in groups]
+        values = [value for value in values if value is not None]
+        if len(values) >= 2 and field in {"power_capacity_kw", "power_capacity_kva", "cooling_capacity_kw"}:
+            normalized[field] = {"min": values[0], "max": values[1]}
+        elif values:
+            normalized[field] = int(values[0]) if values[0].is_integer() else values[0]
 
-    if re.search(r"\bn\+1\b|redundan|dual\s+power|2n\b", lower_joined, flags=re.IGNORECASE):
-        normalized["redundancy"] = True
-    if re.search(r"\bhot[- ]?swappable\b", lower_joined, flags=re.IGNORECASE):
+    if re.search(r"\bhigh availability\b|\bha\b|n\+1|active/passive|active-passive|active/passive", joined):
+        normalized["ha_supported"] = True
+    if re.search(r"redundant power|dual power|redundant psu|redundant power supply", joined):
+        normalized["redundant_power"] = True
+    if re.search(r"hot-?swappable|hot swappable", joined):
         normalized["hot_swappable"] = True
-
     return normalized
+
+
+def extract_pdf_specs(pdf_path: Path) -> dict[str, Any]:
+    import pdfplumber
+
+    text_parts: list[str] = []
+    tables: list[dict[str, Any]] = []
+    with pdfplumber.open(str(pdf_path)) as pdf:
+        for page_number, page in enumerate(pdf.pages, start=1):
+            text = page.extract_text() or ""
+            if text:
+                text_parts.append(text)
+            try:
+                for table_number, table in enumerate(page.extract_tables(), start=1):
+                    structured = table_to_structure(table, page_number, table_number)
+                    if structured:
+                        tables.append(structured)
+            except Exception as exc:
+                print(f"[WARN] pdfplumber table extraction failed on {pdf_path.name} page {page_number}: {exc}")
+
+    text = "\n".join(text_parts)
+    specs: dict[str, Any] = {"tables": tables}
+    key_values = merge_key_values(tables)
+    if key_values:
+        specs["key_values"] = key_values
+    features = extract_features(text)
+    if features:
+        specs["features"] = features
+    return {"technical_specifications": specs, "normalized": normalized_specs_from_pdf(text, specs)}
 
 
 class VertivScraper:
@@ -391,6 +353,7 @@ class VertivScraper:
         self,
         *,
         output: Path,
+        cache_dir: Path,
         max_products: int | None,
         max_pages_per_category: int,
         delay_min: float,
@@ -399,8 +362,11 @@ class VertivScraper:
         headless: bool,
         include_services: bool,
         seed_urls: list[str],
+        refresh_cache: bool,
+        include_evidence: bool,
     ) -> None:
         self.output = output
+        self.cache_dir = cache_dir
         self.max_products = max_products
         self.max_pages_per_category = max_pages_per_category
         self.delay_min = delay_min
@@ -409,112 +375,96 @@ class VertivScraper:
         self.headless = headless
         self.include_services = include_services
         self.seed_urls = seed_urls
+        self.refresh_cache = refresh_cache
+        self.include_evidence = include_evidence
+        self.scraped_products = 0
+        self.datasheets_seen: set[str] = set()
 
-    async def run(self) -> list[dict[str, Any]]:
+    async def run(self) -> dict[str, Any]:
         try:
             from playwright.async_api import async_playwright
         except ImportError as exc:
             raise SystemExit(
-                "Playwright is not installed.\n"
-                "Run: python -m pip install -r requirements.txt\n"
-                "Then: python -m playwright install chromium"
+                "Playwright is required. Run:\n"
+                "  python -m pip install -r requirements.txt\n"
+                "  python -m playwright install chromium"
             ) from exc
 
-        seeds = self._build_seed_list()
+        seeds = self.build_seed_list()
         products: list[dict[str, Any]] = []
-        seen_products: set[str] = set()
+        seen_product_urls: set[str] = set()
 
         async with async_playwright() as pw:
             browser = await pw.chromium.launch(
                 headless=self.headless,
-                args=[
-                    "--disable-blink-features=AutomationControlled",
-                    "--disable-dev-shm-usage",
-                    "--no-sandbox",
-                ],
+                args=["--disable-blink-features=AutomationControlled", "--disable-dev-shm-usage", "--no-sandbox"],
             )
+            context = await self.new_context(browser)
 
             for seed in seeds:
                 if self.max_products and len(products) >= self.max_products:
                     break
-
-                context = await self._new_context(browser)
                 page = await context.new_page()
-                print(f"[INFO] Category: {seed.parent_category} > {seed.subcategory}")
-
+                print(f"[INFO] Category: {seed.main_heading} > {seed.subheading}")
                 try:
-                    urls = await self.collect_product_urls(page, seed)
+                    product_urls = await self.collect_product_urls(page, seed)
                 except Exception as exc:
-                    print(f"[WARN] Failed to collect URLs from {seed.url}: {exc}")
-                    urls = []
-
+                    print(f"[WARN] Could not collect products from {seed.url}: {exc}")
+                    product_urls = []
                 await page.close()
 
-                product_page = await context.new_page()
-                for url in urls:
+                for product_url in product_urls:
                     if self.max_products and len(products) >= self.max_products:
                         break
-                    canon = canonical_url(url)
-                    if canon in seen_products:
+                    canon = canonical_url(product_url)
+                    if canon in seen_product_urls:
                         continue
-                    seen_products.add(canon)
+                    seen_product_urls.add(canon)
+                    product_page = await context.new_page()
+                    try:
+                        product = await self.scrape_product(product_page, product_url, seed)
+                        products.append(product)
+                        self.scraped_products += 1
+                        self.write_output(products, seeds)
+                    except Exception as exc:
+                        print(f"[WARN] Product failed {product_url}: {exc}")
+                    finally:
+                        await product_page.close()
+                    await self.delay()
 
-                    record = await self.scrape_product(product_page, url, seed)
-                    products.append(record)
-                    self._write_output(products)
-                    await self.polite_delay()
-
-                await product_page.close()
-                await context.close()
-                await self.polite_delay(multiplier=2.0)
-
+            await context.close()
             await browser.close()
 
-        self._write_output(products)
-        print(f"[DONE] Saved {len(products)} products to {self.output.resolve()}")
-        return products
+        catalog = self.write_output(products, seeds)
+        print(f"[DONE] Saved {len(products)} products to {self.output}")
+        return catalog
 
-    def _build_seed_list(self) -> list[CategorySeed]:
+    def build_seed_list(self) -> list[CategorySeed]:
         if self.seed_urls:
-            return [
-                CategorySeed("Custom", "Custom Seed", absolute_url(url), "CUSTOM")
-                for url in self.seed_urls
-            ]
-
+            return [CategorySeed("Custom", "Custom", canonical_url(absolute_url(url)), "CUSTOM") for url in self.seed_urls]
         seeds = [seed for seed in CATALOG_SEEDS if self.include_services or not seed.is_service]
         deduped: list[CategorySeed] = []
         seen: set[str] = set()
         for seed in seeds:
-            full_url = canonical_url(absolute_url(seed.url))
-            if full_url in seen:
+            full = canonical_url(absolute_url(seed.url))
+            if full in seen:
                 continue
-            seen.add(full_url)
-            deduped.append(
-                CategorySeed(
-                    seed.parent_category,
-                    seed.subcategory,
-                    full_url,
-                    seed.normalized_category,
-                    seed.is_service,
-                )
-            )
+            seen.add(full)
+            deduped.append(CategorySeed(seed.main_heading, seed.subheading, full, seed.category, seed.is_service))
         return deduped
 
-    async def _new_context(self, browser: Any) -> Any:
+    async def new_context(self, browser: Any) -> Any:
         return await browser.new_context(
             user_agent=random.choice(USER_AGENTS),
-            viewport={"width": random.choice((1280, 1366, 1440)), "height": random.choice((768, 900))},
+            viewport={"width": 1366, "height": 850},
             locale="en-US",
             timezone_id="America/New_York",
             ignore_https_errors=True,
-            extra_http_headers={
-                "Accept-Language": "en-US,en;q=0.9",
-                "DNT": "1",
-                "Upgrade-Insecure-Requests": "1",
-            },
+            accept_downloads=True,
+            extra_http_headers={"Accept-Language": "en-US,en;q=0.9", "DNT": "1"},
         )
 
-    async def polite_delay(self, multiplier: float = 1.0) -> None:
+    async def delay(self, multiplier: float = 1.0) -> None:
         await asyncio.sleep(random.uniform(self.delay_min, self.delay_max) * multiplier)
 
     async def goto(self, page: Any, url: str) -> bool:
@@ -525,7 +475,7 @@ class VertivScraper:
                     await page.wait_for_load_state("networkidle", timeout=min(self.timeout_ms, 15000))
                 except Exception:
                     pass
-                await asyncio.sleep(random.uniform(1.0, 2.0))
+                await asyncio.sleep(random.uniform(1.0, 2.5))
                 return True
             except Exception as exc:
                 print(f"[WARN] Load failed ({attempt}/3): {url} :: {exc}")
@@ -543,20 +493,29 @@ class VertivScraper:
             if not await self.goto(page, next_url):
                 break
 
+            try:
+                await page.locator(f"xpath={PRODUCT_RESULTS_XPATH}").wait_for(timeout=10000)
+            except Exception:
+                pass
+
             page_links = await page.evaluate(
                 """
-                () => Array.from(document.querySelectorAll('a[href]')).map((a) => ({
-                  href: a.href,
-                  text: (a.innerText || a.getAttribute('aria-label') || '').trim(),
-                  className: a.className || ''
-                }))
-                """
+                (xpath) => {
+                  const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+                  const root = result.singleNodeValue || document;
+                  return Array.from(root.querySelectorAll('a[href]')).map((a) => ({
+                    href: a.href,
+                    text: (a.innerText || a.getAttribute('aria-label') || '').trim()
+                  }));
+                }
+                """,
+                PRODUCT_RESULTS_XPATH,
             )
 
             new_count = 0
             for link in page_links:
                 href = clean_text(link.get("href"))
-                if not href or not is_probable_product_url(href, seed.url):
+                if not href or not is_product_url(href, seed.url):
                     continue
                 canon = canonical_url(href)
                 if canon in seen:
@@ -564,22 +523,16 @@ class VertivScraper:
                 seen.add(canon)
                 urls.append(canon)
                 new_count += 1
-
             print(f"[INFO]   page {page_count}: +{new_count} product URLs")
+
             next_url = await self.find_next_page_url(page, next_url)
-            await self.polite_delay()
+            await self.delay()
 
         return urls
 
     async def find_next_page_url(self, page: Any, current_url: str) -> str | None:
-        next_selectors = (
-            "a[rel='next']",
-            "a[aria-label*='Next' i]",
-            "button[aria-label*='Next' i]",
-            ".pagination a:last-child",
-            ".pagination button:last-child",
-        )
-        for selector in next_selectors:
+        selectors = ("a[rel='next']", "a[aria-label*='Next' i]", "button[aria-label*='Next' i]", ".pagination a:last-child")
+        for selector in selectors:
             try:
                 element = await page.query_selector(selector)
                 if not element:
@@ -597,66 +550,58 @@ class VertivScraper:
                 continue
         return None
 
-    async def scrape_product(self, page: Any, url: str, seed: CategorySeed) -> dict[str, Any]:
-        print(f"[INFO]   product: {url}")
-        record: dict[str, Any] = {
+    async def scrape_product(self, page: Any, product_url: str, seed: CategorySeed) -> dict[str, Any]:
+        print(f"[INFO]   product: {product_url}")
+        if not await self.goto(page, product_url):
+            return self.empty_product(product_url, seed)
+
+        title = await self.extract_title(page)
+        model = detect_model(title, product_url)
+        datasheet_url = await self.find_datasheet_url(page, product_url)
+        technical_specifications: dict[str, Any] | None = None
+        normalized: dict[str, Any] = {}
+
+        if datasheet_url:
+            self.datasheets_seen.add(datasheet_url)
+            try:
+                pdf_path = await self.download_pdf(page.context, datasheet_url)
+                extracted = extract_pdf_specs(pdf_path)
+                technical_specifications = extracted["technical_specifications"]
+                normalized = extracted["normalized"]
+            except Exception as exc:
+                print(f"[WARN]   PDF extraction failed for {datasheet_url}: {exc}")
+        else:
+            print(f"[WARN]   no datasheet/brochure found for {product_url}")
+
+        item = {
             "vendor": "Vertiv",
-            "model": None,
-            "product_name": None,
-            "category": seed.normalized_category,
-            "product_category": f"{seed.parent_category} > {seed.subcategory}",
-            "parent_category": seed.parent_category,
-            "subcategory": seed.subcategory,
+            "model": model,
+            "category": seed.category,
+            **normalized,
+            "main_heading": seed.main_heading,
+            "subheading": seed.subheading,
+            "technical_specifications": technical_specifications,
+            "product_url": product_url,
+            "datasheet_url": datasheet_url,
+        }
+        if not self.include_evidence:
+            item = {key: value for key, value in item.items() if value not in (None, "", {}, [])}
+        return item
+
+    def empty_product(self, product_url: str, seed: CategorySeed) -> dict[str, Any]:
+        return {
+            "vendor": "Vertiv",
+            "model": detect_model(None, product_url),
+            "category": seed.category,
+            "main_heading": seed.main_heading,
+            "subheading": seed.subheading,
+            "product_url": product_url,
+            "datasheet_url": None,
             "technical_specifications": None,
-            "normalized_specifications": {},
-            "datasheet_urls": None,
-            "documents": None,
-            "source_product_page_url": url,
-            "product_url": url,
-            "scraped_at": datetime.now(timezone.utc).isoformat(),
         }
 
-        if not await self.goto(page, url):
-            return record
-
-        try:
-            record["product_name"] = await self.extract_title(page)
-            record["model"] = detect_model(record["product_name"], url)
-        except Exception as exc:
-            print(f"[WARN]   title extraction failed for {url}: {exc}")
-
-        try:
-            specs = await self.extract_specifications(page)
-            record["technical_specifications"] = specs or None
-            record["normalized_specifications"] = extract_normalized_specs(specs)
-            if not specs:
-                print(f"[WARN]   no technical specs found for {record['product_name'] or url}")
-        except Exception as exc:
-            print(f"[WARN]   spec extraction failed for {url}: {exc}")
-
-        try:
-            documents = await self.extract_documents(page, url)
-            record["documents"] = documents or None
-            pdfs = [doc["url"] for doc in documents if doc.get("is_pdf")]
-            record["datasheet_urls"] = pdfs or None
-            if not pdfs:
-                print(f"[WARN]   no datasheet PDFs found for {record['product_name'] or url}")
-        except Exception as exc:
-            print(f"[WARN]   document extraction failed for {url}: {exc}")
-
-        return record
-
     async def extract_title(self, page: Any) -> str | None:
-        selectors = (
-            "h1.product-hero__title",
-            "h1.pdp-title",
-            "h1.product-detail__name",
-            "[data-testid*='product'][data-testid*='title']",
-            ".product-detail h1",
-            ".pdp-header h1",
-            "h1",
-        )
-        for selector in selectors:
+        for selector in ("h1.product-hero__title", "h1.pdp-title", ".product-detail h1", ".pdp-header h1", "h1"):
             try:
                 element = await page.query_selector(selector)
                 if element:
@@ -665,272 +610,118 @@ class VertivScraper:
                         return text
             except Exception:
                 continue
-
         title = clean_text(await page.title())
         return title.split("|")[0].strip() if title else None
 
-    async def extract_specifications(self, page: Any) -> dict[str, Any]:
-        await self.open_possible_sections(page, ("Specifications", "Technical", "Product Details", "Resources"))
-        specs: dict[str, Any] = {}
+    async def find_datasheet_url(self, page: Any, product_url: str) -> str | None:
+        xpath_locator = page.locator(f"xpath={GET_BROCHURE_XPATH}")
+        try:
+            if await xpath_locator.count():
+                href = await xpath_locator.first.get_attribute("href")
+                if href and href != "#":
+                    return absolute_url(href, product_url)
+                opened = await self.click_and_capture_pdf(page, xpath_locator.first)
+                if opened:
+                    return opened
+        except Exception:
+            pass
 
-        table_specs = await self.extract_table_specs(page)
-        specs.update(table_specs)
-
-        dl_specs = await self.extract_definition_specs(page)
-        for key, value in dl_specs.items():
-            specs.setdefault(key, value)
-
-        section_specs = await self.extract_text_section_specs(page)
-        for key, value in section_specs.items():
-            specs.setdefault(key, value)
-
-        return self.clean_specs(specs)
-
-    async def extract_table_specs(self, page: Any) -> dict[str, Any]:
-        rows = await page.evaluate(
-            """
-            () => Array.from(document.querySelectorAll('table')).flatMap((table) => {
-              const caption = (table.caption && table.caption.innerText || '').trim();
-              return Array.from(table.querySelectorAll('tr')).map((tr) => ({
-                caption,
-                cells: Array.from(tr.querySelectorAll('th,td')).map((cell) => cell.innerText.trim())
-              }));
-            })
-            """
-        )
-
-        specs: dict[str, Any] = {}
-        active_headers: list[str] | None = None
-        for row in rows:
-            cells = [clean_text(cell) for cell in row.get("cells", []) if clean_text(cell)]
-            if len(cells) < 2:
-                continue
-
-            lower_cells = [cell.lower() for cell in cells]
-            headerish = any(word in " ".join(lower_cells) for word in ("model", "specification", "parameter"))
-            if headerish and len(cells) > 2:
-                active_headers = cells
-                continue
-
-            key = cells[0].rstrip(":")
-            if not self.looks_like_spec_key(key):
-                continue
-
-            if len(cells) == 2:
-                specs[key] = cells[1]
-                continue
-
-            if active_headers and len(active_headers) == len(cells):
-                specs[key] = {
-                    active_headers[index]: value
-                    for index, value in enumerate(cells[1:], start=1)
-                    if value
-                }
-            else:
-                specs[key] = cells[1:]
-
-        return specs
-
-    async def extract_definition_specs(self, page: Any) -> dict[str, Any]:
-        pairs = await page.evaluate(
-            """
-            () => Array.from(document.querySelectorAll('dl')).flatMap((dl) => {
-              const children = Array.from(dl.children);
-              const pairs = [];
-              for (let i = 0; i < children.length; i++) {
-                if (children[i].tagName.toLowerCase() === 'dt') {
-                  const next = children.slice(i + 1).find((el) => el.tagName.toLowerCase() === 'dd');
-                  if (next) pairs.push([children[i].innerText.trim(), next.innerText.trim()]);
-                }
-              }
-              return pairs;
-            })
-            """
-        )
-        specs: dict[str, Any] = {}
-        for key, value in pairs:
-            key = clean_text(key).rstrip(":")
-            value = clean_text(value)
-            if key and value and self.looks_like_spec_key(key):
-                specs[key] = value
-        return specs
-
-    async def extract_text_section_specs(self, page: Any) -> dict[str, Any]:
-        sections = await page.evaluate(
-            """
-            () => Array.from(document.querySelectorAll('section, .accordion, .tab-pane, [role="tabpanel"], div'))
-              .map((el) => ({
-                heading: (el.querySelector('h2,h3,h4,[role="heading"]')?.innerText || '').trim(),
-                text: (el.innerText || '').trim()
-              }))
-              .filter((item) => item.text.length > 20 && item.text.length < 5000)
-            """
-        )
-        specs: dict[str, Any] = {}
-        for section in sections:
-            heading = clean_text(section.get("heading"))
-            body = clean_text(section.get("text"))
-            if not body:
-                continue
-            section_name = f"{heading} {body[:120]}".lower()
-            if not any(word in section_name for word in SPEC_SECTION_WORDS):
-                continue
-
-            for line in re.split(r"\n| {2,}", section.get("text", "")):
-                line = clean_text(line)
-                match = re.match(r"^(.{3,80}?):\s*(.{1,500})$", line)
-                if not match:
-                    continue
-                key = clean_text(match.group(1)).rstrip(":")
-                value = clean_text(match.group(2))
-                if key and value and self.looks_like_spec_key(key):
-                    specs[key] = value
-
-        return specs
-
-    @staticmethod
-    def looks_like_spec_key(key: str) -> bool:
-        key = clean_text(key)
-        if not key or len(key) > 100:
-            return False
-        lowered = key.lower()
-        bad_keys = {
-            "model",
-            "models",
-            "description",
-            "overview",
-            "resources",
-            "documents",
-            "download",
-            "downloads",
-            "support",
-        }
-        if lowered in bad_keys:
-            return False
-        return bool(re.search(r"[A-Za-z]", key))
-
-    @staticmethod
-    def clean_specs(specs: dict[str, Any]) -> dict[str, Any]:
-        cleaned: dict[str, Any] = {}
-        for key, value in specs.items():
-            cleaned_key = clean_text(str(key)).rstrip(":")
-            if not cleaned_key:
-                continue
-            if isinstance(value, dict):
-                cleaned_value = {
-                    clean_text(str(k)): clean_text(str(v))
-                    for k, v in value.items()
-                    if clean_text(str(k)) and clean_text(str(v))
-                }
-            elif isinstance(value, list):
-                cleaned_value = [clean_text(str(item)) for item in value if clean_text(str(item))]
-            else:
-                cleaned_value = clean_text(str(value))
-            if cleaned_value:
-                cleaned[cleaned_key] = cleaned_value
-        return cleaned
-
-    async def extract_documents(self, page: Any, source_url: str) -> list[dict[str, Any]]:
-        await self.open_possible_sections(page, ("Documents", "Downloads", "Resources", "Brochures"))
         links = await page.evaluate(
             """
             () => Array.from(document.querySelectorAll('a[href]')).map((a) => ({
               href: a.href,
-              text: (a.innerText || '').trim(),
-              aria: (a.getAttribute('aria-label') || '').trim(),
-              title: (a.getAttribute('title') || '').trim()
+              text: (a.innerText || a.getAttribute('aria-label') || a.getAttribute('title') || '').trim()
             }))
             """
         )
-
-        docs: list[dict[str, Any]] = []
-        seen: set[str] = set()
+        candidates: list[str] = []
         for link in links:
             href = clean_text(link.get("href"))
-            label = clean_text(link.get("text") or link.get("aria") or link.get("title"))
+            text = clean_text(link.get("text")).lower()
             if not href or href.startswith("javascript:") or href.startswith("mailto:"):
                 continue
+            lower_href = href.lower()
+            if ".pdf" in lower_href or any(keyword in text for keyword in DOCUMENT_KEYWORDS):
+                candidates.append(absolute_url(href, product_url))
 
-            full_url = absolute_url(href, source_url)
-            lower_url = full_url.lower()
-            lower_label = label.lower()
-            is_pdf = ".pdf" in lower_url.split("?", 1)[0]
-            has_doc_keyword = any(keyword in lower_label for keyword in DOCUMENT_KEYWORDS)
+        pdf_candidates = [url for url in candidates if ".pdf" in urlparse(url).path.lower()]
+        if pdf_candidates:
+            return pdf_candidates[0]
 
-            if not is_pdf and not has_doc_keyword:
-                continue
-            if not is_pdf and "vertiv.com" in urlparse(full_url).netloc and "/search/" in urlparse(full_url).path:
-                continue
+        for candidate in candidates:
+            if "/search/" not in urlparse(candidate).path:
+                return candidate
+        return None
 
-            canon = canonical_url(full_url)
-            if canon in seen:
-                continue
-            seen.add(canon)
-            docs.append(
-                {
-                    "title": label or Path(urlparse(full_url).path).name,
-                    "url": full_url,
-                    "is_pdf": is_pdf,
-                    "document_type": self.classify_document(label, full_url),
-                }
-            )
+    async def click_and_capture_pdf(self, page: Any, locator: Any) -> str | None:
+        try:
+            async with page.context.expect_page(timeout=5000) as popup_info:
+                await locator.click(timeout=3000)
+            popup = await popup_info.value
+            await popup.wait_for_load_state("domcontentloaded", timeout=10000)
+            url = popup.url
+            await popup.close()
+            return url if url and url != "about:blank" else None
+        except Exception:
+            try:
+                old_url = page.url
+                await locator.click(timeout=3000)
+                await page.wait_for_load_state("domcontentloaded", timeout=10000)
+                if page.url != old_url:
+                    return page.url
+            except Exception:
+                return None
+        return None
 
-        return docs
+    async def download_pdf(self, context: Any, datasheet_url: str) -> Path:
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        pdf_path = cache_path_for_url(self.cache_dir, datasheet_url)
+        if pdf_path.exists() and not self.refresh_cache:
+            return pdf_path
 
-    async def open_possible_sections(self, page: Any, labels: tuple[str, ...]) -> None:
-        for label in labels:
-            selectors = (
-                f"button:has-text('{label}')",
-                f"a:has-text('{label}')",
-                f"[role='tab']:has-text('{label}')",
-                f"[aria-controls*='{label.lower()}']",
-            )
-            for selector in selectors:
-                try:
-                    elements = await page.query_selector_all(selector)
-                    for element in elements[:2]:
-                        if await element.is_visible():
-                            await element.click(timeout=2000)
-                            await asyncio.sleep(0.5)
-                except Exception:
-                    continue
+        response = await context.request.get(datasheet_url, timeout=self.timeout_ms)
+        if not response.ok:
+            raise RuntimeError(f"HTTP {response.status} downloading {datasheet_url}")
+        content = await response.body()
+        pdf_path.write_bytes(content)
+        return pdf_path
 
-    @staticmethod
-    def classify_document(label: str, url: str) -> str:
-        text = f"{label} {url}".lower()
-        if "datasheet" in text or "data-sheet" in text or "data sheet" in text:
-            return "datasheet"
-        if "brochure" in text:
-            return "brochure"
-        if "technical" in text or "specification" in text or "spec-sheet" in text:
-            return "technical_specification"
-        if "manual" in text or "guide" in text:
-            return "manual"
-        return "document"
-
-    def _write_output(self, products: list[dict[str, Any]]) -> None:
+    def write_output(self, products: list[dict[str, Any]], seeds: list[CategorySeed]) -> dict[str, Any]:
+        catalog = {
+            "metadata": {
+                "source": "Vertiv product pages and official brochure/datasheet PDFs",
+                "seed_urls": [seed.url for seed in seeds],
+                "scraped_at": date.today().isoformat(),
+                "datasheets_seen": len(self.datasheets_seen),
+                "scraped_products": len(products),
+                "notes": (
+                    "Clean matcher-compatible catalog. Product URLs are discovered from Vertiv "
+                    "product-type-results sections. Technical specifications are extracted from "
+                    "linked datasheet PDFs with pdfplumber."
+                ),
+                "include_evidence": self.include_evidence,
+            },
+            "products": products,
+        }
         self.output.parent.mkdir(parents=True, exist_ok=True)
-        self.output.write_text(json.dumps(products, indent=2, ensure_ascii=False), encoding="utf-8")
+        self.output.write_text(json.dumps(catalog, indent=2, ensure_ascii=False), encoding="utf-8")
+        return catalog
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Scrape Vertiv hardware technical specs and datasheet PDFs into JSON."
-    )
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT, help="JSON output path.")
-    parser.add_argument("--max-products", type=int, default=None, help="Stop after N product pages.")
-    parser.add_argument("--max-pages-per-category", type=int, default=8, help="Pagination cap per category.")
-    parser.add_argument("--delay-min", type=float, default=1.5, help="Minimum random delay in seconds.")
-    parser.add_argument("--delay-max", type=float, default=4.0, help="Maximum random delay in seconds.")
-    parser.add_argument("--timeout-ms", type=int, default=45000, help="Page load timeout.")
-    parser.add_argument("--headful", action="store_true", help="Run Chromium visibly for debugging.")
-    parser.add_argument("--include-services", action="store_true", help="Also scrape service category pages.")
-    parser.add_argument(
-        "--seed-url",
-        action="append",
-        default=[],
-        help="Scrape one or more custom category URLs instead of the built-in Vertiv catalog seeds.",
-    )
+    parser = argparse.ArgumentParser(description="Scrape Vertiv product pages and datasheet PDF specs.")
+    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--cache-dir", type=Path, default=DEFAULT_CACHE_DIR)
+    parser.add_argument("--max-products", type=int, default=None)
+    parser.add_argument("--max-pages-per-category", type=int, default=8)
+    parser.add_argument("--delay-min", type=float, default=1.5)
+    parser.add_argument("--delay-max", type=float, default=4.0)
+    parser.add_argument("--timeout-ms", type=int, default=45000)
+    parser.add_argument("--headful", action="store_true")
+    parser.add_argument("--include-services", action="store_true")
+    parser.add_argument("--refresh-cache", action="store_true")
+    parser.add_argument("--include-evidence", action="store_true")
+    parser.add_argument("--seed-url", action="append", default=[])
     return parser.parse_args()
 
 
@@ -939,8 +730,14 @@ async def async_main() -> None:
     if args.delay_min < 0 or args.delay_max < args.delay_min:
         raise SystemExit("--delay-max must be greater than or equal to --delay-min")
 
+    try:
+        import pdfplumber  # noqa: F401
+    except ImportError as exc:
+        raise SystemExit("pdfplumber is required. Run: python -m pip install -r requirements.txt") from exc
+
     scraper = VertivScraper(
         output=args.output,
+        cache_dir=args.cache_dir,
         max_products=args.max_products,
         max_pages_per_category=args.max_pages_per_category,
         delay_min=args.delay_min,
@@ -949,6 +746,8 @@ async def async_main() -> None:
         headless=not args.headful,
         include_services=args.include_services,
         seed_urls=args.seed_url,
+        refresh_cache=args.refresh_cache,
+        include_evidence=args.include_evidence,
     )
     await scraper.run()
 

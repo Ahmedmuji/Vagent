@@ -12,6 +12,7 @@ data/Extracted Requirements Section/
 data/Extracted JSON Results/
 data/Extracted Excel Results/
 output/
+data/product_catalogs/.*_scrape_cache/
 
 # Keep these if you want them in the repo (uncomment if needed)
 # !data/product_catalogs/
