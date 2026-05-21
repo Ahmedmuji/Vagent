@@ -16,7 +16,7 @@ VERTIV_CATEGORIES = {
     "ENERGY_STORAGE": ("battery", "energy storage", "bess", "lithium"),
     "DC_POWER": ("dc power", "rectifier", "netSure", "48v"),
     "POWER_DISTRIBUTION": ("pdu", "power distribution", "busway", "rpp", "panelboard"),
-    "TRANSFER_SWITCH": ("transfer switch", "static transfer", "sts"),
+    "TRANSFER_SWITCH": ("transfer switch", "static transfer", "sts", " ats", "ats-", "dc-ats"),
     "SWITCHGEAR": ("switchgear", "switchboard"),
     "BUSWAY": ("busway", "busduct"),
     "COOLING": ("cooling", "thermal", "in-row", "inrow", "room cooling", "chiller", "heat rejection", "crac", "crv"),
@@ -42,6 +42,7 @@ BAD_DATASHEET_URL_TERMS = (
     "ethics",
     "compliance",
     "foss-information",
+    "obsolete",
 )
 
 
@@ -152,6 +153,38 @@ class VertivRAGMatcher:
                 subheading = str(product.get("subheading") or "").lower()
                 if "in-row" in subheading or "in row" in subheading:
                     score += 0.25
+            if category_hint == "COOLING" and re.search(r"\b300\s*mm\b", query_lower):
+                model_text = f"{product.get('model') or ''} {product.get('subheading') or ''}".lower()
+                if "crv" in model_text or "in-row" in model_text or "in row" in model_text:
+                    score += 0.5
+            if category_hint == "INTEGRATED_RACK_SOLUTION" and "smartaisle" in chunk_text:
+                score += 0.6
+                if "smartaisle 2" in chunk_text:
+                    score += 0.2
+            if category_hint == "UPS" and re.search(r"\b(power module|battery circuit|ground short|lithium-ion battery rack)\b", query_lower):
+                model_text = str(product.get("model") or "").lower()
+                if "apm" in model_text:
+                    score += 0.6
+            if category_hint == "UPS" and re.search(r"\b120\s*kw\b|\b(?:25|30)\s*kw\s+to\s+150\s*kw\b|hot swappable.*modular", query_lower):
+                model_text = str(product.get("model") or "").lower()
+                if "apm2" in model_text:
+                    score += 0.7
+            if category_hint == "ENERGY_STORAGE" and re.search(r"\b(lithium|battery rack|battery module)\b", query_lower):
+                model_text = str(product.get("model") or "").lower()
+                if "energycore" in model_text or "battery" in model_text:
+                    score += 0.5
+            if category_hint == "MONITORING" and "monitoring server" in query_lower:
+                model_text = str(product.get("model") or "").lower()
+                if "rdu501" in model_text:
+                    score += 0.8
+            if category_hint == "COOLING_CONTROL" and "water sensor" in query_lower:
+                model_text = str(product.get("model") or "").lower()
+                if "water sensing" in model_text or "water sensor" in model_text:
+                    score += 0.8
+            if category_hint == "COOLING_CONTROL" and ("temperature" in query_lower or "humidity" in query_lower):
+                model_text = str(product.get("model") or "").lower()
+                if "temperature" in model_text or "humidity" in model_text:
+                    score += 0.5
             if constraints.get("rack_accessory") and str(product.get("category") or "") == "RACK":
                 score += 0.25
                 if any(term in chunk_text for term in ("cable management", "cable manager", "blank panel", "accessories")):
@@ -244,6 +277,20 @@ class VertivRAGMatcher:
         if rack_accessory:
             constraints["category"] = "RACK"
             constraints["rack_accessory"] = True
+        if re.search(r"\b(dc-ats|ats-|ats\b|static transfer|transfer switch)\b", lowered):
+            constraints["category"] = "TRANSFER_SWITCH"
+        if re.search(r"\b(rpdu|rack pdu|pdu\b|power distribution)\b", lowered):
+            constraints["category"] = "POWER_DISTRIBUTION"
+        if re.search(r"\b(containment|hot\s*/\s*cold aisle|hot aisle|cold aisle|aisle containment)\b", lowered):
+            constraints["category"] = "INTEGRATED_RACK_SOLUTION"
+        if re.search(r"\b(lithium-ion battery rack|battery module)\b", lowered):
+            constraints["category"] = "ENERGY_STORAGE"
+        elif re.search(r"\b(power module|battery circuit|ground short)\b", lowered):
+            constraints["category"] = "UPS"
+        if "monitoring server" in lowered:
+            constraints["category"] = "MONITORING"
+        if re.search(r"\b(temperature.*sensor|humidity.*sensor|water sensor|environmental sensor)\b", lowered):
+            constraints["category"] = "COOLING_CONTROL"
         for field, pattern in (
             ("power_capacity_kva", r"(\d+(?:\.\d+)?)\s*kva\b"),
             ("power_capacity_kw", r"(\d+(?:\.\d+)?)\s*kw\b"),
@@ -259,6 +306,8 @@ class VertivRAGMatcher:
                 constraints[field] = _parse_number(match.group(1))
         if category == "COOLING" and "power_capacity_kw" in constraints:
             constraints.setdefault("cooling_capacity_kw", constraints.pop("power_capacity_kw"))
+        elif category != "COOLING":
+            constraints.pop("cooling_capacity_kw", None)
         if re.search(r"\b(n\+1|redundan|dual power|active/passive|active-passive|ha\b|high availability)", lowered):
             constraints["redundancy_required"] = True
         return constraints

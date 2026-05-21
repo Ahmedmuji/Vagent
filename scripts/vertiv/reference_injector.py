@@ -236,13 +236,39 @@ class VertivReferenceInjector:
         lowered = str(text or "").lower()
         if metadata.get("requires_reference") is True:
             return True
+        if VertivReferenceInjector._is_non_vertiv_scope(lowered):
+            return False
         terms = (
             "ups", "battery", "pdu", "rack", "enclosure", "containment", "cooling",
             "thermal", "chiller", "power distribution", "monitoring", "sensor",
             "kvm", "console", "busway", "switchgear", "cabinet", "42u", "48u",
-            "kva", "kw", "boq", "supply", "equipment", "hardware",
+            "kva", "kw", "inrow", "in-row", "crv", "apm", "rdu", "sts",
+            "static transfer", "transfer switch", "ats", "rpdu",
         )
         return any(term in lowered for term in terms)
+
+    @staticmethod
+    def _is_non_vertiv_scope(lowered: str) -> bool:
+        service_terms = (
+            "startup", "commissioning", "installation", "testing & commissioning",
+            "testing and commissioning", "complete job", "civil work",
+        )
+        non_catalog_terms = (
+            "ip camera", "dome camera", "bullet/dome camera", "nvr", "recorder",
+            "hdd", "vesda", "fire detection", "fire alarm", "fire suppression",
+            "gas cylinder", "smoke detector", "smoke sensor", "speaker",
+            "public address", "biometric", "fingerprint", "rfid", "ic card",
+            "access control", "exit button", "electro-magnetic lock",
+            "magnetic lock", "panic bar", "smoke seal", "single leaf door",
+            "double leaf door", "door closer", "exit lights", "exit light",
+            "cable tray", "cable ladder", "cable trunking", "perforated cable",
+            "solid trunking", "distribution board", "o/g db", "db-ups", "ups o/g db",
+            "subassembly", "communication cable", "seismic anchors", "function module",
+            "door sensor", "microwave and infrared sensor",
+        )
+        if any(term in lowered for term in service_terms):
+            return True
+        return any(term in lowered for term in non_catalog_terms)
 
 
 def inject_vertiv_references(data: Dict[str, Any], catalog_dir: Optional[str] = None) -> Tuple[Dict[str, Any], Dict[str, int]]:
