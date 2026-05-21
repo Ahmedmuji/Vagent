@@ -12,14 +12,14 @@ import numpy as np
 
 
 VERTIV_CATEGORIES = {
-    "UPS": ("ups", "uninterruptible", "kva", "kw", "battery", "runtime", "online", "double conversion"),
+    "UPS": ("ups", "uninterruptible", "battery", "runtime", "online", "double conversion"),
     "ENERGY_STORAGE": ("battery", "energy storage", "bess", "lithium"),
     "DC_POWER": ("dc power", "rectifier", "netSure", "48v"),
     "POWER_DISTRIBUTION": ("pdu", "power distribution", "busway", "rpp", "panelboard"),
     "TRANSFER_SWITCH": ("transfer switch", "static transfer", "sts"),
     "SWITCHGEAR": ("switchgear", "switchboard"),
     "BUSWAY": ("busway", "busduct"),
-    "COOLING": ("cooling", "thermal", "in-row", "room cooling", "chiller", "heat rejection", "crac", "crv"),
+    "COOLING": ("cooling", "thermal", "in-row", "inrow", "room cooling", "chiller", "heat rejection", "crac", "crv"),
     "COOLING_CONTROL": ("controller", "thermal control", "monitoring"),
     "RACK": ("rack", "cabinet", "enclosure", "42u", "45u", "48u", "containment", "cable manager", "cable management", "blank panel"),
     "ENCLOSURE": ("outdoor enclosure", "enclosure", "cabinet"),
@@ -29,6 +29,20 @@ VERTIV_CATEGORIES = {
     "KVM": ("kvm", "lcd tray", "console", "switch"),
     "SOFTWARE": ("software", "platform", "management"),
 }
+
+DATASHEET_URL_OVERRIDES = {
+    "liebert rdu501": "https://www.vertiv.com/48eef7/globalassets/products/monitoring-control-and-management/monitoring/liebert-rdu501/liebert-rdu501-datasheet.pdf",
+    "rdu501": "https://www.vertiv.com/48eef7/globalassets/products/monitoring-control-and-management/monitoring/liebert-rdu501/liebert-rdu501-datasheet.pdf",
+    "liebert crv4": "https://www.vertiv.com/49dd12/globalassets/products/thermal-management/in-row-cooling/liebert-crv4-brochure.pdf",
+}
+
+BAD_DATASHEET_URL_TERMS = (
+    "code-of-conduct",
+    "code_of_conduct",
+    "ethics",
+    "compliance",
+    "foss-information",
+)
 
 
 @dataclass
@@ -85,6 +99,12 @@ class VertivRAGMatcher:
             if self._passes_hard_constraints(candidate.product, constraints)
         ]
         candidates = safe_candidates or retrieved
+        candidates_with_datasheets = [
+            candidate for candidate in candidates
+            if self._public_datasheet_url(candidate.product)
+        ]
+        if candidates_with_datasheets:
+            candidates = candidates_with_datasheets
         llm_result = self._llm_rank(query, constraints, candidates) if self.use_llm else None
         if llm_result and llm_result.get("selected_model"):
             selected = self._candidate_by_model(candidates, llm_result["selected_model"]) or (candidates[0] if candidates else None)
@@ -113,12 +133,25 @@ class VertivRAGMatcher:
             product = chunk["product"]
             score = float(query_embedding_scores[idx]) if idx < len(query_embedding_scores) else 0.0
             chunk_text = chunk["text"].lower()
+            query_lower = query.lower()
             overlap = sum(1 for term in keyword_terms if len(term) > 2 and term in chunk_text)
             score += min(overlap / 25.0, 0.25)
+            for model_key in self._model_keys(product.get("model")):
+                model_tokens = [token for token in model_key.split() if len(token) > 2]
+                if model_key and model_key in query_lower:
+                    score += 0.75
+                    break
+                if len(model_tokens) >= 2 and all(token in keyword_terms for token in model_tokens):
+                    score += 0.45
+                    break
             if category_hint and product.get("category") == category_hint:
                 score += 0.3
             elif category_hint and self._category_is_compatible(category_hint, str(product.get("category") or "")):
                 score += 0.15
+            if category_hint == "COOLING" and re.search(r"\bin[- ]?row\b", query_lower):
+                subheading = str(product.get("subheading") or "").lower()
+                if "in-row" in subheading or "in row" in subheading:
+                    score += 0.25
             if constraints.get("rack_accessory") and str(product.get("category") or "") == "RACK":
                 score += 0.25
                 if any(term in chunk_text for term in ("cable management", "cable manager", "blank panel", "accessories")):
@@ -140,6 +173,7 @@ class VertivRAGMatcher:
     def _load_products(self) -> List[Dict[str, Any]]:
         products: List[Dict[str, Any]] = []
         public_links_by_model: Dict[str, Dict[str, Any]] = {}
+        public_link_products: List[Dict[str, Any]] = []
         for name in ("vertiv_scraped.json", "architecture_hardware.json"):
             path = self.catalog_dir / name
             if not path.exists():
@@ -159,13 +193,15 @@ class VertivRAGMatcher:
                     if _norm(item.get("vendor")) not in ("vertiv", ""):
                         continue
                     if self._public_datasheet_url(item) or self._public_product_url(item):
+                        public_link_products.append(item)
                         for key in self._model_keys(item.get("model")):
                             existing = public_links_by_model.get(key)
                             if not existing or (self._public_datasheet_url(item) and not self._public_datasheet_url(existing)):
                                 public_links_by_model[key] = item
             products.extend(entries)
-        hydrated = [self._hydrate_public_links(item, public_links_by_model) for item in products]
-        return [item for item in hydrated if _norm(item.get("vendor")) in ("vertiv", "")]
+        hydrated = [self._hydrate_public_links(item, public_links_by_model, public_link_products) for item in products]
+        vertiv_products = [item for item in hydrated if _norm(item.get("vendor")) in ("vertiv", "")]
+        return self._merge_duplicate_products(vertiv_products)
 
     @staticmethod
     def _build_chunks(products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -366,6 +402,7 @@ class VertivRAGMatcher:
         return (
             "You are selecting a Vertiv hardware reference for an RFP/BOQ compliance row.\n"
             "Use only the supplied candidate evidence. Do not select a model that is under-spec. "
+            "Prefer candidates with a valid datasheet_url; do not choose a candidate with no datasheet_url when a safe datasheet candidate is available. "
             "Prefer the closest candidate that satisfies hard requirements. If no candidate is safe, return no_safe_match.\n\n"
             f"Requirement:\n{query}\n\n"
             f"Parsed hard constraints:\n{json.dumps(constraints, ensure_ascii=False, indent=2)}\n\n"
@@ -406,11 +443,16 @@ class VertivRAGMatcher:
 
     @staticmethod
     def _public_datasheet_url(product: Dict[str, Any]) -> str:
+        for key in VertivRAGMatcher._model_keys(product.get("model")):
+            if key in DATASHEET_URL_OVERRIDES:
+                return DATASHEET_URL_OVERRIDES[key]
         url = str(product.get("datasheet_url") or "").strip()
         lowered = url.lower()
         if not lowered.startswith(("http://", "https://")):
             return ""
         if "partners.vertiv.com/english/directory" in lowered:
+            return ""
+        if any(term in lowered for term in BAD_DATASHEET_URL_TERMS):
             return ""
         if ".pdf" not in lowered:
             return ""
@@ -427,14 +469,36 @@ class VertivRAGMatcher:
         return url
 
     @classmethod
-    def _hydrate_public_links(cls, product: Dict[str, Any], public_links_by_model: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
-        if cls._public_datasheet_url(product):
-            return product
-        linked = None
-        for key in cls._model_keys(product.get("model")):
-            linked = public_links_by_model.get(key)
-            if linked:
-                break
+    def _url_quality(cls, url: str, product: Dict[str, Any]) -> int:
+        lowered = url.lower()
+        model_tokens = [token for key in cls._model_keys(product.get("model")) for token in key.split() if len(token) > 2]
+        score = 0
+        if "/products/" in lowered or "/shared/" in lowered:
+            score += 2
+        if "datasheet" in lowered or "data-sheet" in lowered or "-ds-" in lowered:
+            score += 4
+        if "brochure" in lowered or "-br-" in lowered:
+            score += 3
+        if "obsolete" in lowered:
+            score -= 4
+        score += sum(1 for token in set(model_tokens) if token in lowered)
+        return score
+
+    @classmethod
+    def _hydrate_public_links(
+        cls,
+        product: Dict[str, Any],
+        public_links_by_model: Dict[str, Dict[str, Any]],
+        public_link_products: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        public_datasheet = cls._public_datasheet_url(product)
+        if public_datasheet:
+            hydrated = dict(product)
+            hydrated["datasheet_url"] = public_datasheet
+            if not cls._public_product_url(hydrated):
+                hydrated["product_url"] = ""
+            return hydrated
+        linked = cls._find_public_link(product, public_links_by_model, public_link_products)
         if not linked:
             return product
         hydrated = dict(product)
@@ -446,6 +510,71 @@ class VertivRAGMatcher:
             if not hydrated.get(key) and linked.get(key):
                 hydrated[key] = linked.get(key)
         return hydrated
+
+    @classmethod
+    def _merge_duplicate_products(cls, products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        merged: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        order: List[Tuple[str, str]] = []
+        for product in products:
+            keys = cls._model_keys(product.get("model"))
+            key = (keys[0] if keys else _norm(product.get("model")), str(product.get("category") or ""))
+            if key not in merged:
+                merged[key] = dict(product)
+                order.append(key)
+                continue
+            current = merged[key]
+            for field, value in product.items():
+                if value in (None, "", {}, []):
+                    continue
+                if field == "datasheet_url":
+                    current_url = cls._public_datasheet_url(current)
+                    candidate_url = cls._public_datasheet_url(product)
+                    if candidate_url and (not current_url or cls._url_quality(candidate_url, current) > cls._url_quality(current_url, current)):
+                        current[field] = candidate_url
+                    continue
+                if field == "product_url":
+                    if not cls._public_product_url(current) and cls._public_product_url(product):
+                        current[field] = product.get(field)
+                    continue
+                if current.get(field) in (None, "", {}, []):
+                    current[field] = value
+                elif isinstance(current.get(field), list) and isinstance(value, list):
+                    seen = {str(item) for item in current[field]}
+                    current[field].extend(item for item in value if str(item) not in seen)
+                elif isinstance(current.get(field), dict) and isinstance(value, dict):
+                    current[field] = {**value, **current[field]}
+        return [merged[key] for key in order]
+
+    @classmethod
+    def _find_public_link(
+        cls,
+        product: Dict[str, Any],
+        public_links_by_model: Dict[str, Dict[str, Any]],
+        public_link_products: List[Dict[str, Any]],
+    ) -> Optional[Dict[str, Any]]:
+        product_keys = cls._model_keys(product.get("model"))
+        for key in product_keys:
+            linked = public_links_by_model.get(key)
+            if linked:
+                return linked
+        product_token_sets = [set(key.split()) for key in product_keys if key]
+        product_category = str(product.get("category") or "")
+        best: Optional[Tuple[int, Dict[str, Any]]] = None
+        for candidate in public_link_products:
+            if product_category and str(candidate.get("category") or "") != product_category:
+                continue
+            for candidate_key in cls._model_keys(candidate.get("model")):
+                candidate_tokens = set(candidate_key.split())
+                for product_tokens in product_token_sets:
+                    if not product_tokens or len(product_tokens) < 2:
+                        continue
+                    if product_tokens.issubset(candidate_tokens):
+                        score = len(product_tokens)
+                        if cls._public_datasheet_url(candidate):
+                            score += 5
+                        if best is None or score > best[0]:
+                            best = (score, candidate)
+        return best[1] if best else None
 
     def _format_result(
         self,

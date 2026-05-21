@@ -71,6 +71,12 @@ class VertivReferenceInjector:
                 if self.matcher._passes_hard_constraints(candidate.product, constraints)
             ]
             candidates = safe_candidates or retrieved
+            candidates_with_datasheets = [
+                candidate for candidate in candidates
+                if self.matcher._public_datasheet_url(candidate.product)
+            ]
+            if candidates_with_datasheets:
+                candidates = candidates_with_datasheets
             local_selected = self.matcher._select_fallback(candidates, constraints) if candidates else None
             pending.append({
                 "row_id": f"{sheet.get('title') or sheet.get('name') or 'Sheet'}:{row_idx + 1}",
@@ -154,6 +160,7 @@ class VertivReferenceInjector:
             prompt = (
                 "You are selecting Vertiv hardware references for RFP/BOQ compliance rows.\n"
                 "For each row, choose only from the supplied candidates. Do not choose a candidate that is under-spec. "
+                "Prefer candidates with a valid datasheet_url; do not choose a candidate with no datasheet_url when a safe datasheet candidate is available. "
                 "Prefer the closest candidate that satisfies hard requirements. If no candidate is safe, return no_safe_match for that row.\n"
                 "Return only valid JSON in this exact shape: "
                 "{\"matches\":[{\"row_id\":\"...\",\"selected_model\":\"...\",\"match_status\":\"safe_match|family_match|no_safe_match\","
