@@ -34,6 +34,9 @@ DATASHEET_URL_OVERRIDES = {
     "liebert rdu501": "https://www.vertiv.com/48eef7/globalassets/products/monitoring-control-and-management/monitoring/liebert-rdu501/liebert-rdu501-datasheet.pdf",
     "rdu501": "https://www.vertiv.com/48eef7/globalassets/products/monitoring-control-and-management/monitoring/liebert-rdu501/liebert-rdu501-datasheet.pdf",
     "liebert crv4": "https://www.vertiv.com/49dd12/globalassets/products/thermal-management/in-row-cooling/liebert-crv4-brochure.pdf",
+    "liebert spm": "https://www.vertiv.com/48ea64/globalassets/products/critical-power/power-distribution/liebert-spm-1.0/liebert-spm-1.0-brochure.pdf",
+    "liebert spm 1 0": "https://www.vertiv.com/48ea64/globalassets/products/critical-power/power-distribution/liebert-spm-1.0/liebert-spm-1.0-brochure.pdf",
+    "liebert spm 2 0": "https://www.vertiv.com/48ea64/globalassets/products/critical-power/power-distribution/liebert-spm-1.0/liebert-spm-1.0-brochure.pdf",
 }
 
 BAD_DATASHEET_URL_TERMS = (
@@ -171,8 +174,16 @@ class VertivRAGMatcher:
                     score += 0.7
             if category_hint == "ENERGY_STORAGE" and re.search(r"\b(lithium|battery rack|battery module)\b", query_lower):
                 model_text = str(product.get("model") or "").lower()
+                if "lithium-ion battery cabinet" in model_text or "lithium ion battery cabinet" in model_text:
+                    score += 1.0
                 if "energycore" in model_text or "battery" in model_text:
                     score += 0.5
+            if category_hint == "POWER_DISTRIBUTION" and re.search(r"\b(modular power distribution|ups output|system capacity|hot plug mcb|touch screen|bms|modbus)\b", query_lower):
+                model_text = str(product.get("model") or "").lower()
+                if "spm" in model_text:
+                    score += 1.2
+                if "rack pdu" in model_text or "rpdu" in model_text or "geist" in model_text or "powergo" in model_text:
+                    score -= 0.6
             if category_hint == "MONITORING" and "monitoring server" in query_lower:
                 model_text = str(product.get("model") or "").lower()
                 if "rdu501" in model_text:
@@ -281,6 +292,9 @@ class VertivRAGMatcher:
             constraints["category"] = "TRANSFER_SWITCH"
         if re.search(r"\b(rpdu|rack pdu|pdu\b|power distribution)\b", lowered):
             constraints["category"] = "POWER_DISTRIBUTION"
+        if re.search(r"\b(modular power distribution|rack based modular power distribution|ups output|hot plug mcb|bms,\s*modbus|touch screen)\b", lowered):
+            constraints["category"] = "POWER_DISTRIBUTION"
+            constraints["power_distribution_family"] = "SPM"
         if re.search(r"\b(containment|hot\s*/\s*cold aisle|hot aisle|cold aisle|aisle containment)\b", lowered):
             constraints["category"] = "INTEGRATED_RACK_SOLUTION"
         if re.search(r"\b(lithium-ion battery rack|battery module)\b", lowered):
@@ -308,6 +322,8 @@ class VertivRAGMatcher:
             constraints.setdefault("cooling_capacity_kw", constraints.pop("power_capacity_kw"))
         elif category != "COOLING":
             constraints.pop("cooling_capacity_kw", None)
+        if constraints.get("category") == "ENERGY_STORAGE":
+            constraints["backup_load_kw"] = constraints.pop("power_capacity_kw", None)
         if re.search(r"\b(n\+1|redundan|dual power|active/passive|active-passive|ha\b|high availability)", lowered):
             constraints["redundancy_required"] = True
         return constraints
