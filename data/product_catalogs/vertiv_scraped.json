@@ -38,12 +38,28 @@
     ],
     "scraped_at": "2026-05-21",
     "datasheets_seen": 132,
-    "scraped_products": 582,
+    "scraped_products": 583,
     "notes": "Clean matcher-compatible catalog formatted like fortinet_scraped.json. Includes product-family cards plus model-level products discovered from Vertiv product-family download/model tabs.",
     "include_evidence": false,
-    "model_level_products_added": 451
+    "model_level_products_added": 452
   },
   "products": [
+    {
+      "vendor": "Vertiv",
+      "model": "Vertiv HPL P1 Lithium-Ion Battery Energy Storage System",
+      "category": "ENERGY_STORAGE",
+      "main_heading": "Critical Power",
+      "subheading": "Battery Energy Storage System (BESS)",
+      "features": [
+        "lithium-ion battery energy storage system",
+        "standard lithium-ion battery reference",
+        "battery rack",
+        "battery module",
+        "UPS backup battery"
+      ],
+      "product_url": "",
+      "datasheet_url": "https://www.vertiv.com/496d1e/globalassets/shared/vertiv-hpl-p1-lithium-ion-battery-energy-storage-system-data-sheet-en-mka4l0ukhplp1lib.pdf"
+    },
     {
       "vendor": "Vertiv",
       "model": "Liebert GXT5 Lithium-Ion UPS 1000 - 3000 VA",

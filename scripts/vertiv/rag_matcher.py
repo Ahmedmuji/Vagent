@@ -174,8 +174,10 @@ class VertivRAGMatcher:
                     score += 0.7
             if category_hint == "ENERGY_STORAGE" and re.search(r"\b(lithium|battery rack|battery module)\b", query_lower):
                 model_text = str(product.get("model") or "").lower()
+                if "hpl p1" in model_text:
+                    score += 2.0
                 if "lithium-ion battery cabinet" in model_text or "lithium ion battery cabinet" in model_text:
-                    score += 1.0
+                    score += 0.6
                 if "energycore" in model_text or "battery" in model_text:
                     score += 0.5
             if category_hint == "POWER_DISTRIBUTION" and re.search(r"\b(modular power distribution|ups output|system capacity|hot plug mcb|touch screen|bms|modbus)\b", query_lower):
@@ -297,7 +299,7 @@ class VertivRAGMatcher:
             constraints["power_distribution_family"] = "SPM"
         if re.search(r"\b(containment|hot\s*/\s*cold aisle|hot aisle|cold aisle|aisle containment)\b", lowered):
             constraints["category"] = "INTEGRATED_RACK_SOLUTION"
-        if re.search(r"\b(lithium-ion battery rack|battery module)\b", lowered):
+        if re.search(r"\b(lithium[- ]ion battery|battery rack|battery module|battery cabinet)\b", lowered):
             constraints["category"] = "ENERGY_STORAGE"
         elif re.search(r"\b(power module|battery circuit|ground short)\b", lowered):
             constraints["category"] = "UPS"
