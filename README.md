@@ -2,7 +2,7 @@
 
 A high-performance, AI-driven pipeline for isolating technical requirements from RFP (Request for Proposal) PDF documents and transforming them into enriched, actionable Excel workbooks.
 
-![UI Mockup](https://raw.githubusercontent.com/username/repo/main/docs/ui-preview.png) *(Placeholder for your actual screenshot)*
+![UI Mockup](image/README/1779709107664.png)
 
 ## 🌟 Key Features
 
@@ -30,18 +30,22 @@ A high-performance, AI-driven pipeline for isolating technical requirements from
 ## 🚀 Getting Started
 
 ### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/your-username/rfp-extractor.git
 cd rfp-extractor
 ```
 
 ### 2. Install Dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ### 3. Configure Environment
+
 Create a `.env` file in the root directory:
+
 ```env
 GOOGLE_API_KEY=your_gemini_api_key_here
 FLASK_SECRET_KEY=your_secret_key
@@ -49,13 +53,17 @@ MAX_UPLOAD_MB=200
 ```
 
 ### 4. Run the Web UI
+
 ```bash
 python app.py
 ```
+
 Open `http://127.0.0.1:5000` in your browser.
 
 ### 5. Run via CLI (Batch Mode)
+
 Place your PDFs in `data/Complete RFPs/` and run:
+
 ```bash
 python main_pipeline.py
 ```
@@ -65,10 +73,10 @@ python main_pipeline.py
 - `app.py`: Flask web server and API endpoints.
 - `main_pipeline.py`: Main orchestrator for end-to-end processing.
 - `scripts/`:
-    - `local_section_detector.py`: Heuristic-based PDF segmentation.
-    - `gemini_extractor.py`: AI table extraction logic.
-    - `admin_guide_enricher.py`: Reference injection and citation logic.
-    - `json_to_excel.py`: Formatted Excel generation.
+  - `local_section_detector.py`: Heuristic-based PDF segmentation.
+  - `gemini_extractor.py`: AI table extraction logic.
+  - `admin_guide_enricher.py`: Reference injection and citation logic.
+  - `json_to_excel.py`: Formatted Excel generation.
 - `templates/`: Modern JS-driven frontend.
 - `data/`: Input PDFs, product catalogs, and reference datasets.
 - `output/`: Generated indexes and cached metadata.
