@@ -2,7 +2,7 @@
 
 A high-performance, AI-driven pipeline for isolating technical requirements from RFP (Request for Proposal) PDF documents and transforming them into enriched, actionable Excel workbooks.
 
-![UI Mockup](image/README/1779709107664.png)
+![UI Mockup](image/ss.png)
 
 ## 🌟 Key Features
 
