@@ -49,22 +49,12 @@ BAD_DATASHEET_URL_TERMS = (
 )
 
 UNSUPPORTED_REQUIREMENT_PATTERNS = (
-    ("SPLIT_AC", r"\b(split\s*a/?c|split\s+ac|split\s+air\s*condition(?:er|ing)?|ton\s+split|compressor\s+and\s+vendor|ashrae\s+requirement)\b"),
+    ("SPLIT_AC", r"\b(split\s*a/?c|split\s+ac|split\s+type\s+ac|split\s+air\s*condition(?:er|ing)?|a/?c\s+unit|air\s*condition(?:er|ing)?\s+unit|ton\s+split|t3\s+compressor|compressor\s+and\s+vendor|ashrae\s+requirement)\b"),
     ("VIDEO_WALL", r"\b(video\s*wall|display\s*wall|lcd\s*wall|noc\s+screen|screen\s+for\s+the\s+network\s+operations\s+room)\b"),
     ("CCTV", r"\b(ip\s*camera|dome\s*camera|bullet\s*camera|nvr|network\s+video\s+recorder|cctv)\b"),
     ("FIRE_SYSTEM", r"\b(fire\s+alarm|fire\s+detection|fire\s+suppression|smoke\s+detector|gas\s+cylinder|fk-5-1-12|clean\s+agent)\b"),
     ("ACCESS_CONTROL", r"\b(access\s+control|biometric|fingerprint|rfid|face\s+recognition|exit\s+button|magnetic\s+lock)\b"),
 )
-
-MIN_ACCEPTED_SCORE_BY_CATEGORY = {
-    "COOLING": 0.35,
-    "MONITORING": 0.35,
-    "UPS": 0.30,
-    "ENERGY_STORAGE": 0.35,
-    "POWER_DISTRIBUTION": 0.30,
-    "RACK": 0.25,
-    "INTEGRATED_RACK_SOLUTION": 0.30,
-}
 
 
 @dataclass
@@ -138,13 +128,6 @@ class VertivRAGMatcher:
         if not candidates:
             return self._no_match_result(query, constraints, "no relevant catalog candidates were retrieved for this requirement")
         selected = self._select_fallback(candidates, constraints)
-        if not self._candidate_is_confident(selected, query, constraints):
-            return self._no_match_result(
-                query,
-                constraints,
-                "top retrieved Vertiv candidate was too weak or from the wrong product family",
-                candidates,
-            )
         return self._format_result(selected, query, constraints, candidates, None)
 
     def retrieve(self, query: str, constraints: Dict[str, Any]) -> List[VertivCandidate]:
@@ -458,32 +441,6 @@ class VertivRAGMatcher:
             }
             return f"requirement appears to be {labels.get(unsupported, unsupported)}, which is outside the Vertiv catalog scope used by this matcher"
         return ""
-
-    def _candidate_is_confident(self, candidate: VertivCandidate, query: str, constraints: Dict[str, Any]) -> bool:
-        category = constraints.get("category") or ""
-        product_category = str(candidate.product.get("category") or "")
-        if category and not self._category_is_compatible(category, product_category):
-            return False
-        min_score = MIN_ACCEPTED_SCORE_BY_CATEGORY.get(category, 0.25 if category else 0.30)
-        if candidate.score < min_score:
-            return False
-        query_lower = query.lower()
-        product_text = f"{candidate.product.get('model') or ''} {candidate.product.get('category') or ''} {candidate.product.get('subheading') or ''} {candidate.chunk[:700]}".lower()
-        category_terms = {
-            "COOLING": ("in-row", "inrow", "row cooling", "crv", "precision cooling", "thermal"),
-            "MONITORING": ("rdu", "monitoring", "sensor", "environmental"),
-            "UPS": ("ups", "apm", "mtp", "uninterruptible"),
-            "ENERGY_STORAGE": ("battery", "lithium", "energy storage", "hpl"),
-            "POWER_DISTRIBUTION": ("spm", "power distribution", "pdu", "busway"),
-            "RACK": ("rack", "cabinet", "enclosure"),
-            "INTEGRATED_RACK_SOLUTION": ("smartaisle", "containment", "integrated"),
-        }
-        terms = category_terms.get(category, ())
-        if terms and not any(term in query_lower and term in product_text for term in terms):
-            # Allow strong model mentions even if the broader category vocabulary is sparse.
-            if not any(model_key and model_key in query_lower for model_key in self._model_keys(candidate.product.get("model"))):
-                return False
-        return True
 
     @staticmethod
     def _no_match_result(

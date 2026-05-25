@@ -60,13 +60,11 @@ class VertivReferenceInjector:
                 continue
             text = self._row_text(headers, row_data)
             contextual_text = self._contextual_row_text(sheet, headers, text)
-            if not self._should_reference(contextual_text, metadata):
-                continue
-            self.stats["groups_seen"] += 1
             query = self.matcher._build_query(contextual_text, metadata)
             constraints = self.matcher._parse_constraints(query, metadata)
             out_of_scope_reason = self.matcher._out_of_scope_reason(query, constraints)
             if out_of_scope_reason:
+                self.stats["groups_seen"] += 1
                 pending.append({
                     "row_id": f"{sheet.get('title') or sheet.get('name') or 'Sheet'}:{row_idx + 1}",
                     "row": row,
@@ -78,6 +76,9 @@ class VertivReferenceInjector:
                     "forced_result": self.matcher._no_match_result(query, constraints, out_of_scope_reason),
                 })
                 continue
+            if not self._should_reference(contextual_text, metadata):
+                continue
+            self.stats["groups_seen"] += 1
             retrieved = self.matcher.retrieve(query, constraints)
             safe_candidates = [
                 candidate for candidate in retrieved
@@ -91,23 +92,6 @@ class VertivReferenceInjector:
             if candidates_with_datasheets:
                 candidates = candidates_with_datasheets
             local_selected = self.matcher._select_fallback(candidates, constraints) if candidates else None
-            if local_selected and not self.matcher._candidate_is_confident(local_selected, query, constraints):
-                pending.append({
-                    "row_id": f"{sheet.get('title') or sheet.get('name') or 'Sheet'}:{row_idx + 1}",
-                    "row": row,
-                    "row_data": row_data,
-                    "query": query,
-                    "constraints": constraints,
-                    "candidates": [],
-                    "local_selected": None,
-                    "forced_result": self.matcher._no_match_result(
-                        query,
-                        constraints,
-                        "top retrieved Vertiv candidate was too weak or from the wrong product family",
-                        candidates,
-                    ),
-                })
-                continue
             pending.append({
                 "row_id": f"{sheet.get('title') or sheet.get('name') or 'Sheet'}:{row_idx + 1}",
                 "row": row,
@@ -276,6 +260,8 @@ class VertivReferenceInjector:
             "kvm", "console", "busway", "switchgear", "cabinet", "42u", "48u",
             "kva", "kw", "inrow", "in-row", "crv", "apm", "rdu", "sts",
             "static transfer", "transfer switch", "ats", "rpdu",
+            "cable manager", "cable management", "blank panel", "brush strip",
+            "rack accessory",
         )
         return any(term in lowered for term in terms)
 
@@ -297,8 +283,9 @@ class VertivReferenceInjector:
             "solid trunking", "distribution board", "o/g db", "db-ups", "ups o/g db",
             "subassembly", "communication cable", "seismic anchors", "function module",
             "door sensor", "microwave and infrared sensor",
-            "split ac", "split a/c", "split air conditioner", "split air conditioning",
-            "ton split", "compressor and vendor", "video wall", "display wall",
+            "split ac", "split a/c", "split type ac", "split air conditioner", "split air conditioning",
+            "a/c unit", "ac unit", "air conditioning unit", "air conditioner unit",
+            "ton split", "t3 compressor", "compressor and vendor", "video wall", "display wall",
             "lcd wall", "noc screen", "screen for the network operations room",
         )
         if any(term in lowered for term in service_terms):
