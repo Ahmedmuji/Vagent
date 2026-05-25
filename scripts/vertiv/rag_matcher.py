@@ -48,6 +48,24 @@ BAD_DATASHEET_URL_TERMS = (
     "obsolete",
 )
 
+UNSUPPORTED_REQUIREMENT_PATTERNS = (
+    ("SPLIT_AC", r"\b(split\s*a/?c|split\s+ac|split\s+air\s*condition(?:er|ing)?|ton\s+split|compressor\s+and\s+vendor|ashrae\s+requirement)\b"),
+    ("VIDEO_WALL", r"\b(video\s*wall|display\s*wall|lcd\s*wall|noc\s+screen|screen\s+for\s+the\s+network\s+operations\s+room)\b"),
+    ("CCTV", r"\b(ip\s*camera|dome\s*camera|bullet\s*camera|nvr|network\s+video\s+recorder|cctv)\b"),
+    ("FIRE_SYSTEM", r"\b(fire\s+alarm|fire\s+detection|fire\s+suppression|smoke\s+detector|gas\s+cylinder|fk-5-1-12|clean\s+agent)\b"),
+    ("ACCESS_CONTROL", r"\b(access\s+control|biometric|fingerprint|rfid|face\s+recognition|exit\s+button|magnetic\s+lock)\b"),
+)
+
+MIN_ACCEPTED_SCORE_BY_CATEGORY = {
+    "COOLING": 0.35,
+    "MONITORING": 0.35,
+    "UPS": 0.30,
+    "ENERGY_STORAGE": 0.35,
+    "POWER_DISTRIBUTION": 0.30,
+    "RACK": 0.25,
+    "INTEGRATED_RACK_SOLUTION": 0.30,
+}
+
 
 @dataclass
 class VertivCandidate:
@@ -97,6 +115,9 @@ class VertivRAGMatcher:
         metadata = metadata or {}
         query = self._build_query(requirement_text, metadata)
         constraints = self._parse_constraints(query, metadata)
+        out_of_scope_reason = self._out_of_scope_reason(query, constraints)
+        if out_of_scope_reason:
+            return self._no_match_result(query, constraints, out_of_scope_reason)
         retrieved = self.retrieve(query, constraints)
         safe_candidates = [
             candidate for candidate in retrieved
@@ -115,17 +136,15 @@ class VertivRAGMatcher:
             if selected:
                 return self._format_result(selected, query, constraints, candidates, llm_result)
         if not candidates:
-            return {
-                "reference": "",
-                "reasoning": "Vertiv: no relevant catalog candidates were retrieved for this requirement.",
-                "details": {
-                    "provider": "vertiv",
-                    "query": query,
-                    "constraints": constraints,
-                    "top_candidates": [],
-                },
-            }
+            return self._no_match_result(query, constraints, "no relevant catalog candidates were retrieved for this requirement")
         selected = self._select_fallback(candidates, constraints)
+        if not self._candidate_is_confident(selected, query, constraints):
+            return self._no_match_result(
+                query,
+                constraints,
+                "top retrieved Vertiv candidate was too weak or from the wrong product family",
+                candidates,
+            )
         return self._format_result(selected, query, constraints, candidates, None)
 
     def retrieve(self, query: str, constraints: Dict[str, Any]) -> List[VertivCandidate]:
@@ -283,6 +302,9 @@ class VertivRAGMatcher:
     def _parse_constraints(self, text: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
         lowered = text.lower()
         constraints: Dict[str, Any] = {}
+        unsupported = self._detect_unsupported_type(lowered)
+        if unsupported:
+            constraints["unsupported_type"] = unsupported
         category = self._infer_category(lowered, metadata)
         if category:
             constraints["category"] = category
@@ -329,6 +351,13 @@ class VertivRAGMatcher:
         if re.search(r"\b(n\+1|redundan|dual power|active/passive|active-passive|ha\b|high availability)", lowered):
             constraints["redundancy_required"] = True
         return constraints
+
+    @staticmethod
+    def _detect_unsupported_type(lowered: str) -> str:
+        for name, pattern in UNSUPPORTED_REQUIREMENT_PATTERNS:
+            if re.search(pattern, lowered):
+                return name
+        return ""
 
     @staticmethod
     def _infer_category(lowered: str, metadata: Dict[str, Any]) -> str:
@@ -398,6 +427,8 @@ class VertivRAGMatcher:
             return np.array(scores)
 
     def _passes_hard_constraints(self, product: Dict[str, Any], constraints: Dict[str, Any]) -> bool:
+        if constraints.get("unsupported_type"):
+            return False
         if constraints.get("category") and not self._category_is_compatible(constraints["category"], str(product.get("category") or "")):
             return False
         for field in ("power_capacity_kva", "power_capacity_kw", "cooling_capacity_kw", "rack_units", "static_load_kg", "outlet_count"):
@@ -414,6 +445,72 @@ class VertivRAGMatcher:
             if not any(term in text for term in ("redundan", "dual power", "n+1", "ha", "high availability", "hot_swappable")):
                 return False
         return True
+
+    def _out_of_scope_reason(self, query: str, constraints: Dict[str, Any]) -> str:
+        unsupported = constraints.get("unsupported_type")
+        if unsupported:
+            labels = {
+                "SPLIT_AC": "split AC / non-Vertiv packaged air-conditioning scope",
+                "VIDEO_WALL": "video wall / display scope",
+                "CCTV": "CCTV scope",
+                "FIRE_SYSTEM": "fire detection or fire suppression scope",
+                "ACCESS_CONTROL": "access control scope",
+            }
+            return f"requirement appears to be {labels.get(unsupported, unsupported)}, which is outside the Vertiv catalog scope used by this matcher"
+        return ""
+
+    def _candidate_is_confident(self, candidate: VertivCandidate, query: str, constraints: Dict[str, Any]) -> bool:
+        category = constraints.get("category") or ""
+        product_category = str(candidate.product.get("category") or "")
+        if category and not self._category_is_compatible(category, product_category):
+            return False
+        min_score = MIN_ACCEPTED_SCORE_BY_CATEGORY.get(category, 0.25 if category else 0.30)
+        if candidate.score < min_score:
+            return False
+        query_lower = query.lower()
+        product_text = f"{candidate.product.get('model') or ''} {candidate.product.get('category') or ''} {candidate.product.get('subheading') or ''} {candidate.chunk[:700]}".lower()
+        category_terms = {
+            "COOLING": ("in-row", "inrow", "row cooling", "crv", "precision cooling", "thermal"),
+            "MONITORING": ("rdu", "monitoring", "sensor", "environmental"),
+            "UPS": ("ups", "apm", "mtp", "uninterruptible"),
+            "ENERGY_STORAGE": ("battery", "lithium", "energy storage", "hpl"),
+            "POWER_DISTRIBUTION": ("spm", "power distribution", "pdu", "busway"),
+            "RACK": ("rack", "cabinet", "enclosure"),
+            "INTEGRATED_RACK_SOLUTION": ("smartaisle", "containment", "integrated"),
+        }
+        terms = category_terms.get(category, ())
+        if terms and not any(term in query_lower and term in product_text for term in terms):
+            # Allow strong model mentions even if the broader category vocabulary is sparse.
+            if not any(model_key and model_key in query_lower for model_key in self._model_keys(candidate.product.get("model"))):
+                return False
+        return True
+
+    @staticmethod
+    def _no_match_result(
+        query: str,
+        constraints: Dict[str, Any],
+        reason: str,
+        candidates: Optional[List[VertivCandidate]] = None,
+    ) -> Dict[str, Any]:
+        return {
+            "reference": "",
+            "reasoning": f"Vertiv: no reference added because {reason}.",
+            "details": {
+                "provider": "vertiv",
+                "match_status": "out_of_scope_or_no_safe_match",
+                "query": query,
+                "constraints": constraints,
+                "top_candidates": [
+                    {
+                        "model": c.product.get("model"),
+                        "category": c.product.get("category"),
+                        "score": round(c.score, 4),
+                        "datasheet_url": VertivRAGMatcher._public_datasheet_url(c.product),
+                    }
+                    for c in (candidates or [])[:8]
+                ],
+            },
+        }
 
     def _select_fallback(self, candidates: List[VertivCandidate], constraints: Dict[str, Any]) -> VertivCandidate:
         def fit(candidate: VertivCandidate) -> Tuple[float, float]:

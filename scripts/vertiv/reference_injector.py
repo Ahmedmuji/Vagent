@@ -65,6 +65,19 @@ class VertivReferenceInjector:
             self.stats["groups_seen"] += 1
             query = self.matcher._build_query(contextual_text, metadata)
             constraints = self.matcher._parse_constraints(query, metadata)
+            out_of_scope_reason = self.matcher._out_of_scope_reason(query, constraints)
+            if out_of_scope_reason:
+                pending.append({
+                    "row_id": f"{sheet.get('title') or sheet.get('name') or 'Sheet'}:{row_idx + 1}",
+                    "row": row,
+                    "row_data": row_data,
+                    "query": query,
+                    "constraints": constraints,
+                    "candidates": [],
+                    "local_selected": None,
+                    "forced_result": self.matcher._no_match_result(query, constraints, out_of_scope_reason),
+                })
+                continue
             retrieved = self.matcher.retrieve(query, constraints)
             safe_candidates = [
                 candidate for candidate in retrieved
@@ -78,6 +91,23 @@ class VertivReferenceInjector:
             if candidates_with_datasheets:
                 candidates = candidates_with_datasheets
             local_selected = self.matcher._select_fallback(candidates, constraints) if candidates else None
+            if local_selected and not self.matcher._candidate_is_confident(local_selected, query, constraints):
+                pending.append({
+                    "row_id": f"{sheet.get('title') or sheet.get('name') or 'Sheet'}:{row_idx + 1}",
+                    "row": row,
+                    "row_data": row_data,
+                    "query": query,
+                    "constraints": constraints,
+                    "candidates": [],
+                    "local_selected": None,
+                    "forced_result": self.matcher._no_match_result(
+                        query,
+                        constraints,
+                        "top retrieved Vertiv candidate was too weak or from the wrong product family",
+                        candidates,
+                    ),
+                })
+                continue
             pending.append({
                 "row_id": f"{sheet.get('title') or sheet.get('name') or 'Sheet'}:{row_idx + 1}",
                 "row": row,
@@ -105,6 +135,8 @@ class VertivReferenceInjector:
         sheet["headers"] = headers
 
     def _result_for_pending_item(self, item: Dict[str, Any], decision: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        if item.get("forced_result"):
+            return item["forced_result"]
         candidates: List[VertivCandidate] = item["candidates"]
         if not candidates:
             return {
@@ -235,7 +267,7 @@ class VertivReferenceInjector:
     def _should_reference(text: str, metadata: Dict[str, Any]) -> bool:
         lowered = str(text or "").lower()
         if metadata.get("requires_reference") is True:
-            return True
+            return not VertivReferenceInjector._is_non_vertiv_scope(lowered)
         if VertivReferenceInjector._is_non_vertiv_scope(lowered):
             return False
         terms = (
@@ -265,6 +297,9 @@ class VertivReferenceInjector:
             "solid trunking", "distribution board", "o/g db", "db-ups", "ups o/g db",
             "subassembly", "communication cable", "seismic anchors", "function module",
             "door sensor", "microwave and infrared sensor",
+            "split ac", "split a/c", "split air conditioner", "split air conditioning",
+            "ton split", "compressor and vendor", "video wall", "display wall",
+            "lcd wall", "noc screen", "screen for the network operations room",
         )
         if any(term in lowered for term in service_terms):
             return True
