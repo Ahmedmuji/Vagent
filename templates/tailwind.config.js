@@ -1,5 +1,5 @@
 window.tailwind = window.tailwind || {};
-window.tailwind.config = {
+tailwind.config = {
       theme: {
         extend: {
           fontFamily: {

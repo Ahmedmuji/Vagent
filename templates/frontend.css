@@ -1,4 +1,35 @@
 html, body { font-feature-settings: "ss01","cv11","cv02"; }
+
+    /* Fallbacks for custom Tailwind tokens when the CDN config is delayed or blocked. */
+    .bg-mesh { background-image: radial-gradient(1200px 600px at 10% -10%, #e9fbf3 0%, transparent 60%), radial-gradient(900px 500px at 100% 0%, #e8efff 0%, transparent 55%), linear-gradient(180deg, #f6f7fb 0%, #f1f4fa 100%); }
+    .bg-brand-grad { background-image: linear-gradient(135deg, #0fb47a 0%, #0a6b4b 60%, #0b1220 130%); }
+    .bg-brand-50 { background-color: #ecfdf7; }
+    .bg-brand-500 { background-color: #0fb47a; }
+    .bg-ink { background-color: #0b1220; }
+    .bg-ink\/60 { background-color: rgba(11, 18, 32, .6); }
+    .bg-line { background-color: #e6e9f2; }
+    .bg-steel-50 { background-color: #f7f9fc; }
+    .bg-steel-50\/40 { background-color: rgba(247, 249, 252, .4); }
+    .bg-steel-50\/50 { background-color: rgba(247, 249, 252, .5); }
+    .bg-steel-50\/60 { background-color: rgba(247, 249, 252, .6); }
+    .bg-steel-100 { background-color: #eef2f8; }
+    .bg-steel-200 { background-color: #dde4ee; }
+    .bg-steel-700 { background-color: #2c3a52; }
+    .border-line { border-color: #e6e9f2; }
+    .border-brand-200 { border-color: #a8edd1; }
+    .border-brand-500 { border-color: #0fb47a; }
+    .border-steel-200 { border-color: #dde4ee; }
+    .ring-brand-100 { --tw-ring-color: #d2f7e7; }
+    .ring-line { --tw-ring-color: #e6e9f2; }
+    .text-brand-600 { color: #0a8f61; }
+    .text-brand-700 { color: #0a6b4b; }
+    .text-ink { color: #0b1220; }
+    .text-steel-500 { color: #5b6a82; }
+    .text-steel-700 { color: #2c3a52; }
+    .shadow-panel { box-shadow: 0 1px 0 rgba(15,23,42,0.04), 0 24px 60px -24px rgba(15,23,42,0.18); }
+    .shadow-ring { box-shadow: 0 0 0 6px rgba(15,180,122,0.12); }
+    .shadow-soft { box-shadow: 0 1px 2px rgba(15,23,42,0.06), 0 8px 24px -10px rgba(15,23,42,0.12); }
+
     .grain::before {
       content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
       background-image: radial-gradient(rgba(11,18,32,.04) 1px, transparent 1px);
