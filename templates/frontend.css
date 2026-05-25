@@ -1,4 +1,4 @@
-﻿html, body { font-feature-settings: "ss01","cv11","cv02"; }
+html, body { font-feature-settings: "ss01","cv11","cv02"; }
     .grain::before {
       content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
       background-image: radial-gradient(rgba(11,18,32,.04) 1px, transparent 1px);

@@ -1,16 +1,17 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Vagent â€” RFP Processor</title>
+  <title>Vagent - RFP Processor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
-  <script src="frontend.js"></script>
+  <script src="tailwind.config.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <link rel="stylesheet" href="frontend.css">
+  <script src="frontend.js" defer></script>
 </head>
 <body class="relative min-h-screen bg-mesh text-ink antialiased grain">
   <!-- Top nav -->
@@ -47,17 +48,17 @@
       <div class="max-w-2xl">
         <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-line bg-white/70 px-3 py-1 text-xs font-medium text-steel-700 backdrop-blur">
           <i data-lucide="sparkles" class="h-3.5 w-3.5 text-brand-600"></i>
-          New Â· Gemini 3 Flash extraction
+          New - Gemini 3 Flash extraction
         </div>
         <h1 class="text-3xl font-bold tracking-tight sm:text-[40px] sm:leading-[1.05]">
-          Turn dense RFPs into <span class="font-serif italic text-brand-700">decisionâ€‘ready</span> workbooks.
+          Turn dense RFPs into <span class="font-serif italic text-brand-700">decision-ready</span> workbooks.
         </h1>
         <p class="mt-3 max-w-xl text-[15px] leading-relaxed text-steel-500">
-          Extract requirements, match references against your catalog, and ship a clean Excel deliverable â€” in one pass.
+          Extract requirements, match references against your catalog, and ship a clean Excel deliverable - in one pass.
         </p>
       </div>
       <div class="flex items-center gap-2 text-xs text-steel-500">
-        <span class="kbd">âŒ˜</span><span class="kbd">U</span>
+        <span class="kbd">Ctrl</span><span class="kbd">U</span>
         <span>to upload</span>
       </div>
     </header>
@@ -119,8 +120,8 @@
             <label class="grid gap-2">
               <span class="text-[12px] font-semibold uppercase tracking-wider text-steel-700">Reference provider</span>
               <select id="referenceProvider" class="focus-ring h-11 rounded-xl border border-line bg-white px-3.5 text-sm font-medium transition">
-                <option value="fortinet">Fortinet RAG â€” network & security</option>
-                <option value="vertiv">Vertiv RAG â€” data center architecture</option>
+                <option value="fortinet">Fortinet RAG - network and security</option>
+                <option value="vertiv">Vertiv RAG - data center architecture</option>
               </select>
             </label>
 

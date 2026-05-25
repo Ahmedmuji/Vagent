@@ -57,7 +57,7 @@ def index():
 
 @app.route("/<path:asset_name>", methods=["GET"])
 def serve_template_asset(asset_name):
-    if asset_name not in {"frontend.css", "frontend.js"}:
+    if asset_name not in {"frontend.css", "frontend.js", "tailwind.config.js"}:
         return "Not found", 404
     return send_from_directory(os.path.join(PROJECT_ROOT, "templates"), asset_name)
 
@@ -82,7 +82,7 @@ def estimate_cost_route():
     """
     Pre-flight cost estimation endpoint.
     Accepts the same file upload as /process, saves the file, estimates
-    the API cost, and returns JSON — WITHOUT starting any LLM processing.
+    the API cost, and returns JSON without starting any LLM processing.
     The browser uses this to show a cost confirmation dialog.
     """
     uploaded_file = request.files.get("rfp_file")
