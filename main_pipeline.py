@@ -14,6 +14,7 @@ from json_to_excel import create_formatted_excel
 from admin_guide_enricher import FortinetAdminGuideReferenceEnricher
 from pdf_admin_metadata import build_admin_guide_metadata_index
 from reference_injector import inject_hardware_references
+from fortinet.reference_injector import inject_fortinet_references
 from vertiv.reference_injector import inject_vertiv_references
 from cost_estimator import AbortedByUser, confirm_execution, estimate_cost
 
@@ -132,9 +133,15 @@ def process_pdf_section(filename, input_path, start_page, end_page, extracted_pd
     if reference_provider == "vertiv":
         print("Resolving hardware references from Vertiv RAG catalog...")
         technical_data, hardware_stats = inject_vertiv_references(technical_data)
-    else:
+    elif reference_provider in {"fortinet", "fortinet-rag"}:
+        print("Resolving hardware references from Fortinet RAG catalog...")
+        technical_data, hardware_stats = inject_fortinet_references(technical_data)
+    elif reference_provider in {"fortinet-rules", "deterministic"}:
         print("Resolving hardware references from deterministic Fortinet product catalogs...")
         technical_data, hardware_stats = inject_hardware_references(technical_data)
+    else:
+        print("Resolving hardware references from Fortinet RAG catalog...")
+        technical_data, hardware_stats = inject_fortinet_references(technical_data)
     print(f"  Hardware reference stats: {hardware_stats}")
 
     json_filename = f"{base_name}.json"
@@ -149,7 +156,7 @@ def process_pdf_section(filename, input_path, start_page, end_page, extracted_pd
 
     final_excel_path = excel_path
     enrichment_stats = None
-    if reference_provider == "fortinet" and toc_index_path and os.path.exists(toc_index_path):
+    if reference_provider in {"fortinet", "fortinet-rag", "fortinet-rules", "deterministic"} and toc_index_path and os.path.exists(toc_index_path):
         print("Enriching with Fortinet Admin Guide references...")
         enriched_filename = f"{base_name}_enriched_with_admin_guide_references.xlsx"
         enriched_path = os.path.join(pdf_excel_dir, enriched_filename)
@@ -168,7 +175,7 @@ def process_pdf_section(filename, input_path, start_page, end_page, extracted_pd
         enrichment_stats = enricher.stats
         print(f"  Enriched Excel: {enriched_path}")
         print(f"  Enrichment stats: {enrichment_stats}")
-    elif reference_provider == "fortinet":
+    elif reference_provider in {"fortinet", "fortinet-rag", "fortinet-rules", "deterministic"}:
         print("  Skipping Admin Guide enrichment (no TOC index available).")
     else:
         print("  Skipping Fortinet Admin Guide enrichment for Vertiv reference provider.")
@@ -220,7 +227,7 @@ def main():
                         help="Skip the Fortinet Admin Guide enrichment step.")
     parser.add_argument("--model", default=None,
                         help="Gemini model to use for extraction and cost estimation.")
-    parser.add_argument("--reference-provider", choices=["fortinet", "vertiv"], default="fortinet",
+    parser.add_argument("--reference-provider", choices=["fortinet", "fortinet-rag", "fortinet-rules", "deterministic", "vertiv"], default="fortinet",
                         help="Product reference provider to use for hardware references.")
     args = parser.parse_args()
 
