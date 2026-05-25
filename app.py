@@ -5,7 +5,7 @@ import uuid
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 from pathlib import Path
 
-from flask import Flask, flash, jsonify, redirect, render_template, request, send_file, url_for
+from flask import Flask, flash, jsonify, redirect, render_template, request, send_file, send_from_directory, url_for
 from pypdf import PdfReader
 from werkzeug.utils import secure_filename
 
@@ -53,6 +53,13 @@ def parse_page_range(start_page_raw, end_page_raw, total_pages):
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html")
+
+
+@app.route("/<path:asset_name>", methods=["GET"])
+def serve_template_asset(asset_name):
+    if asset_name not in {"frontend.css", "frontend.js"}:
+        return "Not found", 404
+    return send_from_directory(os.path.join(PROJECT_ROOT, "templates"), asset_name)
 
 
 @app.route("/models", methods=["GET"])

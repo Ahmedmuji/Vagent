@@ -1,0 +1,17 @@
+﻿html, body { font-feature-settings: "ss01","cv11","cv02"; }
+    .grain::before {
+      content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+      background-image: radial-gradient(rgba(11,18,32,.04) 1px, transparent 1px);
+      background-size: 3px 3px; mix-blend-mode:multiply;
+    }
+    .step-rail { background: linear-gradient(to bottom, #e6e9f2 0%, #e6e9f2 100%); }
+    .step-rail.active { background: linear-gradient(to bottom, #0fb47a 0%, #0a6b4b 100%); }
+    .fade-in { animation: fade .35s ease both; }
+    @keyframes fade { from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none} }
+    .shimmer { background: linear-gradient(110deg, transparent 20%, rgba(255,255,255,.5) 50%, transparent 80%); background-size: 200% 100%; animation: sh 1.6s linear infinite; }
+    @keyframes sh { from{background-position:200% 0} to{background-position:-200% 0} }
+    select { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235b6a82' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+      background-repeat:no-repeat; background-position: right .9rem center; appearance:none; padding-right: 2.4rem; }
+    .focus-ring:focus { outline:none; box-shadow: 0 0 0 4px rgba(15,180,122,.18); border-color:#0fb47a; }
+    .kbd { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; padding: 2px 6px; border:1px solid #e6e9f2; border-bottom-width:2px; border-radius:6px; background:#fff; color:#2c3a52; }
+

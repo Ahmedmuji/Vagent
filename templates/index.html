@@ -1,101 +1,132 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Vagent RFP Processor</title>
+  <title>Vagent â€” RFP Processor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <script src="frontend.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            ink: '#142033',
-            mist: '#f5f7fb',
-            line: '#d9e1ec',
-            brand: {
-              50: '#e7f5f2',
-              100: '#d5eee9',
-              500: '#146c63',
-              600: '#0e564f',
-              700: '#0a4540'
-            },
-            steel: {
-              50: '#f8fafc',
-              100: '#eef3f8',
-              500: '#637083',
-              700: '#35445a'
-            }
-          },
-          boxShadow: {
-            panel: '0 18px 55px rgba(20, 32, 51, 0.10)'
-          }
-        }
-      }
-    };
-  </script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="stylesheet" href="frontend.css">
 </head>
-<body class="min-h-screen bg-mist text-ink antialiased">
-  <main class="mx-auto w-[min(1180px,calc(100vw-24px))] py-4 sm:py-6 lg:py-8">
-    <header class="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div class="flex min-w-0 items-center gap-3">
-        <div class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-brand-500 to-blue-700 text-sm font-black text-white shadow-sm">V</div>
-        <div class="min-w-0">
-          <h1 class="text-xl font-black tracking-normal sm:text-2xl">Vagent RFP Processor</h1>
-          <p class="mt-1 text-sm text-steel-500">Extract requirements, match references, and generate the workbook.</p>
+<body class="relative min-h-screen bg-mesh text-ink antialiased grain">
+  <!-- Top nav -->
+  <nav class="relative z-10">
+    <div class="mx-auto flex w-[min(1240px,calc(100vw-24px))] items-center justify-between py-5">
+      <div class="flex items-center gap-3">
+        <div class="relative grid h-10 w-10 place-items-center rounded-xl bg-brand-grad text-white shadow-soft">
+          <span class="font-serif text-lg leading-none">V</span>
+          <span class="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-brand-500 ring-2 ring-white"></span>
+        </div>
+        <div class="leading-tight">
+          <div class="text-sm font-semibold tracking-tight">Vagent</div>
+          <div class="text-[11px] uppercase tracking-[0.18em] text-steel-500">RFP Workbench</div>
         </div>
       </div>
-      <div class="inline-flex items-center justify-center gap-2 rounded-full border border-line bg-white px-3 py-2 text-sm font-medium text-steel-500 shadow-sm">
-        <span class="h-2 w-2 rounded-full bg-emerald-600"></span>
-        <span id="serverState">Ready</span>
+      <div class="hidden items-center gap-2 sm:flex">
+        <a class="rounded-lg px-3 py-2 text-sm font-medium text-steel-700 hover:bg-white/60">Docs</a>
+        <a class="rounded-lg px-3 py-2 text-sm font-medium text-steel-700 hover:bg-white/60">Runs</a>
+        <span class="mx-2 h-5 w-px bg-line"></span>
+        <div class="inline-flex items-center gap-2 rounded-full border border-line bg-white/80 px-3 py-1.5 text-xs font-medium text-steel-700 shadow-soft backdrop-blur">
+          <span class="relative flex h-2 w-2">
+            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-500 opacity-60"></span>
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-brand-500"></span>
+          </span>
+          <span id="serverState">Ready</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="relative mx-auto w-[min(1240px,calc(100vw-24px))] pb-16">
+    <!-- Hero -->
+    <header class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div class="max-w-2xl">
+        <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-line bg-white/70 px-3 py-1 text-xs font-medium text-steel-700 backdrop-blur">
+          <i data-lucide="sparkles" class="h-3.5 w-3.5 text-brand-600"></i>
+          New Â· Gemini 3 Flash extraction
+        </div>
+        <h1 class="text-3xl font-bold tracking-tight sm:text-[40px] sm:leading-[1.05]">
+          Turn dense RFPs into <span class="font-serif italic text-brand-700">decisionâ€‘ready</span> workbooks.
+        </h1>
+        <p class="mt-3 max-w-xl text-[15px] leading-relaxed text-steel-500">
+          Extract requirements, match references against your catalog, and ship a clean Excel deliverable â€” in one pass.
+        </p>
+      </div>
+      <div class="flex items-center gap-2 text-xs text-steel-500">
+        <span class="kbd">âŒ˜</span><span class="kbd">U</span>
+        <span>to upload</span>
       </div>
     </header>
 
-    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <section class="rounded-lg border border-line bg-white shadow-panel">
-        <div class="border-b border-line px-5 py-4">
-          <h2 class="text-base font-extrabold">Process RFP</h2>
-          <p class="mt-1 text-sm text-steel-500">Select the source PDF and the reference catalog for this run.</p>
+    <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <!-- Main panel -->
+      <section class="relative overflow-hidden rounded-2xl border border-line bg-white shadow-panel">
+        <div class="flex items-center justify-between border-b border-line bg-gradient-to-b from-white to-steel-50/50 px-6 py-5">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="grid h-6 w-6 place-items-center rounded-md bg-brand-50 text-brand-700"><i data-lucide="upload-cloud" class="h-3.5 w-3.5"></i></span>
+              <h2 class="text-[15px] font-semibold tracking-tight">Process RFP</h2>
+            </div>
+            <p class="mt-1 text-[13px] text-steel-500">Select the source PDF and the reference catalog for this run.</p>
+          </div>
+          <div class="hidden items-center gap-1.5 rounded-full border border-line bg-white px-2.5 py-1 text-[11px] font-medium text-steel-500 sm:inline-flex">
+            <i data-lucide="lock" class="h-3 w-3"></i> Processed locally
+          </div>
         </div>
 
-        <div class="p-4 sm:p-5">
-          <div id="dropZone" role="button" tabindex="0" aria-label="Upload PDF" class="group grid min-h-[190px] cursor-pointer place-items-center rounded-lg border-2 border-dashed border-slate-300 bg-steel-50 px-5 py-8 text-center transition hover:border-brand-500 hover:bg-brand-50 focus:outline-none focus:ring-4 focus:ring-brand-100">
+        <div class="p-6">
+          <!-- Drop zone -->
+          <div id="dropZone" role="button" tabindex="0" aria-label="Upload PDF"
+               class="group relative grid min-h-[220px] cursor-pointer place-items-center overflow-hidden rounded-2xl border-2 border-dashed border-steel-200 bg-gradient-to-br from-steel-50 to-white px-6 py-10 text-center transition hover:border-brand-500 hover:from-brand-50 hover:to-white focus:outline-none focus:ring-4 focus:ring-brand-100">
+            <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-200 to-transparent opacity-0 transition group-hover:opacity-100"></div>
             <input type="file" id="fileInput" accept="application/pdf" hidden>
+
             <div id="dropZoneContent">
-              <div class="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-lg bg-blue-50 text-blue-700">
-                <i data-lucide="file-up" class="h-7 w-7"></i>
+              <div class="relative mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-white shadow-soft ring-1 ring-line">
+                <div class="absolute inset-0 rounded-2xl bg-brand-grad opacity-0 transition group-hover:opacity-100"></div>
+                <i data-lucide="file-up" class="relative h-7 w-7 text-brand-600 transition group-hover:text-white"></i>
               </div>
-              <div class="text-base font-extrabold">Drop the RFP PDF here</div>
-              <div class="mt-1 text-sm text-steel-500">or click to browse from this machine</div>
+              <div class="text-[15px] font-semibold tracking-tight">Drop your RFP PDF here</div>
+              <div class="mt-1.5 text-[13px] text-steel-500">or <span class="font-medium text-brand-700 underline-offset-4 group-hover:underline">browse from this machine</span></div>
+              <div class="mt-4 flex flex-wrap items-center justify-center gap-2 text-[11px] text-steel-500">
+                <span class="rounded-full bg-white px-2 py-0.5 ring-1 ring-line">PDF only</span>
+                <span class="rounded-full bg-white px-2 py-0.5 ring-1 ring-line">Up to 200 MB</span>
+                <span class="rounded-full bg-white px-2 py-0.5 ring-1 ring-line">Stays on your tunnel</span>
+              </div>
             </div>
 
-            <div id="filePreview" class="hidden w-full items-center gap-3 text-left">
-              <div class="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-brand-500 text-white">
+            <div id="filePreview" class="hidden w-full items-center gap-4 text-left">
+              <div class="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-brand-grad text-white shadow-soft">
                 <i data-lucide="file-text" class="h-6 w-6"></i>
               </div>
               <div class="min-w-0 flex-1">
-                <div id="selectedFileName" class="truncate font-extrabold"></div>
-                <div id="selectedFileSize" class="mt-1 text-sm text-steel-500"></div>
+                <div id="selectedFileName" class="truncate text-[15px] font-semibold tracking-tight"></div>
+                <div id="selectedFileSize" class="mt-1 text-[12px] font-medium text-steel-500"></div>
               </div>
-              <button id="removeFile" type="button" aria-label="Remove selected PDF" title="Remove" class="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line bg-white text-steel-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700">
+              <button id="removeFile" type="button" aria-label="Remove selected PDF" title="Remove"
+                      class="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line bg-white text-steel-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700">
                 <i data-lucide="x" class="h-4 w-4"></i>
               </button>
             </div>
           </div>
 
-          <div class="mt-5 grid gap-4 md:grid-cols-2">
+          <!-- Settings grid -->
+          <div class="mt-6 grid gap-5 md:grid-cols-2">
             <label class="grid gap-2">
-              <span class="text-sm font-bold text-steel-700">Reference provider</span>
-              <select id="referenceProvider" class="h-11 rounded-lg border border-line bg-white px-3 text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100">
-                <option value="fortinet">Fortinet RAG - network and security</option>
-                <option value="vertiv">Vertiv RAG - data center architecture</option>
+              <span class="text-[12px] font-semibold uppercase tracking-wider text-steel-700">Reference provider</span>
+              <select id="referenceProvider" class="focus-ring h-11 rounded-xl border border-line bg-white px-3.5 text-sm font-medium transition">
+                <option value="fortinet">Fortinet RAG â€” network & security</option>
+                <option value="vertiv">Vertiv RAG â€” data center architecture</option>
               </select>
             </label>
 
             <label class="grid gap-2">
-              <span class="text-sm font-bold text-steel-700">Extraction model</span>
-              <select id="modelName" class="h-11 rounded-lg border border-line bg-white px-3 text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100">
+              <span class="text-[12px] font-semibold uppercase tracking-wider text-steel-700">Extraction model</span>
+              <select id="modelName" class="focus-ring h-11 rounded-xl border border-line bg-white px-3.5 text-sm font-medium transition">
                 <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
                 <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash-Lite Preview</option>
                 <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
@@ -105,573 +136,184 @@
             </label>
 
             <label class="grid gap-2">
-              <span class="text-sm font-bold text-steel-700">Start page</span>
-              <input type="number" id="startPage" placeholder="Auto" min="1" inputmode="numeric" class="h-11 rounded-lg border border-line bg-white px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-100">
+              <span class="text-[12px] font-semibold uppercase tracking-wider text-steel-700">Start page</span>
+              <div class="relative">
+                <i data-lucide="arrow-right-to-line" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-steel-500"></i>
+                <input type="number" id="startPage" placeholder="Auto" min="1" inputmode="numeric"
+                       class="focus-ring h-11 w-full rounded-xl border border-line bg-white pl-9 pr-3 text-sm font-medium transition placeholder:font-normal placeholder:text-steel-500">
+              </div>
             </label>
 
             <label class="grid gap-2">
-              <span class="text-sm font-bold text-steel-700">End page</span>
-              <input type="number" id="endPage" placeholder="Auto" min="1" inputmode="numeric" class="h-11 rounded-lg border border-line bg-white px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-100">
+              <span class="text-[12px] font-semibold uppercase tracking-wider text-steel-700">End page</span>
+              <div class="relative">
+                <i data-lucide="arrow-left-to-line" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-steel-500"></i>
+                <input type="number" id="endPage" placeholder="Auto" min="1" inputmode="numeric"
+                       class="focus-ring h-11 w-full rounded-xl border border-line bg-white pl-9 pr-3 text-sm font-medium transition placeholder:font-normal placeholder:text-steel-500">
+              </div>
             </label>
           </div>
 
-          <div id="enrichmentRow" class="mt-4 flex items-center justify-between gap-4 rounded-lg border border-line bg-steel-50 p-4">
-            <div class="min-w-0">
-              <div class="text-sm font-extrabold">Admin Guide enrichment</div>
-              <div class="mt-1 text-sm leading-5 text-steel-500">For Fortinet runs, keep this enabled when admin guide references are needed.</div>
+          <!-- Enrichment toggle -->
+          <div id="enrichmentRow" class="mt-5 flex items-center justify-between gap-4 rounded-xl border border-line bg-gradient-to-r from-steel-50 to-white p-4">
+            <div class="flex min-w-0 items-start gap-3">
+              <div class="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-brand-700 ring-1 ring-line">
+                <i data-lucide="book-open-text" class="h-4 w-4"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="text-[14px] font-semibold tracking-tight">Admin Guide enrichment</div>
+                <div class="mt-0.5 text-[13px] leading-5 text-steel-500">For Fortinet runs, keep enabled when admin guide references are needed.</div>
+              </div>
             </div>
             <label class="relative h-7 w-12 shrink-0 cursor-pointer" aria-label="Skip Admin Guide enrichment">
               <input type="checkbox" id="skipEnrichment" class="peer sr-only">
-              <span class="absolute inset-0 rounded-full bg-slate-300 transition peer-checked:bg-brand-500"></span>
-              <span class="absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition peer-checked:translate-x-5"></span>
+              <span class="absolute inset-0 rounded-full bg-steel-200 transition peer-checked:bg-brand-500"></span>
+              <span class="absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-soft transition peer-checked:translate-x-5"></span>
             </label>
           </div>
 
-          <div class="mt-5">
-            <button id="submitBtn" type="button" class="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-5 text-sm font-extrabold text-white transition hover:bg-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-100 disabled:cursor-not-allowed disabled:opacity-60">
+          <!-- Submit -->
+          <div class="mt-6">
+            <button id="submitBtn" type="button"
+                    class="group relative inline-flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-brand-grad px-5 text-[14px] font-semibold tracking-tight text-white shadow-soft transition hover:shadow-ring focus:outline-none focus:ring-4 focus:ring-brand-100 disabled:cursor-not-allowed disabled:opacity-60">
+              <span class="pointer-events-none absolute inset-0 shimmer opacity-0 group-hover:opacity-30"></span>
               <span id="btnSpinner" class="hidden h-5 w-5 animate-spin rounded-full border-2 border-white/35 border-t-white"></span>
               <i id="btnIcon" data-lucide="play" class="h-4 w-4"></i>
-              <span id="btnText">Estimate and Process</span>
+              <span id="btnText">Estimate & Process</span>
+              <i data-lucide="arrow-right" class="h-4 w-4 opacity-80 transition group-hover:translate-x-0.5"></i>
             </button>
+            <p class="mt-2.5 text-center text-[12px] text-steel-500">You'll see a cost estimate before any tokens are spent.</p>
           </div>
 
-          <div id="statusArea" role="status" aria-live="polite" class="mt-4 hidden rounded-lg border p-4">
-            <div id="statusTitle" class="font-extrabold"></div>
-            <div id="statusDesc" class="mt-1 text-sm leading-5"></div>
+          <div id="statusArea" role="status" aria-live="polite" class="mt-5 hidden rounded-xl border p-4">
+            <div id="statusTitle" class="text-[14px] font-semibold tracking-tight"></div>
+            <div id="statusDesc" class="mt-1 text-[13px] leading-5"></div>
           </div>
         </div>
       </section>
 
-      <aside class="rounded-lg border border-line bg-white shadow-panel">
-        <div class="border-b border-line px-5 py-4">
-          <h2 class="text-base font-extrabold">Run State</h2>
-          <p class="mt-1 text-sm text-steel-500">Progress for the current upload.</p>
+      <!-- Aside -->
+      <aside class="flex flex-col gap-5">
+        <div class="overflow-hidden rounded-2xl border border-line bg-white shadow-panel">
+          <div class="flex items-center justify-between border-b border-line bg-gradient-to-b from-white to-steel-50/50 px-5 py-4">
+            <div class="flex items-center gap-2">
+              <span class="grid h-6 w-6 place-items-center rounded-md bg-brand-50 text-brand-700"><i data-lucide="activity" class="h-3.5 w-3.5"></i></span>
+              <h2 class="text-[15px] font-semibold tracking-tight">Run State</h2>
+            </div>
+            <span class="text-[11px] font-medium text-steel-500">Live</span>
+          </div>
+
+          <div class="p-5">
+            <ol class="relative space-y-1">
+              <!-- vertical rail -->
+              <div class="absolute left-[15px] top-2 bottom-2 w-px bg-line"></div>
+              <!-- Steps -->
+              <li id="step1" class="progress-step relative grid grid-cols-[32px_minmax(0,1fr)] items-start gap-3 py-2">
+                <div class="step-num relative z-10 grid h-8 w-8 place-items-center rounded-full bg-steel-100 text-[11px] font-bold text-steel-500 ring-4 ring-white">1</div>
+                <div>
+                  <div class="text-[13px] font-semibold tracking-tight">Extract</div>
+                  <div class="mt-0.5 text-[12px] leading-5 text-steel-500">Read requirement pages from the PDF.</div>
+                </div>
+              </li>
+              <li id="step2" class="progress-step relative grid grid-cols-[32px_minmax(0,1fr)] items-start gap-3 py-2">
+                <div class="step-num relative z-10 grid h-8 w-8 place-items-center rounded-full bg-steel-100 text-[11px] font-bold text-steel-500 ring-4 ring-white">2</div>
+                <div>
+                  <div class="text-[13px] font-semibold tracking-tight">Analyze</div>
+                  <div class="mt-0.5 text-[12px] leading-5 text-steel-500">Structure compliance rows with Gemini.</div>
+                </div>
+              </li>
+              <li id="step3" class="progress-step relative grid grid-cols-[32px_minmax(0,1fr)] items-start gap-3 py-2">
+                <div class="step-num relative z-10 grid h-8 w-8 place-items-center rounded-full bg-steel-100 text-[11px] font-bold text-steel-500 ring-4 ring-white">3</div>
+                <div>
+                  <div class="text-[13px] font-semibold tracking-tight">Reference</div>
+                  <div class="mt-0.5 text-[12px] leading-5 text-steel-500">Match products and admin guide evidence.</div>
+                </div>
+              </li>
+              <li id="step4" class="progress-step relative grid grid-cols-[32px_minmax(0,1fr)] items-start gap-3 py-2">
+                <div class="step-num relative z-10 grid h-8 w-8 place-items-center rounded-full bg-steel-100 text-[11px] font-bold text-steel-500 ring-4 ring-white">4</div>
+                <div>
+                  <div class="text-[13px] font-semibold tracking-tight">Deliver</div>
+                  <div class="mt-0.5 text-[12px] leading-5 text-steel-500">Create the formatted Excel workbook.</div>
+                </div>
+              </li>
+            </ol>
+
+            <div class="mt-5 border-t border-line pt-5">
+              <div class="mb-3 flex items-center justify-between gap-3">
+                <h3 class="text-[13px] font-semibold tracking-tight">Current Result</h3>
+                <button id="refreshDownloadsBtn" type="button"
+                        class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-line bg-white px-2.5 text-[12px] font-semibold text-steel-700 transition hover:bg-steel-50 disabled:cursor-not-allowed disabled:opacity-60">
+                  <i data-lucide="refresh-cw" class="h-3.5 w-3.5"></i>
+                  <span>Refresh</span>
+                </button>
+              </div>
+              <div id="downloadsList">
+                <div class="rounded-xl border border-dashed border-line bg-steel-50/60 px-4 py-6 text-center text-[12.5px] leading-5 text-steel-500">
+                  <i data-lucide="inbox" class="mx-auto mb-2 h-5 w-5 text-steel-500"></i>
+                  No workbook has been generated for this upload yet.
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="p-5">
-          <div class="space-y-4">
-            <div id="step1" class="progress-step grid grid-cols-[2rem_minmax(0,1fr)] gap-3">
-              <div class="step-num grid h-8 w-8 place-items-center rounded-full bg-slate-200 text-xs font-black text-steel-500">1</div>
-              <div>
-                <div class="text-sm font-extrabold">Extract</div>
-                <div class="mt-1 text-sm leading-5 text-steel-500">Read requirement pages from the PDF.</div>
-              </div>
-            </div>
-            <div id="step2" class="progress-step grid grid-cols-[2rem_minmax(0,1fr)] gap-3">
-              <div class="step-num grid h-8 w-8 place-items-center rounded-full bg-slate-200 text-xs font-black text-steel-500">2</div>
-              <div>
-                <div class="text-sm font-extrabold">Analyze</div>
-                <div class="mt-1 text-sm leading-5 text-steel-500">Structure compliance rows with Gemini.</div>
-              </div>
-            </div>
-            <div id="step3" class="progress-step grid grid-cols-[2rem_minmax(0,1fr)] gap-3">
-              <div class="step-num grid h-8 w-8 place-items-center rounded-full bg-slate-200 text-xs font-black text-steel-500">3</div>
-              <div>
-                <div class="text-sm font-extrabold">Reference</div>
-                <div class="mt-1 text-sm leading-5 text-steel-500">Match products and admin guide evidence.</div>
-              </div>
-            </div>
-            <div id="step4" class="progress-step grid grid-cols-[2rem_minmax(0,1fr)] gap-3">
-              <div class="step-num grid h-8 w-8 place-items-center rounded-full bg-slate-200 text-xs font-black text-steel-500">4</div>
-              <div>
-                <div class="text-sm font-extrabold">Deliver</div>
-                <div class="mt-1 text-sm leading-5 text-steel-500">Create the formatted Excel workbook.</div>
-              </div>
-            </div>
+        <!-- Tip card -->
+        <div class="overflow-hidden rounded-2xl border border-line bg-gradient-to-br from-ink to-steel-700 p-5 text-white shadow-panel">
+          <div class="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-white/60">
+            <i data-lucide="lightbulb" class="h-3.5 w-3.5"></i> Pro tip
           </div>
-
-          <div class="mt-6 border-t border-line pt-5">
-            <div class="mb-3 flex items-center justify-between gap-3">
-              <h3 class="text-sm font-extrabold">Current Result</h3>
-              <button id="refreshDownloadsBtn" type="button" class="inline-flex h-9 items-center gap-2 rounded-lg border border-line bg-white px-3 text-sm font-bold text-ink transition hover:bg-steel-50 disabled:cursor-not-allowed disabled:opacity-60">
-                <i data-lucide="refresh-cw" class="h-4 w-4"></i>
-                <span>Refresh</span>
-              </button>
-            </div>
-            <div id="downloadsList">
-              <div class="rounded-lg border border-dashed border-line bg-steel-50 px-4 py-5 text-center text-sm leading-5 text-steel-500">No workbook has been generated for this upload yet.</div>
-            </div>
-          </div>
+          <p class="mt-2 text-[13px] leading-relaxed text-white/85">
+            Set explicit <span class="font-mono text-white">start</span> / <span class="font-mono text-white">end</span> pages on large RFPs to keep extraction crisp and costs predictable.
+          </p>
         </div>
       </aside>
     </div>
   </main>
 
-  <div id="costModal" role="dialog" aria-modal="true" aria-labelledby="costTitle" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 p-4">
-    <div class="max-h-[calc(100vh-2rem)] w-full max-w-xl overflow-auto rounded-lg border border-line bg-white shadow-2xl">
-      <div class="border-b border-line px-5 py-4">
-        <h2 id="costTitle" class="text-lg font-extrabold">API Cost Estimate</h2>
-        <p class="mt-1 text-sm text-steel-500">Review the estimate before extraction starts.</p>
+  <!-- Cost Modal -->
+  <div id="costModal" role="dialog" aria-modal="true" aria-labelledby="costTitle"
+       class="fixed inset-0 z-50 hidden items-center justify-center bg-ink/60 p-4 backdrop-blur-sm">
+    <div class="fade-in max-h-[calc(100vh-2rem)] w-full max-w-xl overflow-hidden rounded-2xl border border-line bg-white shadow-2xl">
+      <div class="flex items-start justify-between gap-4 border-b border-line bg-gradient-to-b from-white to-steel-50/60 px-6 py-5">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="grid h-6 w-6 place-items-center rounded-md bg-brand-50 text-brand-700"><i data-lucide="receipt" class="h-3.5 w-3.5"></i></span>
+            <h2 id="costTitle" class="text-[16px] font-semibold tracking-tight">API Cost Estimate</h2>
+          </div>
+          <p class="mt-1 text-[13px] text-steel-500">Review the estimate before extraction starts.</p>
+        </div>
+        <button onclick="document.getElementById('costCancelBtn').click()" aria-label="Close"
+                class="grid h-8 w-8 place-items-center rounded-lg text-steel-500 hover:bg-steel-50">
+          <i data-lucide="x" class="h-4 w-4"></i>
+        </button>
       </div>
-      <div class="px-5 py-4">
-        <table class="w-full border-collapse text-sm">
-          <tr class="border-b border-line"><td class="py-2 text-steel-500">Model</td><td id="cModel" class="py-2 text-right font-extrabold"></td></tr>
-          <tr class="border-b border-line"><td class="py-2 text-steel-500">Pages</td><td id="cPages" class="py-2 text-right font-extrabold"></td></tr>
-          <tr class="border-b border-line"><td class="py-2 text-steel-500">Chunks</td><td id="cChunks" class="py-2 text-right font-extrabold"></td></tr>
-          <tr class="border-b border-line"><td class="py-2 text-steel-500">Input price / 1M</td><td id="cInputRate" class="py-2 text-right font-extrabold"></td></tr>
-          <tr class="border-b border-line"><td class="py-2 text-steel-500">Output price / 1M</td><td id="cOutputRate" class="py-2 text-right font-extrabold"></td></tr>
-          <tr class="border-b border-line"><td class="py-2 text-steel-500">Est. input tokens</td><td id="cInputTok" class="py-2 text-right font-extrabold"></td></tr>
-          <tr class="border-b border-line"><td class="py-2 text-steel-500">Est. output tokens</td><td id="cOutputTok" class="py-2 text-right font-extrabold"></td></tr>
-          <tr class="border-b border-line"><td class="py-2 text-steel-500">Input cost</td><td id="cInputCost" class="py-2 text-right font-extrabold"></td></tr>
-          <tr class="border-b border-line"><td class="py-2 text-steel-500">Output cost</td><td id="cOutputCost" class="py-2 text-right font-extrabold"></td></tr>
-          <tr><td class="pt-4 text-base font-black text-brand-600">Total estimate</td><td id="cTotal" class="pt-4 text-right text-base font-black text-brand-600"></td></tr>
-        </table>
+      <div class="px-6 py-5">
+        <div class="overflow-hidden rounded-xl border border-line">
+          <table class="w-full border-collapse text-[13.5px]">
+            <tbody class="[&_tr:nth-child(even)]:bg-steel-50/50 [&_td]:px-4 [&_td]:py-2.5">
+              <tr><td class="text-steel-500">Model</td><td id="cModel" class="text-right font-semibold"></td></tr>
+              <tr><td class="text-steel-500">Pages</td><td id="cPages" class="text-right font-semibold font-mono"></td></tr>
+              <tr><td class="text-steel-500">Chunks</td><td id="cChunks" class="text-right font-semibold font-mono"></td></tr>
+              <tr><td class="text-steel-500">Input price / 1M</td><td id="cInputRate" class="text-right font-semibold font-mono"></td></tr>
+              <tr><td class="text-steel-500">Output price / 1M</td><td id="cOutputRate" class="text-right font-semibold font-mono"></td></tr>
+              <tr><td class="text-steel-500">Est. input tokens</td><td id="cInputTok" class="text-right font-semibold font-mono"></td></tr>
+              <tr><td class="text-steel-500">Est. output tokens</td><td id="cOutputTok" class="text-right font-semibold font-mono"></td></tr>
+              <tr><td class="text-steel-500">Input cost</td><td id="cInputCost" class="text-right font-semibold font-mono"></td></tr>
+              <tr><td class="text-steel-500">Output cost</td><td id="cOutputCost" class="text-right font-semibold font-mono"></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="mt-4 flex items-center justify-between rounded-xl bg-brand-grad px-4 py-3 text-white shadow-soft">
+          <span class="text-[12px] font-medium uppercase tracking-wider text-white/80">Total estimate</span>
+          <span id="cTotal" class="text-right text-lg font-bold font-mono"></span>
+        </div>
       </div>
-      <div class="flex flex-col gap-3 px-5 pb-5 sm:flex-row">
-        <button id="costCancelBtn" type="button" class="h-11 flex-1 rounded-lg border border-line bg-white px-4 text-sm font-extrabold text-ink transition hover:bg-steel-50">Cancel</button>
-        <button id="costConfirmBtn" type="button" class="h-11 flex-1 rounded-lg bg-brand-500 px-4 text-sm font-extrabold text-white transition hover:bg-brand-600">Proceed</button>
+      <div class="flex flex-col gap-3 border-t border-line bg-steel-50/40 px-6 py-4 sm:flex-row">
+        <button id="costCancelBtn" type="button" class="h-11 flex-1 rounded-xl border border-line bg-white px-4 text-[14px] font-semibold text-ink transition hover:bg-steel-50">Cancel</button>
+        <button id="costConfirmBtn" type="button" class="h-11 flex-1 rounded-xl bg-brand-grad px-4 text-[14px] font-semibold text-white shadow-soft transition hover:shadow-ring">Proceed</button>
       </div>
     </div>
   </div>
-
-  <script>
-    const state = {
-      file: null,
-      isProcessing: false,
-      pendingStoredName: null,
-      pendingOriginalName: null,
-      pendingModelName: null,
-      pendingReferenceProvider: null,
-      lastCompletedDownload: null
-    };
-
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('fileInput');
-    const dropZoneContent = document.getElementById('dropZoneContent');
-    const filePreview = document.getElementById('filePreview');
-    const selectedFileName = document.getElementById('selectedFileName');
-    const selectedFileSize = document.getElementById('selectedFileSize');
-    const removeFile = document.getElementById('removeFile');
-    const submitBtn = document.getElementById('submitBtn');
-    const btnSpinner = document.getElementById('btnSpinner');
-    const btnIcon = document.getElementById('btnIcon');
-    const btnText = document.getElementById('btnText');
-    const statusArea = document.getElementById('statusArea');
-    const statusTitle = document.getElementById('statusTitle');
-    const statusDesc = document.getElementById('statusDesc');
-    const serverState = document.getElementById('serverState');
-    const modelNameInput = document.getElementById('modelName');
-    const referenceProviderInput = document.getElementById('referenceProvider');
-    const startPageInput = document.getElementById('startPage');
-    const endPageInput = document.getElementById('endPage');
-    const skipEnrichmentInput = document.getElementById('skipEnrichment');
-    const enrichmentRow = document.getElementById('enrichmentRow');
-    const costModal = document.getElementById('costModal');
-    const costConfirmBtn = document.getElementById('costConfirmBtn');
-    const costCancelBtn = document.getElementById('costCancelBtn');
-    const downloadsList = document.getElementById('downloadsList');
-    const refreshDownloadsBtn = document.getElementById('refreshDownloadsBtn');
-
-    if (window.lucide) window.lucide.createIcons();
-
-    const FALLBACK_MODELS = [
-      { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview', input_per_1m: 0.50, output_per_1m: 3.00 },
-      { id: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash-Lite Preview', input_per_1m: 0.25, output_per_1m: 1.50 },
-      { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', input_per_1m: 0.30, output_per_1m: 2.50 },
-      { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite', input_per_1m: 0.10, output_per_1m: 0.40 },
-      { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', input_per_1m: 1.25, output_per_1m: 10.00 }
-    ];
-
-    function formatBytes(bytes) {
-      if (!bytes) return '0 MB';
-      return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
-    }
-
-    function escapeHtml(value) {
-      return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    }
-
-    async function loadModelOptions() {
-      try {
-        const res = await fetch('/models');
-        const data = await res.json();
-        if (!res.ok || !Array.isArray(data.models) || data.models.length === 0) return;
-        renderModelOptions(data.models);
-      } catch (err) {
-        console.warn('Could not load model options:', err);
-        renderModelOptions(FALLBACK_MODELS);
-      }
-    }
-
-    function renderModelOptions(models) {
-      const currentValue = modelNameInput.value || 'gemini-3-flash-preview';
-      modelNameInput.innerHTML = '';
-      models.forEach(model => {
-        const option = document.createElement('option');
-        option.value = model.id;
-        option.textContent = `${model.label} - $${model.input_per_1m}/$${model.output_per_1m} per 1M`;
-        modelNameInput.appendChild(option);
-      });
-      if ([...modelNameInput.options].some(option => option.value === currentValue)) {
-        modelNameInput.value = currentValue;
-      }
-    }
-
-    renderModelOptions(FALLBACK_MODELS);
-    loadModelOptions();
-    updateProviderState();
-
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-      dropZone.addEventListener(eventName, event => {
-        event.preventDefault();
-        event.stopPropagation();
-      });
-    });
-
-    ['dragenter', 'dragover'].forEach(eventName => {
-      dropZone.addEventListener(eventName, () => {
-        dropZone.classList.add('border-brand-500', 'bg-brand-50');
-      });
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-      dropZone.addEventListener(eventName, () => {
-        if (!state.file) dropZone.classList.remove('border-brand-500', 'bg-brand-50');
-      });
-    });
-
-    dropZone.addEventListener('drop', event => {
-      const files = event.dataTransfer.files;
-      if (files.length) handleFile(files[0]);
-    });
-
-    dropZone.addEventListener('click', () => fileInput.click());
-    dropZone.addEventListener('keydown', event => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        fileInput.click();
-      }
-    });
-
-    fileInput.addEventListener('change', event => {
-      if (event.target.files.length) handleFile(event.target.files[0]);
-    });
-
-    referenceProviderInput.addEventListener('change', updateProviderState);
-
-    function updateProviderState() {
-      const isFortinet = referenceProviderInput.value === 'fortinet';
-      enrichmentRow.classList.toggle('opacity-60', !isFortinet);
-      skipEnrichmentInput.disabled = !isFortinet;
-      if (!isFortinet) skipEnrichmentInput.checked = true;
-    }
-
-    function handleFile(file) {
-      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-      if (!isPdf) {
-        showStatus('error', 'Invalid file type', 'Upload a PDF file to continue.');
-        return;
-      }
-      revokeLastCompletedDownload();
-      state.file = file;
-      state.pendingStoredName = null;
-      state.pendingOriginalName = null;
-      state.pendingModelName = null;
-      state.pendingReferenceProvider = null;
-      state.lastCompletedDownload = null;
-      selectedFileName.textContent = file.name;
-      selectedFileSize.textContent = formatBytes(file.size);
-      dropZoneContent.classList.add('hidden');
-      filePreview.classList.remove('hidden');
-      filePreview.classList.add('flex');
-      dropZone.classList.add('border-brand-500', 'bg-brand-50');
-      clearStatus();
-      clearCurrentDownload();
-      updateSteps(0);
-    }
-
-    removeFile.addEventListener('click', event => {
-      event.stopPropagation();
-      revokeLastCompletedDownload();
-      state.file = null;
-      state.pendingStoredName = null;
-      state.pendingOriginalName = null;
-      state.pendingModelName = null;
-      state.pendingReferenceProvider = null;
-      fileInput.value = '';
-      dropZoneContent.classList.remove('hidden');
-      filePreview.classList.add('hidden');
-      filePreview.classList.remove('flex');
-      dropZone.classList.remove('border-brand-500', 'bg-brand-50');
-      clearCurrentDownload();
-      clearStatus();
-      updateSteps(0);
-    });
-
-    submitBtn.addEventListener('click', async () => {
-      if (!state.file) {
-        showStatus('error', 'No PDF selected', 'Choose an RFP PDF before starting.');
-        return;
-      }
-      if (state.isProcessing) return;
-
-      setProcessing(true, 'Estimating...');
-      showStatus('processing', 'Estimating cost', 'The PDF is being checked before processing starts.');
-      serverState.textContent = 'Estimating';
-
-      const formData = new FormData();
-      formData.append('rfp_file', state.file);
-      formData.append('model_name', modelNameInput.value);
-      formData.append('start_page', startPageInput.value);
-      formData.append('end_page', endPageInput.value);
-
-      try {
-        const res = await fetch('/estimate_cost', { method: 'POST', body: formData });
-        const data = await parseJsonResponse(res);
-        if (!res.ok) throw new Error(data.error || 'Cost estimation failed.');
-
-        state.pendingStoredName = data.stored_name;
-        state.pendingOriginalName = data.original_name;
-        state.pendingModelName = data.model_name;
-        state.pendingReferenceProvider = referenceProviderInput.value;
-
-        const cost = data.cost;
-        document.getElementById('cModel').textContent = cost.model_label || cost.model;
-        document.getElementById('cPages').textContent = cost.num_pages.toLocaleString();
-        document.getElementById('cChunks').textContent = cost.num_chunks.toLocaleString();
-        document.getElementById('cInputRate').textContent = `$${cost.input_price_per_1m.toFixed(2)}`;
-        document.getElementById('cOutputRate').textContent = `$${cost.output_price_per_1m.toFixed(2)}`;
-        document.getElementById('cInputTok').textContent = cost.estimated_input_tokens.toLocaleString();
-        document.getElementById('cOutputTok').textContent = cost.estimated_output_tokens.toLocaleString();
-        document.getElementById('cInputCost').textContent = `$${cost.input_cost_usd.toFixed(6)}`;
-        document.getElementById('cOutputCost').textContent = `$${cost.output_cost_usd.toFixed(6)}`;
-        document.getElementById('cTotal').textContent = `$${cost.total_cost_usd.toFixed(6)}`;
-
-        setProcessing(false);
-        serverState.textContent = 'Ready';
-        costModal.classList.remove('hidden');
-        costModal.classList.add('flex');
-      } catch (err) {
-        showStatus('error', 'Estimation failed', err.message);
-        setProcessing(false);
-        serverState.textContent = 'Ready';
-      }
-    });
-
-    costCancelBtn.addEventListener('click', () => {
-      costModal.classList.add('hidden');
-      costModal.classList.remove('flex');
-      state.pendingStoredName = null;
-      state.pendingModelName = null;
-      state.pendingReferenceProvider = null;
-      clearStatus();
-    });
-
-    costModal.addEventListener('click', event => {
-      if (event.target === costModal) costCancelBtn.click();
-    });
-
-    costConfirmBtn.addEventListener('click', async () => {
-      costModal.classList.add('hidden');
-      costModal.classList.remove('flex');
-      if (!state.pendingStoredName) return;
-
-      setProcessing(true, 'Processing...');
-      serverState.textContent = 'Processing';
-      showStatus('processing', 'Processing RFP', 'The run has started. If the tunnel times out, use Refresh to fetch the completed workbook.');
-      updateSteps(1);
-      clearCurrentDownload('Processing this upload. Refresh will show only this run when it is ready.');
-
-      const formData = new FormData();
-      formData.append('stored_name', state.pendingStoredName);
-      formData.append('original_name', state.pendingOriginalName);
-      formData.append('model_name', state.pendingModelName || modelNameInput.value);
-      formData.append('reference_provider', state.pendingReferenceProvider || referenceProviderInput.value);
-      formData.append('start_page', startPageInput.value);
-      formData.append('end_page', endPageInput.value);
-      if (skipEnrichmentInput.checked) formData.append('skip_enrichment', 'on');
-
-      const timers = [
-        setTimeout(() => updateSteps(2), 4500),
-        setTimeout(() => updateSteps(3), 14000)
-      ];
-
-      try {
-        const response = await fetch('/process', { method: 'POST', body: formData });
-        if (!response.ok) {
-          const handled = await handleProcessError(response);
-          if (handled) return;
-          throw new Error('Pipeline processing failed.');
-        }
-
-        updateSteps(4);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const filename = filenameFromResponse(response) || 'enriched_requirements.xlsx';
-        triggerDownload(url, filename);
-
-        revokeLastCompletedDownload();
-        state.lastCompletedDownload = {
-          name: filename,
-          path: null,
-          mtime: Date.now() / 1000,
-          size: blob.size,
-          blobUrl: url
-        };
-        renderDownloads([state.lastCompletedDownload]);
-        showStatus('success', 'Workbook ready', 'The generated Excel file has been downloaded and is listed in Current Result.');
-        setProcessing(false);
-        serverState.textContent = 'Ready';
-      } catch (error) {
-        console.error(error);
-        showStatus('error', 'Processing failed', error.message);
-        setProcessing(false);
-        serverState.textContent = 'Ready';
-        updateSteps(0);
-      } finally {
-        timers.forEach(clearTimeout);
-      }
-    });
-
-    async function parseJsonResponse(response) {
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) return response.json();
-      const text = await response.text();
-      return { error: text || `HTTP ${response.status}` };
-    }
-
-    async function handleProcessError(response) {
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Pipeline processing failed.');
-      }
-      if (response.status === 504 || response.status === 503) {
-        showStatus('processing', 'Processing in background', 'The tunnel stopped waiting, but the backend may still finish the file. Click Refresh in Current Result after a minute.');
-        updateSteps(3);
-        setProcessing(false);
-        serverState.textContent = 'Background run';
-        return true;
-      }
-      if (response.status === 502) {
-        throw new Error('Server returned 502. Check backend logs and try again with enrichment disabled if memory is tight.');
-      }
-      if (response.status === 413) {
-        throw new Error('The PDF is too large for the current server upload limit.');
-      }
-      throw new Error(`Server error ${response.status}.`);
-    }
-
-    function filenameFromResponse(response) {
-      const header = response.headers.get('Content-Disposition') || '';
-      const utfMatch = header.match(/filename\*=UTF-8''([^;]+)/i);
-      if (utfMatch) return decodeURIComponent(utfMatch[1]);
-      const quoted = header.match(/filename="?([^"]+)"?/i);
-      return quoted ? quoted[1] : '';
-    }
-
-    function triggerDownload(url, filename) {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-
-    function setProcessing(isProcessing, label) {
-      state.isProcessing = isProcessing;
-      submitBtn.disabled = isProcessing;
-      btnSpinner.classList.toggle('hidden', !isProcessing);
-      btnIcon.classList.toggle('hidden', isProcessing);
-      btnText.textContent = label || 'Estimate and Process';
-    }
-
-    function showStatus(type, title, desc) {
-      statusArea.className = 'mt-4 rounded-lg border p-4';
-      const styles = {
-        processing: 'border-amber-200 bg-amber-50 text-amber-900',
-        success: 'border-emerald-200 bg-emerald-50 text-emerald-900',
-        error: 'border-red-200 bg-red-50 text-red-900'
-      };
-      statusArea.className += ` ${styles[type] || styles.processing}`;
-      statusTitle.textContent = title;
-      statusDesc.textContent = desc;
-      statusDesc.className = 'mt-1 text-sm leading-5 opacity-80';
-    }
-
-    function clearStatus() {
-      statusArea.className = 'mt-4 hidden rounded-lg border p-4';
-      statusTitle.textContent = '';
-      statusDesc.textContent = '';
-    }
-
-    function updateSteps(step) {
-      for (let i = 1; i <= 4; i++) {
-        const el = document.getElementById(`step${i}`);
-        const num = el.querySelector('.step-num');
-        const active = i <= step;
-        num.className = active
-          ? 'step-num grid h-8 w-8 place-items-center rounded-full bg-brand-500 text-xs font-black text-white'
-          : 'step-num grid h-8 w-8 place-items-center rounded-full bg-slate-200 text-xs font-black text-steel-500';
-      }
-    }
-
-    function clearCurrentDownload(message = 'No workbook has been generated for this upload yet.') {
-      downloadsList.innerHTML = `<div class="rounded-lg border border-dashed border-line bg-steel-50 px-4 py-5 text-center text-sm leading-5 text-steel-500">${escapeHtml(message)}</div>`;
-    }
-
-    function encodeDownloadPath(path) {
-      return String(path || '').split('/').map(encodeURIComponent).join('/');
-    }
-
-    function revokeLastCompletedDownload() {
-      if (state.lastCompletedDownload && state.lastCompletedDownload.blobUrl) {
-        window.URL.revokeObjectURL(state.lastCompletedDownload.blobUrl);
-      }
-      state.lastCompletedDownload = null;
-    }
-
-    function renderDownloads(files) {
-      downloadsList.innerHTML = '';
-      if (!files || files.length === 0) {
-        clearCurrentDownload('This run is still processing. Refresh again in a minute.');
-        return;
-      }
-      const file = files[0];
-      const date = new Date(file.mtime * 1000).toLocaleString();
-      const size = formatBytes(file.size);
-      const href = file.blobUrl || `/download/${encodeDownloadPath(file.path)}`;
-      const item = document.createElement('div');
-      item.className = 'flex flex-col gap-3 rounded-lg border border-line bg-white p-3 sm:flex-row sm:items-center sm:justify-between';
-      item.innerHTML = `
-        <div class="min-w-0">
-          <div class="truncate text-sm font-extrabold">${escapeHtml(file.name)}</div>
-          <div class="mt-1 text-xs text-steel-500">${escapeHtml(date)} - ${escapeHtml(size)}</div>
-        </div>
-        <a class="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-extrabold text-white transition hover:bg-blue-800" href="${href}" download="${escapeHtml(file.name)}">
-          <span>Download</span>
-        </a>
-      `;
-      downloadsList.appendChild(item);
-    }
-
-    async function fetchRecentDownloads() {
-      if (!state.pendingStoredName) {
-        clearCurrentDownload();
-        return;
-      }
-      try {
-        refreshDownloadsBtn.disabled = true;
-        refreshDownloadsBtn.querySelector('span').textContent = 'Checking...';
-        const res = await fetch(`/recent_downloads?stored_name=${encodeURIComponent(state.pendingStoredName)}`);
-        const data = await res.json();
-        renderDownloads(data.files || []);
-      } catch (err) {
-        console.error('Failed to fetch downloads:', err);
-        clearCurrentDownload('Could not check this run yet. Try Refresh again.');
-      } finally {
-        refreshDownloadsBtn.disabled = false;
-        refreshDownloadsBtn.querySelector('span').textContent = 'Refresh';
-      }
-    }
-
-    refreshDownloadsBtn.addEventListener('click', fetchRecentDownloads);
-  </script>
 </body>
 </html>
+
