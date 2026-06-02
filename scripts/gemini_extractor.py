@@ -1,7 +1,6 @@
 import os
 import json
 import re
-import time
 import base64
 import requests
 from dotenv import load_dotenv
@@ -15,39 +14,18 @@ class GeminiExtractionError(RuntimeError):
     """Raised when Gemini extraction fails for a specific PDF chunk."""
 
 
-def _env_int(name, default):
+def _call_gemini_once(client, model_name, prompt, uploaded_file, chunk_index):
     try:
-        return int(os.getenv(name, str(default)))
-    except (TypeError, ValueError):
-        return default
-
-
-def _call_gemini_with_retries(client, model_name, prompt, uploaded_file, chunk_index):
-    max_attempts = max(1, _env_int("GEMINI_EXTRACTOR_MAX_RETRIES", 3))
-    base_delay = max(1, _env_int("GEMINI_EXTRACTOR_RETRY_DELAY_SECONDS", 8))
-    last_error = None
-
-    for attempt in range(1, max_attempts + 1):
-        try:
-            return client.models.generate_content(
-                model=model_name,
-                contents=[prompt, uploaded_file],
-            )
-        except Exception as exc:
-            last_error = exc
-            message = str(exc) or exc.__class__.__name__
-            print(
-                f"Gemini extraction failed for chunk {chunk_index} "
-                f"(attempt {attempt}/{max_attempts}): {message}"
-            )
-            if attempt >= max_attempts:
-                break
-            time.sleep(base_delay * attempt)
-
-    raise GeminiExtractionError(
-        f"Gemini extraction failed for chunk {chunk_index} after {max_attempts} attempts. "
-        f"Last error: {last_error}"
-    ) from last_error
+        return client.models.generate_content(
+            model=model_name,
+            contents=[prompt, uploaded_file],
+        )
+    except Exception as exc:
+        message = str(exc) or exc.__class__.__name__
+        print(f"Gemini extraction failed for chunk {chunk_index}: {message}")
+        raise GeminiExtractionError(
+            f"Gemini extraction failed for chunk {chunk_index}. Last error: {message}"
+        ) from exc
 
 def extract_json_from_text(text):
     """Cleans the model's response to extract only the JSON part and repairs common errors."""
@@ -189,7 +167,7 @@ def get_technical_data_from_gemini(pdf_path, model_name="gemini-3-flash-preview"
             )
 
             print(f"Requesting extraction from {model_name} for chunk {chunk_index + 1}...")
-            response = _call_gemini_with_retries(
+            response = _call_gemini_once(
                 client,
                 model_name,
                 prompt,
