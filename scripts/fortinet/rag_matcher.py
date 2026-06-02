@@ -123,6 +123,7 @@ class FortinetRAGMatcher:
         }
 
     def match_vendor(self, query: str, constraints: Dict[str, Any], vendor: str) -> Dict[str, Any]:
+        constraints = self._adjust_solution_scale_constraints(query, constraints, vendor)
         retrieved = self.retrieve(query, constraints, vendor=vendor)
         safe_candidates = [
             candidate for candidate in retrieved
@@ -395,6 +396,45 @@ class FortinetRAGMatcher:
         ok, _, _, _ = ProductMatcher._passes_hard_filters(product, constraints)
         return ok
 
+    def _adjust_solution_scale_constraints(self, query: str, constraints: Dict[str, Any], vendor: str) -> Dict[str, Any]:
+        adjusted = dict(constraints or {})
+        required = ProductMatcher._parse_catalog_number(adjusted.get("ssl_vpn_users"))
+        if required is None:
+            return adjusted
+        query_lower = query.lower()
+        if "ssl" not in query_lower or "vpn" not in query_lower:
+            return adjusted
+        if not re.search(r"\b(scalable|scale|license|licence|solution|pr\s+and\s+dr|pdc|sdc|redundant)\b", query_lower):
+            return adjusted
+        max_supported = self._vendor_max_numeric(vendor, "ssl_vpn_users", adjusted)
+        if max_supported is None or required <= max_supported:
+            return adjusted
+        adjusted["solution_scale_ssl_vpn_users"] = required
+        adjusted["ssl_vpn_users"] = max_supported
+        requirements = dict(adjusted.get("requirements") or {})
+        requirements["solution_scale_ssl_vpn_users"] = required
+        requirements["ssl_vpn_users"] = max_supported
+        adjusted["requirements"] = requirements
+        adjusted["constraint_adjustment_note"] = (
+            f"Requested SSL-VPN scale {int(required)} is treated as solution/license scale; "
+            f"per-appliance hard filter capped at catalog maximum {int(max_supported)} for {vendor}."
+        )
+        return adjusted
+
+    def _vendor_max_numeric(self, vendor: str, field: str, constraints: Dict[str, Any]) -> Optional[float]:
+        category = constraints.get("device_type") or constraints.get("category")
+        max_value: Optional[float] = None
+        for product in self.products:
+            if _norm(product.get("vendor")) != vendor.lower():
+                continue
+            if category and not self._category_is_compatible(category, str(product.get("category") or "")):
+                continue
+            value = ProductMatcher._product_numeric_value(product, field, None)
+            if value is None:
+                continue
+            max_value = max(float(value), max_value or 0.0)
+        return max_value
+
     @staticmethod
     def _constraint_details(product: Dict[str, Any], constraints: Dict[str, Any]) -> Tuple[List[str], List[str], Dict[str, Any]]:
         try:
@@ -410,6 +450,15 @@ class FortinetRAGMatcher:
         matched, _, _ = self._constraint_details(candidate.product, constraints)
         try:
             score = ProductMatcher._score_product(candidate.product, constraints, matched)
+            if constraints.get("solution_scale_ssl_vpn_users"):
+                ssl_users = ProductMatcher._product_numeric_value(candidate.product, "ssl_vpn_users", None) or 0.0
+                return (
+                    -float(ssl_users),
+                    -float(score.get("hardware_scale", 0)),
+                    float(score.get("weighted_overprovision_penalty", 999)),
+                    float(score.get("weighted_worst_overprovision", 999)),
+                    -candidate.score,
+                )
             return (
                 float(score.get("weighted_overprovision_penalty", 999)),
                 float(score.get("weighted_worst_overprovision", 999)),
@@ -487,14 +536,14 @@ class FortinetRAGMatcher:
         vendor = str(product.get("vendor") or "Fortinet")
         model = str(product.get("model") or "")
         url = str(product.get("datasheet_url") or product.get("product_url") or "").strip()
-        return f"{vendor}: {model} — {url}" if url else f"{vendor}: {model}"
+        return f"{vendor}: {model} - {url}" if url else f"{vendor}: {model}"
 
     @staticmethod
     def _model_keys(model: Any) -> List[str]:
         text = _norm(model)
         if not text:
             return []
-        plain = re.sub(r"\b(fortinet|juniper|fortigate|fortiswitch)\b|™|®", " ", text)
+        plain = re.sub(r"\b(fortinet|juniper|fortigate|fortiswitch)\b|\(tm\)|\(r\)|tm|registered", " ", text)
         plain = re.sub(r"[^a-z0-9]+", " ", plain).strip()
         keys = {text, re.sub(r"\s+", " ", plain)}
         return [key for key in keys if key]
@@ -528,6 +577,8 @@ class FortinetRAGMatcher:
                 f"{vendor}: selected {product.get('model')} from RAG-retrieved catalog candidates after hard constraint filtering. "
                 "The candidate was not below any parsed numeric/interface/HA constraints."
             )
+            if constraints.get("constraint_adjustment_note"):
+                reasoning += f" {constraints['constraint_adjustment_note']}"
             if checks:
                 reasoning += f" Key checks: {'; '.join(checks[:6])}."
         details = {
