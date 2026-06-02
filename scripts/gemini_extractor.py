@@ -10,6 +10,45 @@ from pypdf import PdfReader, PdfWriter
 # Load environment variables
 load_dotenv()
 
+
+class GeminiExtractionError(RuntimeError):
+    """Raised when Gemini extraction fails for a specific PDF chunk."""
+
+
+def _env_int(name, default):
+    try:
+        return int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _call_gemini_with_retries(client, model_name, prompt, uploaded_file, chunk_index):
+    max_attempts = max(1, _env_int("GEMINI_EXTRACTOR_MAX_RETRIES", 3))
+    base_delay = max(1, _env_int("GEMINI_EXTRACTOR_RETRY_DELAY_SECONDS", 8))
+    last_error = None
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return client.models.generate_content(
+                model=model_name,
+                contents=[prompt, uploaded_file],
+            )
+        except Exception as exc:
+            last_error = exc
+            message = str(exc) or exc.__class__.__name__
+            print(
+                f"Gemini extraction failed for chunk {chunk_index} "
+                f"(attempt {attempt}/{max_attempts}): {message}"
+            )
+            if attempt >= max_attempts:
+                break
+            time.sleep(base_delay * attempt)
+
+    raise GeminiExtractionError(
+        f"Gemini extraction failed for chunk {chunk_index} after {max_attempts} attempts. "
+        f"Last error: {last_error}"
+    ) from last_error
+
 def extract_json_from_text(text):
     """Cleans the model's response to extract only the JSON part and repairs common errors."""
     # Find the JSON block
@@ -58,14 +97,16 @@ def get_technical_data_from_gemini(pdf_path, model_name="gemini-3-flash-preview"
     for chunk_index, current_pdf_path in enumerate(chunk_paths):
         print(f"Reading file chunk {chunk_index + 1}/{len(chunk_paths)}: {current_pdf_path}...")
         
-        # Upload the file chunk using the official SDK
-        print(f"Uploading chunk {chunk_index + 1} to Google Gemini...")
-        uploaded_file = client.files.upload(file=current_pdf_path)
+        uploaded_file = None
+        try:
+            # Upload the file chunk using the official SDK
+            print(f"Uploading chunk {chunk_index + 1} to Google Gemini...")
+            uploaded_file = client.files.upload(file=current_pdf_path)
 
-        prompt = (
-            "Extract EVERY single piece of information from the attached technical document. "
-            "Do not summarize. Do not omit any paragraphs or narrative text. "
-            "The output must be a JSON object with a 'sheets' key containing a list of objects.\n\n"
+            prompt = (
+                "Extract EVERY single piece of information from the attached technical document. "
+                "Do not summarize. Do not omit any paragraphs or narrative text. "
+                "The output must be a JSON object with a 'sheets' key containing a list of objects.\n\n"
             
             "1. FOR TABLES (CRITICAL STRUCTURAL RULES):\n"
             "   - Preserve the EXACT column structure and row order from the source.\n"
@@ -128,45 +169,59 @@ def get_technical_data_from_gemini(pdf_path, model_name="gemini-3-flash-preview"
             "4. OUTPUT RULES:\n"
             "   - Return ONLY valid JSON.\n"
             "   - Include the 'sheets' root key.\n"
-            "   - Ensure visual order is preserved."
-        )
+                "   - Ensure visual order is preserved."
+            )
 
-        print(f"Requesting extraction from {model_name} for chunk {chunk_index + 1}...")
-        
-        response = client.models.generate_content(
-            model=model_name,
-            contents=[prompt, uploaded_file]
-        )
+            print(f"Requesting extraction from {model_name} for chunk {chunk_index + 1}...")
+            response = _call_gemini_with_retries(
+                client,
+                model_name,
+                prompt,
+                uploaded_file,
+                chunk_index + 1,
+            )
 
-        raw_text = response.text
-        json_str = extract_json_from_text(raw_text)
-        
-        try:
-            chunk_data = json.loads(json_str)
-            
-            # Save individual chunk JSON if output directory is provided
-            if chunk_output_dir:
-                os.makedirs(chunk_output_dir, exist_ok=True)
-                chunk_file_path = os.path.join(chunk_output_dir, f"chunk_{chunk_index + 1}.json")
-                with open(chunk_file_path, "w", encoding="utf-8") as f:
-                    json.dump(chunk_data, f, indent=4)
-                print(f"Chunk {chunk_index + 1} saved to {chunk_file_path}")
+            raw_text = response.text or ""
+            if not raw_text.strip():
+                raise GeminiExtractionError(
+                    f"Gemini returned an empty response for chunk {chunk_index + 1}."
+                )
+            json_str = extract_json_from_text(raw_text)
 
-            if isinstance(chunk_data, dict) and "sheets" in chunk_data:
-                all_sheets.extend(chunk_data["sheets"])
-            elif isinstance(chunk_data, list):
-                all_sheets.extend(chunk_data)
-            else:
-                all_sheets.append(chunk_data)
-        except json.JSONDecodeError as e:
-            print(f"Failed to parse JSON for chunk {chunk_index + 1}: {e}")
-            print(f"Raw response: {raw_text}")
-            
-        # Clean up the file from Google's servers after processing
-        try:
-            client.files.delete(name=uploaded_file.name)
-        except Exception as e:
-            print(f"Warning: Could not delete uploaded file {uploaded_file.name}: {e}")
+            try:
+                chunk_data = json.loads(json_str)
+
+                # Save individual chunk JSON if output directory is provided
+                if chunk_output_dir:
+                    os.makedirs(chunk_output_dir, exist_ok=True)
+                    chunk_file_path = os.path.join(chunk_output_dir, f"chunk_{chunk_index + 1}.json")
+                    with open(chunk_file_path, "w", encoding="utf-8") as f:
+                        json.dump(chunk_data, f, indent=4)
+                    print(f"Chunk {chunk_index + 1} saved to {chunk_file_path}")
+
+                if isinstance(chunk_data, dict) and "sheets" in chunk_data:
+                    all_sheets.extend(chunk_data["sheets"])
+                elif isinstance(chunk_data, list):
+                    all_sheets.extend(chunk_data)
+                else:
+                    all_sheets.append(chunk_data)
+            except json.JSONDecodeError as e:
+                if chunk_output_dir:
+                    os.makedirs(chunk_output_dir, exist_ok=True)
+                    raw_file_path = os.path.join(chunk_output_dir, f"chunk_{chunk_index + 1}_raw_response.txt")
+                    with open(raw_file_path, "w", encoding="utf-8") as f:
+                        f.write(raw_text or "")
+                    print(f"Raw chunk response saved to {raw_file_path}")
+                raise GeminiExtractionError(
+                    f"Gemini returned invalid JSON for chunk {chunk_index + 1}: {e}"
+                ) from e
+        finally:
+            # Clean up the file from Google's servers after processing or failure.
+            if uploaded_file is not None:
+                try:
+                    client.files.delete(name=uploaded_file.name)
+                except Exception as e:
+                    print(f"Warning: Could not delete uploaded file {uploaded_file.name}: {e}")
 
     return {"sheets": all_sheets}
 
