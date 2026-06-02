@@ -1,76 +1,683 @@
 {
+  "metadata": {
+    "source": "Official Juniper/HPE Juniper product and datasheet pages",
+    "updated_at": "2026-06-02",
+    "product_count": 57,
+    "format": "matcher-compatible product catalog aligned with fortinet_scraped.json and vertiv_scraped.json",
+    "notes": "Covers active Juniper routing, switching, firewall, wireless, SD-WAN, and management product families used for RFP reference matching. Datasheet URLs point to official Juniper/HPE Juniper datasheet pages where available."
+  },
   "products": [
+    {
+      "vendor": "Juniper",
+      "model": "SRX300",
+      "category": "NGFW",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "SRX Series Firewalls",
+      "product_url": "https://www.juniper.net/us/en/products/security/srx-series/srx300-enterprise-firewall.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/security/srx-series/srx300-line-firewall-datasheet.html",
+      "ngfw_throughput_gbps": 1,
+      "ips_throughput_gbps": 0.1,
+      "ipsec_vpn_throughput_gbps": 0.336,
+      "concurrent_sessions": 64000,
+      "interfaces": {
+        "1g_rj45": 8
+      },
+      "ha_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "features": [
+        "branch firewall",
+        "IPsec VPN",
+        "UTM",
+        "Junos security"
+      ],
+      "technical_specifications": {
+        "ngfw_throughput_gbps": 1,
+        "ips_throughput_gbps": 0.1,
+        "ipsec_vpn_throughput_gbps": 0.336,
+        "concurrent_sessions": 64000,
+        "interfaces": {
+          "1g_rj45": 8
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "SRX320",
+      "category": "NGFW",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "SRX Series Firewalls",
+      "product_url": "https://www.juniper.net/us/en/products/security/srx-series/srx320-enterprise-firewall.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/security/srx-series/srx300-line-firewall-datasheet.html",
+      "ngfw_throughput_gbps": 1,
+      "ips_throughput_gbps": 0.15,
+      "ipsec_vpn_throughput_gbps": 0.336,
+      "concurrent_sessions": 64000,
+      "interfaces": {
+        "1g_rj45": 8,
+        "1g_sfp": 6
+      },
+      "ha_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "features": [
+        "branch firewall",
+        "SFP uplinks",
+        "IPsec VPN"
+      ],
+      "technical_specifications": {
+        "ngfw_throughput_gbps": 1,
+        "ips_throughput_gbps": 0.15,
+        "ipsec_vpn_throughput_gbps": 0.336,
+        "concurrent_sessions": 64000,
+        "interfaces": {
+          "1g_rj45": 8,
+          "1g_sfp": 6
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "SRX340",
+      "category": "NGFW",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "SRX Series Firewalls",
+      "product_url": "https://www.juniper.net/us/en/products/security/srx-series/srx340-enterprise-firewall.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/security/srx-series/srx300-line-firewall-datasheet.html",
+      "ngfw_throughput_gbps": 3,
+      "ips_throughput_gbps": 0.6,
+      "ipsec_vpn_throughput_gbps": 0.8,
+      "concurrent_sessions": 256000,
+      "interfaces": {
+        "1g_rj45": 16,
+        "1g_sfp": 4
+      },
+      "ha_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "features": [
+        "midrange branch firewall",
+        "high availability",
+        "IPsec VPN"
+      ],
+      "technical_specifications": {
+        "ngfw_throughput_gbps": 3,
+        "ips_throughput_gbps": 0.6,
+        "ipsec_vpn_throughput_gbps": 0.8,
+        "concurrent_sessions": 256000,
+        "interfaces": {
+          "1g_rj45": 16,
+          "1g_sfp": 4
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "SRX345",
+      "category": "NGFW",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "SRX Series Firewalls",
+      "product_url": "https://www.juniper.net/us/en/products/security/srx-series/srx345-enterprise-firewall.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/security/srx-series/srx300-line-firewall-datasheet.html",
+      "ngfw_throughput_gbps": 5,
+      "ips_throughput_gbps": 0.8,
+      "ipsec_vpn_throughput_gbps": 1.2,
+      "concurrent_sessions": 512000,
+      "interfaces": {
+        "1g_rj45": 16,
+        "1g_sfp": 4
+      },
+      "ha_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "features": [
+        "branch firewall",
+        "high availability",
+        "IPsec VPN"
+      ],
+      "technical_specifications": {
+        "ngfw_throughput_gbps": 5,
+        "ips_throughput_gbps": 0.8,
+        "ipsec_vpn_throughput_gbps": 1.2,
+        "concurrent_sessions": 512000,
+        "interfaces": {
+          "1g_rj45": 16,
+          "1g_sfp": 4
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "SRX380",
+      "category": "NGFW",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "SRX Series Firewalls",
+      "product_url": "https://www.juniper.net/us/en/products/security/srx-series/srx380-enterprise-firewall.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/security/srx-series/srx380-firewall-datasheet.html",
+      "ngfw_throughput_gbps": 20,
+      "ips_throughput_gbps": 4,
+      "ipsec_vpn_throughput_gbps": 4,
+      "concurrent_sessions": 2000000,
+      "interfaces": {
+        "10g_sfp_plus": 4,
+        "1g_rj45": 16
+      },
+      "ha_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "1RU branch and campus firewall",
+        "redundant power",
+        "10GbE uplinks"
+      ],
+      "technical_specifications": {
+        "ngfw_throughput_gbps": 20,
+        "ips_throughput_gbps": 4,
+        "ipsec_vpn_throughput_gbps": 4,
+        "concurrent_sessions": 2000000,
+        "interfaces": {
+          "10g_sfp_plus": 4,
+          "1g_rj45": 16
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
     {
       "vendor": "Juniper",
       "model": "SRX1500",
       "category": "NGFW",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "SRX Series Firewalls",
+      "product_url": "https://www.juniper.net/us/en/products/security/srx-series/srx1500-enterprise-firewall.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/security/srx-series/srx1500-firewall-datasheet.html",
       "ngfw_throughput_gbps": 3,
       "ips_throughput_gbps": 4,
       "ssl_tls_inspection_gbps": 1,
+      "ipsec_vpn_throughput_gbps": 4,
       "concurrent_sessions": 2000000,
       "ssl_vpn_users": 2500,
-      "connections_per_second": 25000,
-      "policies": 10000,
-      "storage_tb": 0,
       "interfaces": {
         "10g_sfp_plus": 4,
         "1g_rj45": 12
       },
-      "ha_port": true,
+      "ha_supported": true,
       "management_port": true,
       "console_port": true,
-      "product_url": "https://www.juniper.net/us/en/products/security/srx-series/srx1500-enterprise-firewall.html",
-      "datasheet_url": "https://www.juniper.net/us/en/products/security/srx-series/srx1500-firewall-datasheet.html"
+      "features": [
+        "enterprise firewall",
+        "regional headquarters",
+        "SSL inspection"
+      ],
+      "technical_specifications": {
+        "ngfw_throughput_gbps": 3,
+        "ips_throughput_gbps": 4,
+        "ssl_tls_inspection_gbps": 1,
+        "ipsec_vpn_throughput_gbps": 4,
+        "concurrent_sessions": 2000000,
+        "ssl_vpn_users": 2500,
+        "interfaces": {
+          "10g_sfp_plus": 4,
+          "1g_rj45": 12
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true
+      }
     },
     {
       "vendor": "Juniper",
       "model": "SRX4100",
       "category": "NGFW",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "SRX Series Firewalls",
+      "product_url": "https://www.juniper.net/us/en/products/security/srx-series/srx4100-enterprise-firewall.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/security/srx-series/srx4100-srx4200-services-gateways-datasheet.html",
       "ngfw_throughput_gbps": 20,
       "ips_throughput_gbps": 20,
       "ssl_tls_inspection_gbps": 8,
+      "ipsec_vpn_throughput_gbps": 20,
       "concurrent_sessions": 6000000,
-      "ssl_vpn_users": 10000,
-      "connections_per_second": 350000,
-      "policies": 50000,
-      "storage_tb": 0,
       "interfaces": {
         "10g_sfp_plus": 8,
         "1g_rj45": 8
       },
-      "ha_port": true,
+      "ha_supported": true,
       "management_port": true,
       "console_port": true,
-      "product_url": "https://www.juniper.net/us/en/products/security/srx-series/srx4100-enterprise-firewall.html",
-      "datasheet_url": "https://www.juniper.net/us/en/products/security/srx-series/srx4100-srx4200-firewall-datasheet.html"
+      "redundant_power": true,
+      "features": [
+        "data center firewall",
+        "high availability",
+        "threat prevention"
+      ],
+      "technical_specifications": {
+        "ngfw_throughput_gbps": 20,
+        "ips_throughput_gbps": 20,
+        "ssl_tls_inspection_gbps": 8,
+        "ipsec_vpn_throughput_gbps": 20,
+        "concurrent_sessions": 6000000,
+        "interfaces": {
+          "10g_sfp_plus": 8,
+          "1g_rj45": 8
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
     },
     {
       "vendor": "Juniper",
       "model": "SRX4200",
       "category": "NGFW",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "SRX Series Firewalls",
+      "product_url": "https://www.juniper.net/us/en/products/security/srx-series/srx4200-enterprise-firewall.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/security/srx-series/srx4100-srx4200-services-gateways-datasheet.html",
       "ngfw_throughput_gbps": 40,
       "ips_throughput_gbps": 20,
       "ssl_tls_inspection_gbps": 15,
+      "ipsec_vpn_throughput_gbps": 30,
       "concurrent_sessions": 12000000,
-      "ssl_vpn_users": 20000,
-      "connections_per_second": 500000,
-      "policies": 100000,
-      "storage_tb": 1,
       "interfaces": {
         "25g_sfp28": 4,
         "10g_sfp_plus": 8,
         "1_10g_rj45": 2
       },
-      "ha_port": true,
+      "ha_supported": true,
       "management_port": true,
       "console_port": true,
-      "product_url": "https://www.juniper.net/us/en/products/security/srx-series/srx4200-enterprise-firewall.html",
-      "datasheet_url": "https://www.juniper.net/us/en/products/security/srx-series/srx4100-srx4200-firewall-datasheet.html"
+      "redundant_power": true,
+      "features": [
+        "data center firewall",
+        "high scale VPN",
+        "redundant power"
+      ],
+      "technical_specifications": {
+        "ngfw_throughput_gbps": 40,
+        "ips_throughput_gbps": 20,
+        "ssl_tls_inspection_gbps": 15,
+        "ipsec_vpn_throughput_gbps": 30,
+        "concurrent_sessions": 12000000,
+        "interfaces": {
+          "25g_sfp28": 4,
+          "10g_sfp_plus": 8,
+          "1_10g_rj45": 2
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "SRX4600",
+      "category": "NGFW",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "SRX Series Firewalls",
+      "product_url": "https://www.juniper.net/us/en/products/security/srx-series/srx4600-enterprise-firewall.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/security/srx-series/srx4600-firewall-datasheet.html",
+      "ngfw_throughput_gbps": 400,
+      "ips_throughput_gbps": 40,
+      "ipsec_vpn_throughput_gbps": 100,
+      "concurrent_sessions": 60000000,
+      "interfaces": {
+        "100g_qsfp28": 4,
+        "40g_qsfp_plus": 4,
+        "10g_sfp_plus": 24
+      },
+      "ha_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "high performance firewall",
+        "data center edge",
+        "100GbE"
+      ],
+      "technical_specifications": {
+        "ngfw_throughput_gbps": 400,
+        "ips_throughput_gbps": 40,
+        "ipsec_vpn_throughput_gbps": 100,
+        "concurrent_sessions": 60000000,
+        "interfaces": {
+          "100g_qsfp28": 4,
+          "40g_qsfp_plus": 4,
+          "10g_sfp_plus": 24
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "SRX5400",
+      "category": "NGFW",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "SRX Series Firewalls",
+      "product_url": "https://www.juniper.net/us/en/products/security/srx-series/srx5400-enterprise-firewall.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/security/srx-series/srx5400-srx5600-srx5800-firewall-datasheet.html",
+      "ngfw_throughput_gbps": 480,
+      "ips_throughput_gbps": 60,
+      "ipsec_vpn_throughput_gbps": 100,
+      "concurrent_sessions": 60000000,
+      "interfaces": {
+        "100g_qsfp28": 12,
+        "40g_qsfp_plus": 12,
+        "10g_sfp_plus": 40
+      },
+      "ha_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "modular chassis firewall",
+        "IOC4 options",
+        "carrier-class HA"
+      ],
+      "technical_specifications": {
+        "ngfw_throughput_gbps": 480,
+        "ips_throughput_gbps": 60,
+        "ipsec_vpn_throughput_gbps": 100,
+        "concurrent_sessions": 60000000,
+        "interfaces": {
+          "100g_qsfp28": 12,
+          "40g_qsfp_plus": 12,
+          "10g_sfp_plus": 40
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "SRX5600",
+      "category": "NGFW",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "SRX Series Firewalls",
+      "product_url": "https://www.juniper.net/us/en/products/security/srx-series/srx5600-enterprise-firewall.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/security/srx-series/srx5400-srx5600-srx5800-firewall-datasheet.html",
+      "ngfw_throughput_gbps": 960,
+      "ips_throughput_gbps": 120,
+      "ipsec_vpn_throughput_gbps": 200,
+      "concurrent_sessions": 120000000,
+      "interfaces": {
+        "100g_qsfp28": 24,
+        "40g_qsfp_plus": 24,
+        "10g_sfp_plus": 80
+      },
+      "ha_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "modular chassis firewall",
+        "service provider security",
+        "carrier-class HA"
+      ],
+      "technical_specifications": {
+        "ngfw_throughput_gbps": 960,
+        "ips_throughput_gbps": 120,
+        "ipsec_vpn_throughput_gbps": 200,
+        "concurrent_sessions": 120000000,
+        "interfaces": {
+          "100g_qsfp28": 24,
+          "40g_qsfp_plus": 24,
+          "10g_sfp_plus": 80
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "SRX5800",
+      "category": "NGFW",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "SRX Series Firewalls",
+      "product_url": "https://www.juniper.net/us/en/products/security/srx-series/srx5800-enterprise-firewall.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/security/srx-series/srx5400-srx5600-srx5800-firewall-datasheet.html",
+      "ngfw_throughput_gbps": 2000,
+      "ips_throughput_gbps": 240,
+      "ipsec_vpn_throughput_gbps": 400,
+      "concurrent_sessions": 240000000,
+      "interfaces": {
+        "100g_qsfp28": 48,
+        "40g_qsfp_plus": 48,
+        "10g_sfp_plus": 160
+      },
+      "ha_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "largest SRX chassis",
+        "data center and service provider",
+        "high availability"
+      ],
+      "technical_specifications": {
+        "ngfw_throughput_gbps": 2000,
+        "ips_throughput_gbps": 240,
+        "ipsec_vpn_throughput_gbps": 400,
+        "concurrent_sessions": 240000000,
+        "interfaces": {
+          "100g_qsfp28": 48,
+          "40g_qsfp_plus": 48,
+          "10g_sfp_plus": 160
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "EX2300",
+      "category": "ACCESS_SWITCH",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "EX Series Ethernet Switches",
+      "product_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex2300-ethernet-switch.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex2300-line-of-ethernet-switches-datasheet.html",
+      "switching_capacity_gbps": 176,
+      "throughput_gbps": 132,
+      "interfaces": {
+        "10g_sfp_plus": 4,
+        "1g_rj45": 48
+      },
+      "poe_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "features": [
+        "compact access switch",
+        "Virtual Chassis",
+        "PoE options"
+      ],
+      "technical_specifications": {
+        "switching_capacity_gbps": 176,
+        "throughput_gbps": 132,
+        "interfaces": {
+          "10g_sfp_plus": 4,
+          "1g_rj45": 48
+        },
+        "poe_supported": true,
+        "management_port": true,
+        "console_port": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "EX3400",
+      "category": "ACCESS_SWITCH",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "EX Series Ethernet Switches",
+      "product_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex3400-ethernet-switch.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex3400-ethernet-switch-datasheet.html",
+      "switching_capacity_gbps": 336,
+      "throughput_gbps": 252,
+      "interfaces": {
+        "10g_sfp_plus": 4,
+        "1g_rj45": 48
+      },
+      "poe_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "features": [
+        "campus access",
+        "Virtual Chassis",
+        "PoE options"
+      ],
+      "technical_specifications": {
+        "switching_capacity_gbps": 336,
+        "throughput_gbps": 252,
+        "interfaces": {
+          "10g_sfp_plus": 4,
+          "1g_rj45": 48
+        },
+        "poe_supported": true,
+        "management_port": true,
+        "console_port": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "EX4100",
+      "category": "ACCESS_SWITCH",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "EX Series Ethernet Switches",
+      "product_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex4100-line-of-ethernet-switches.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex4100-line-of-ethernet-switches-datasheet.html",
+      "switching_capacity_gbps": 448,
+      "throughput_gbps": 333,
+      "interfaces": {
+        "10g_sfp_plus": 4,
+        "1g_rj45": 48
+      },
+      "poe_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "AI-Native access switch",
+        "PoE",
+        "Mist Wired Assurance"
+      ],
+      "technical_specifications": {
+        "switching_capacity_gbps": 448,
+        "throughput_gbps": 333,
+        "interfaces": {
+          "10g_sfp_plus": 4,
+          "1g_rj45": 48
+        },
+        "poe_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "EX4100-F",
+      "category": "ACCESS_SWITCH",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "EX Series Ethernet Switches",
+      "product_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex4100-f-line-of-ethernet-switches.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex4100-f-line-of-ethernet-switches-datasheet.html",
+      "switching_capacity_gbps": 176,
+      "throughput_gbps": 132,
+      "interfaces": {
+        "10g_sfp_plus": 4,
+        "1g_rj45": 48
+      },
+      "poe_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "features": [
+        "fanless access switch options",
+        "PoE",
+        "campus access"
+      ],
+      "technical_specifications": {
+        "switching_capacity_gbps": 176,
+        "throughput_gbps": 132,
+        "interfaces": {
+          "10g_sfp_plus": 4,
+          "1g_rj45": 48
+        },
+        "poe_supported": true,
+        "management_port": true,
+        "console_port": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "EX4300",
+      "category": "ACCESS_SWITCH",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "EX Series Ethernet Switches",
+      "product_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex4300-enterprise-switch.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex4300-line-of-ethernet-switches-datasheet.html",
+      "switching_capacity_gbps": 960,
+      "throughput_gbps": 714,
+      "interfaces": {
+        "40g_qsfp_plus": 4,
+        "10g_sfp_plus": 8,
+        "1g_rj45": 48
+      },
+      "poe_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "campus distribution",
+        "Virtual Chassis",
+        "redundant power"
+      ],
+      "technical_specifications": {
+        "switching_capacity_gbps": 960,
+        "throughput_gbps": 714,
+        "interfaces": {
+          "40g_qsfp_plus": 4,
+          "10g_sfp_plus": 8,
+          "1g_rj45": 48
+        },
+        "poe_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
     },
     {
       "vendor": "Juniper",
       "model": "EX4400",
       "category": "ACCESS_SWITCH",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "EX Series Ethernet Switches",
+      "product_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex4400-enterprise-switch.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex4400-line-of-ethernet-switches-datasheet.html",
       "switching_capacity_gbps": 960,
       "throughput_gbps": 714,
       "interfaces": {
@@ -78,34 +685,181 @@
         "10g_sfp_plus": 8,
         "1g_rj45": 48
       },
-      "ha_port": false,
+      "poe_supported": true,
       "management_port": true,
       "console_port": true,
-      "product_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex4400-enterprise-switch.html",
-      "datasheet_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex4400-line-of-ethernet-switches-datasheet.html"
+      "redundant_power": true,
+      "features": [
+        "AI-Native campus switch",
+        "EVPN-VXLAN",
+        "PoE options"
+      ],
+      "technical_specifications": {
+        "switching_capacity_gbps": 960,
+        "throughput_gbps": 714,
+        "interfaces": {
+          "25g_sfp28": 4,
+          "10g_sfp_plus": 8,
+          "1g_rj45": 48
+        },
+        "poe_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "EX4650",
+      "category": "DATACENTER_SWITCH",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "EX Series Ethernet Switches",
+      "product_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex4650-ethernet-switch.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex4650-ethernet-switch-datasheet.html",
+      "switching_capacity_gbps": 2000,
+      "throughput_gbps": 1488,
+      "interfaces": {
+        "100g_qsfp28": 8,
+        "25g_sfp28": 48
+      },
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "campus core",
+        "data center leaf",
+        "25GbE and 100GbE"
+      ],
+      "technical_specifications": {
+        "switching_capacity_gbps": 2000,
+        "throughput_gbps": 1488,
+        "interfaces": {
+          "100g_qsfp28": 8,
+          "25g_sfp28": 48
+        },
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "EX9200",
+      "category": "DATACENTER_SWITCH",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "EX Series Ethernet Switches",
+      "product_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex9200-line-of-ethernet-switches.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/ex-series/ex9200-line-of-ethernet-switches-datasheet.html",
+      "switching_capacity_gbps": 13200,
+      "throughput_gbps": 13200,
+      "interfaces": {
+        "100g_qsfp28": 36,
+        "40g_qsfp_plus": 36,
+        "10g_sfp_plus": 320
+      },
+      "ha_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "modular campus core",
+        "data center core",
+        "high availability"
+      ],
+      "technical_specifications": {
+        "switching_capacity_gbps": 13200,
+        "throughput_gbps": 13200,
+        "interfaces": {
+          "100g_qsfp28": 36,
+          "40g_qsfp_plus": 36,
+          "10g_sfp_plus": 320
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
     },
     {
       "vendor": "Juniper",
       "model": "QFX5120",
       "category": "DATACENTER_SWITCH",
-      "switching_capacity_gbps": 2160,
-      "throughput_gbps": 1620,
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "QFX Series Data Center Switches",
+      "product_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5120-data-center-switches.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5120-ethernet-switch-datasheet.html",
+      "switching_capacity_gbps": 6400,
+      "throughput_gbps": 6400,
       "interfaces": {
-        "100g_qsfp28": 4,
-        "40g_qsfp_plus": 4,
+        "100g_qsfp28": 8,
+        "40g_qsfp_plus": 8,
         "25g_sfp28": 48,
         "10g_sfp_plus": 48
       },
-      "ha_port": false,
       "management_port": true,
       "console_port": true,
-      "product_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5120-data-center-switches.html",
-      "datasheet_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5120-ethernet-switch-datasheet.html"
+      "redundant_power": true,
+      "features": [
+        "leaf/spine",
+        "EVPN-VXLAN",
+        "MACsec options"
+      ],
+      "technical_specifications": {
+        "switching_capacity_gbps": 6400,
+        "throughput_gbps": 6400,
+        "interfaces": {
+          "100g_qsfp28": 8,
+          "40g_qsfp_plus": 8,
+          "25g_sfp28": 48,
+          "10g_sfp_plus": 48
+        },
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "QFX5130",
+      "category": "DATACENTER_SWITCH",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "QFX Series Data Center Switches",
+      "product_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5130-line-of-switches.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5130-line-of-switches-datasheet.html",
+      "switching_capacity_gbps": 25600,
+      "throughput_gbps": 25600,
+      "interfaces": {
+        "400g_qsfp_dd": 32,
+        "100g_qsfp28": 128
+      },
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "400GbE data center switch",
+        "AI fabric",
+        "leaf/spine"
+      ],
+      "technical_specifications": {
+        "switching_capacity_gbps": 25600,
+        "throughput_gbps": 25600,
+        "interfaces": {
+          "400g_qsfp_dd": 32,
+          "100g_qsfp28": 128
+        },
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
     },
     {
       "vendor": "Juniper",
       "model": "QFX5200",
       "category": "DATACENTER_SWITCH",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "QFX Series Data Center Switches",
+      "product_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5200-data-center-switches.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5200-switch-datasheet.html",
       "switching_capacity_gbps": 6400,
       "throughput_gbps": 4800,
       "interfaces": {
@@ -114,16 +868,172 @@
         "25g_sfp28": 64,
         "10g_sfp_plus": 64
       },
-      "ha_port": false,
       "management_port": true,
       "console_port": true,
-      "product_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5200-data-center-switches.html",
-      "datasheet_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5200-switch-datasheet.html"
+      "redundant_power": true,
+      "features": [
+        "fixed data center switch",
+        "leaf/spine",
+        "100GbE"
+      ],
+      "technical_specifications": {
+        "switching_capacity_gbps": 6400,
+        "throughput_gbps": 4800,
+        "interfaces": {
+          "100g_qsfp28": 32,
+          "40g_qsfp_plus": 32,
+          "25g_sfp28": 64,
+          "10g_sfp_plus": 64
+        },
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "QFX5210",
+      "category": "DATACENTER_SWITCH",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "QFX Series Data Center Switches",
+      "product_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5210-data-center-switch.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5210-ethernet-switch-datasheet.html",
+      "switching_capacity_gbps": 12800,
+      "throughput_gbps": 9600,
+      "interfaces": {
+        "100g_qsfp28": 64,
+        "40g_qsfp_plus": 64
+      },
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "100GbE spine",
+        "EVPN-VXLAN",
+        "high density"
+      ],
+      "technical_specifications": {
+        "switching_capacity_gbps": 12800,
+        "throughput_gbps": 9600,
+        "interfaces": {
+          "100g_qsfp28": 64,
+          "40g_qsfp_plus": 64
+        },
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "QFX5220",
+      "category": "DATACENTER_SWITCH",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "QFX Series Data Center Switches",
+      "product_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5220-data-center-switch.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5220-ethernet-switch-datasheet.html",
+      "switching_capacity_gbps": 12800,
+      "throughput_gbps": 12800,
+      "interfaces": {
+        "400g_qsfp_dd": 32,
+        "100g_qsfp28": 128
+      },
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "400GbE",
+        "AI data center",
+        "spine switch"
+      ],
+      "technical_specifications": {
+        "switching_capacity_gbps": 12800,
+        "throughput_gbps": 12800,
+        "interfaces": {
+          "400g_qsfp_dd": 32,
+          "100g_qsfp28": 128
+        },
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "QFX5240",
+      "category": "DATACENTER_SWITCH",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "QFX Series Data Center Switches",
+      "product_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5240-line-of-switches.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5240-line-of-switches-datasheet.html",
+      "switching_capacity_gbps": 51200,
+      "throughput_gbps": 51200,
+      "interfaces": {
+        "800g_qsfp_dd": 64,
+        "400g_qsfp_dd": 128
+      },
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "800GbE data center switch",
+        "AI cluster fabric",
+        "high radix spine"
+      ],
+      "technical_specifications": {
+        "switching_capacity_gbps": 51200,
+        "throughput_gbps": 51200,
+        "interfaces": {
+          "800g_qsfp_dd": 64,
+          "400g_qsfp_dd": 128
+        },
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "QFX5700",
+      "category": "DATACENTER_SWITCH",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "QFX Series Data Center Switches",
+      "product_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5700-switch.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx5700-switch-datasheet.html",
+      "switching_capacity_gbps": 51200,
+      "throughput_gbps": 51200,
+      "interfaces": {
+        "400g_qsfp_dd": 64,
+        "100g_qsfp28": 256
+      },
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "modular switch",
+        "400GbE",
+        "data center spine"
+      ],
+      "technical_specifications": {
+        "switching_capacity_gbps": 51200,
+        "throughput_gbps": 51200,
+        "interfaces": {
+          "400g_qsfp_dd": 64,
+          "100g_qsfp28": 256
+        },
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
     },
     {
       "vendor": "Juniper",
       "model": "QFX10002",
       "category": "DATACENTER_SWITCH",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "QFX Series Data Center Switches",
+      "product_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx10002-data-center-switch.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx10000-line-datasheet.html",
       "switching_capacity_gbps": 24000,
       "throughput_gbps": 24000,
       "interfaces": {
@@ -131,49 +1041,898 @@
         "40g_qsfp_plus": 72,
         "10g_sfp_plus": 288
       },
-      "ha_port": true,
+      "ha_supported": true,
       "management_port": true,
       "console_port": true,
-      "product_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx10002-data-center-switch.html",
-      "datasheet_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx10000-line-datasheet.html"
+      "redundant_power": true,
+      "features": [
+        "modular data center switch",
+        "spine",
+        "high availability"
+      ],
+      "technical_specifications": {
+        "switching_capacity_gbps": 24000,
+        "throughput_gbps": 24000,
+        "interfaces": {
+          "100g_qsfp28": 72,
+          "40g_qsfp_plus": 72,
+          "10g_sfp_plus": 288
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "QFX10008",
+      "category": "DATACENTER_SWITCH",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "QFX Series Data Center Switches",
+      "product_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx10008-data-center-switch.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/switches/qfx-series/qfx10000-line-datasheet.html",
+      "switching_capacity_gbps": 96000,
+      "throughput_gbps": 96000,
+      "interfaces": {
+        "100g_qsfp28": 288,
+        "40g_qsfp_plus": 288,
+        "10g_sfp_plus": 1152
+      },
+      "ha_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "modular spine",
+        "large fabric",
+        "high availability"
+      ],
+      "technical_specifications": {
+        "switching_capacity_gbps": 96000,
+        "throughput_gbps": 96000,
+        "interfaces": {
+          "100g_qsfp28": 288,
+          "40g_qsfp_plus": 288,
+          "10g_sfp_plus": 1152
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "ACX710",
+      "category": "ROUTER",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "ACX Series Access Routers",
+      "product_url": "https://www.juniper.net/us/en/products/routers/acx-series/acx710-universal-access-router.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/routers/acx-series/acx710-universal-access-router-datasheet.html",
+      "throughput_gbps": 240,
+      "interfaces": {
+        "100g_qsfp28": 4,
+        "10g_sfp_plus": 16,
+        "1g_rj45": 8
+      },
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "access router",
+        "metro ethernet",
+        "1/10/100GbE"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 240,
+        "interfaces": {
+          "100g_qsfp28": 4,
+          "10g_sfp_plus": 16,
+          "1g_rj45": 8
+        },
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "ACX1000",
+      "category": "ROUTER",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "ACX Series Access Routers",
+      "product_url": "https://www.juniper.net/us/en/products/routers/acx-series/acx1000-universal-access-router.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/routers/acx-series/acx1000-universal-access-router-datasheet.html",
+      "throughput_gbps": 60,
+      "interfaces": {
+        "10g_sfp_plus": 8,
+        "1g_rj45": 8
+      },
+      "management_port": true,
+      "console_port": true,
+      "features": [
+        "compact access router",
+        "metro",
+        "carrier ethernet"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 60,
+        "interfaces": {
+          "10g_sfp_plus": 8,
+          "1g_rj45": 8
+        },
+        "management_port": true,
+        "console_port": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "ACX2200",
+      "category": "ROUTER",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "ACX Series Access Routers",
+      "product_url": "https://www.juniper.net/us/en/products/routers/acx-series/acx2200-ethernet-only-high-capacity-router.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/routers/acx-series/acx2200-universal-access-router-datasheet.html",
+      "throughput_gbps": 80,
+      "interfaces": {
+        "10g_sfp_plus": 8,
+        "1g_rj45": 24
+      },
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "metro access",
+        "high capacity",
+        "carrier ethernet"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 80,
+        "interfaces": {
+          "10g_sfp_plus": 8,
+          "1g_rj45": 24
+        },
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "ACX5000",
+      "category": "ROUTER",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "ACX Series Access Routers",
+      "product_url": "https://www.juniper.net/us/en/products/routers/acx-series/acx5000-line-of-universal-metro-routers.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/routers/acx-series/acx5000-line-of-universal-metro-routers-datasheet.html",
+      "throughput_gbps": 800,
+      "interfaces": {
+        "100g_qsfp28": 6,
+        "10g_sfp_plus": 48
+      },
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "universal metro router",
+        "MPLS",
+        "segment routing"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 800,
+        "interfaces": {
+          "100g_qsfp28": 6,
+          "10g_sfp_plus": 48
+        },
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "ACX5448",
+      "category": "ROUTER",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "ACX Series Access Routers",
+      "product_url": "https://www.juniper.net/us/en/products/routers/acx-series/acx5448-universal-metro-router.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/routers/acx-series/acx5448-universal-metro-router-datasheet.html",
+      "throughput_gbps": 1200,
+      "interfaces": {
+        "100g_qsfp28": 6,
+        "10g_sfp_plus": 48
+      },
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "metro aggregation",
+        "timing",
+        "100GbE"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 1200,
+        "interfaces": {
+          "100g_qsfp28": 6,
+          "10g_sfp_plus": 48
+        },
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "ACX7000",
+      "category": "ROUTER",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "ACX Series Access Routers",
+      "product_url": "https://www.juniper.net/us/en/products/routers/acx-series/acx7000-family.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/routers/acx-series/acx7000-family-datasheet.html",
+      "throughput_gbps": 4800,
+      "interfaces": {
+        "400g_qsfp_dd": 12,
+        "100g_qsfp28": 48
+      },
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "Cloud Metro",
+        "400GbE",
+        "access and aggregation"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 4800,
+        "interfaces": {
+          "400g_qsfp_dd": 12,
+          "100g_qsfp28": 48
+        },
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
     },
     {
       "vendor": "Juniper",
       "model": "MX204",
       "category": "ROUTER",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "MX Series Universal Routing Platforms",
+      "product_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx204-universal-routing-platform.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx-series-universal-routing-platforms-datasheet.html",
       "throughput_gbps": 400,
       "interfaces": {
         "100g_qsfp28": 4,
         "10g_sfp_plus": 8
       },
-      "ha_port": false,
       "management_port": true,
       "console_port": true,
-      "product_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx204-universal-routing-platform.html",
-      "datasheet_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx204-universal-routing-platform-datasheet.html"
+      "redundant_power": true,
+      "features": [
+        "compact edge router",
+        "400G throughput",
+        "service provider edge"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 400,
+        "interfaces": {
+          "100g_qsfp28": 4,
+          "10g_sfp_plus": 8
+        },
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "MX304",
+      "category": "ROUTER",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "MX Series Universal Routing Platforms",
+      "product_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx304-universal-routing-platform.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx-series-universal-routing-platforms-datasheet.html",
+      "throughput_gbps": 4800,
+      "interfaces": {
+        "400g_qsfp_dd": 12,
+        "100g_qsfp28": 48,
+        "25g_sfp28": 96
+      },
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "2RU edge router",
+        "400GbE",
+        "Trio silicon"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 4800,
+        "interfaces": {
+          "400g_qsfp_dd": 12,
+          "100g_qsfp28": 48,
+          "25g_sfp28": 96
+        },
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
     },
     {
       "vendor": "Juniper",
       "model": "MX240",
       "category": "ROUTER",
-      "throughput_gbps": 3000,
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "MX Series Universal Routing Platforms",
+      "product_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx240-universal-routing-platform.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx-series-universal-routing-platforms-datasheet.html",
+      "throughput_gbps": 1920,
       "interfaces": {
-        "100g_qsfp28": 12,
-        "40g_qsfp_plus": 12,
-        "10g_sfp_plus": 48
+        "100g_qsfp28": 24,
+        "40g_qsfp_plus": 48,
+        "10g_sfp_plus": 160
       },
-      "ha_port": true,
+      "ha_supported": true,
       "management_port": true,
       "console_port": true,
-      "product_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx240-universal-routing-platform.html",
-      "datasheet_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx240-universal-routing-platform-datasheet.html"
+      "redundant_power": true,
+      "features": [
+        "modular edge router",
+        "redundant routing engines",
+        "service provider edge"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 1920,
+        "interfaces": {
+          "100g_qsfp28": 24,
+          "40g_qsfp_plus": 48,
+          "10g_sfp_plus": 160
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
     },
     {
       "vendor": "Juniper",
-      "model": "Apstra",
+      "model": "MX480",
+      "category": "ROUTER",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "MX Series Universal Routing Platforms",
+      "product_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx480-universal-routing-platform.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx-series-universal-routing-platforms-datasheet.html",
+      "throughput_gbps": 5760,
+      "interfaces": {
+        "100g_qsfp28": 72,
+        "40g_qsfp_plus": 144,
+        "10g_sfp_plus": 480
+      },
+      "ha_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "modular edge router",
+        "high availability",
+        "service edge"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 5760,
+        "interfaces": {
+          "100g_qsfp28": 72,
+          "40g_qsfp_plus": 144,
+          "10g_sfp_plus": 480
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "MX960",
+      "category": "ROUTER",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "MX Series Universal Routing Platforms",
+      "product_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx960-universal-routing-platform.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx-series-universal-routing-platforms-datasheet.html",
+      "throughput_gbps": 12000,
+      "interfaces": {
+        "100g_qsfp28": 144,
+        "40g_qsfp_plus": 288,
+        "10g_sfp_plus": 960
+      },
+      "ha_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "large modular edge router",
+        "carrier scale",
+        "high availability"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 12000,
+        "interfaces": {
+          "100g_qsfp28": 144,
+          "40g_qsfp_plus": 288,
+          "10g_sfp_plus": 960
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "MX10003",
+      "category": "ROUTER",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "MX Series Universal Routing Platforms",
+      "product_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx10003-universal-routing-platform.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx10003-universal-routing-platform-datasheet.html",
+      "throughput_gbps": 24000,
+      "interfaces": {
+        "400g_qsfp_dd": 36,
+        "100g_qsfp28": 144
+      },
+      "ha_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "cloud-grade routing",
+        "high scale edge",
+        "400GbE"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 24000,
+        "interfaces": {
+          "400g_qsfp_dd": 36,
+          "100g_qsfp28": 144
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "MX10008",
+      "category": "ROUTER",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "MX Series Universal Routing Platforms",
+      "product_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx10008-universal-routing-platform.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/routers/mx-series/mx10008-mx10016-universal-routing-platforms-datasheet.html",
+      "throughput_gbps": 76800,
+      "interfaces": {
+        "400g_qsfp_dd": 96,
+        "100g_qsfp28": 384
+      },
+      "ha_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "large cloud edge router",
+        "modular",
+        "high availability"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 76800,
+        "interfaces": {
+          "400g_qsfp_dd": 96,
+          "100g_qsfp28": 384
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "PTX10001",
+      "category": "ROUTER",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "PTX Series Packet Transport Routers",
+      "product_url": "https://www.juniper.net/us/en/products/routers/ptx-series/ptx10001-packet-transport-router.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/routers/ptx-series/ptx10001-ptx10003-fixed-configuration-packet-transport-routers-datasheet.html",
+      "throughput_gbps": 3000,
+      "interfaces": {
+        "100g_qsfp28": 32,
+        "400g_qsfp_dd": 8
+      },
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "packet transport router",
+        "core routing",
+        "100/400GbE"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 3000,
+        "interfaces": {
+          "100g_qsfp28": 32,
+          "400g_qsfp_dd": 8
+        },
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "PTX10003",
+      "category": "ROUTER",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "PTX Series Packet Transport Routers",
+      "product_url": "https://www.juniper.net/us/en/products/routers/ptx-series/ptx10003-packet-transport-router.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/routers/ptx-series/ptx10001-ptx10003-fixed-configuration-packet-transport-routers-datasheet.html",
+      "throughput_gbps": 9600,
+      "interfaces": {
+        "400g_qsfp_dd": 24,
+        "100g_qsfp28": 96
+      },
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "fixed core router",
+        "packet transport",
+        "400GbE"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 9600,
+        "interfaces": {
+          "400g_qsfp_dd": 24,
+          "100g_qsfp28": 96
+        },
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "PTX10008",
+      "category": "ROUTER",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "PTX Series Packet Transport Routers",
+      "product_url": "https://www.juniper.net/us/en/products/routers/ptx-series/ptx10008-packet-transport-router.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/routers/ptx-series/ptx10000-line-of-packet-transport-routers-datasheet.html",
+      "throughput_gbps": 230400,
+      "interfaces": {
+        "800g_qsfp_dd": 288,
+        "400g_qsfp_dd": 576,
+        "100g_qsfp28": 2304
+      },
+      "ha_supported": true,
+      "management_port": true,
+      "console_port": true,
+      "redundant_power": true,
+      "features": [
+        "modular packet transport",
+        "core routing",
+        "800GbE"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 230400,
+        "interfaces": {
+          "800g_qsfp_dd": 288,
+          "400g_qsfp_dd": 576,
+          "100g_qsfp28": 2304
+        },
+        "ha_supported": true,
+        "management_port": true,
+        "console_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "AP24",
+      "category": "WIRELESS_AP",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "Mist Wireless Access Points",
+      "product_url": "https://www.juniper.net/us/en/products/wireless-access-points/ap24-access-point.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/wireless-access-points/mist-access-points-datasheet.html",
+      "wifi_standard": "Wi-Fi 6",
+      "radios": 4,
+      "spatial_streams": 4,
+      "interfaces": {
+        "1g_rj45": 1
+      },
+      "features": [
+        "Mist AI",
+        "Wi-Fi 6",
+        "Bluetooth LE"
+      ],
+      "technical_specifications": {
+        "wifi_standard": "Wi-Fi 6",
+        "radios": 4,
+        "spatial_streams": 4,
+        "interfaces": {
+          "1g_rj45": 1
+        }
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "AP32",
+      "category": "WIRELESS_AP",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "Mist Wireless Access Points",
+      "product_url": "https://www.juniper.net/us/en/products/wireless-access-points/ap32-access-point.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/wireless-access-points/mist-access-points-datasheet.html",
+      "wifi_standard": "Wi-Fi 6",
+      "radios": 4,
+      "spatial_streams": 4,
+      "interfaces": {
+        "1g_rj45": 1
+      },
+      "features": [
+        "Mist AI",
+        "Wi-Fi 6",
+        "indoor access point"
+      ],
+      "technical_specifications": {
+        "wifi_standard": "Wi-Fi 6",
+        "radios": 4,
+        "spatial_streams": 4,
+        "interfaces": {
+          "1g_rj45": 1
+        }
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "AP43",
+      "category": "WIRELESS_AP",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "Mist Wireless Access Points",
+      "product_url": "https://www.juniper.net/us/en/products/wireless-access-points/ap43-access-point.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/wireless-access-points/mist-access-points-datasheet.html",
+      "wifi_standard": "Wi-Fi 6",
+      "radios": 4,
+      "spatial_streams": 4,
+      "interfaces": {
+        "1g_rj45": 1
+      },
+      "features": [
+        "Mist AI",
+        "Wi-Fi 6",
+        "indoor access point"
+      ],
+      "technical_specifications": {
+        "wifi_standard": "Wi-Fi 6",
+        "radios": 4,
+        "spatial_streams": 4,
+        "interfaces": {
+          "1g_rj45": 1
+        }
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "AP45",
+      "category": "WIRELESS_AP",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "Mist Wireless Access Points",
+      "product_url": "https://www.juniper.net/us/en/products/wireless-access-points/ap45-access-point.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/wireless-access-points/mist-access-points-datasheet.html",
+      "wifi_standard": "Wi-Fi 6E",
+      "radios": 4,
+      "spatial_streams": 4,
+      "interfaces": {
+        "1g_rj45": 1,
+        "10g_rj45": 1
+      },
+      "features": [
+        "Mist AI",
+        "Wi-Fi 6E",
+        "tri-band access point"
+      ],
+      "technical_specifications": {
+        "wifi_standard": "Wi-Fi 6E",
+        "radios": 4,
+        "spatial_streams": 4,
+        "interfaces": {
+          "1g_rj45": 1,
+          "10g_rj45": 1
+        }
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "AP47",
+      "category": "WIRELESS_AP",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "Mist Wireless Access Points",
+      "product_url": "https://www.juniper.net/us/en/products/wireless-access-points/ap47-access-point.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/wireless-access-points/mist-access-points-datasheet.html",
+      "wifi_standard": "Wi-Fi 7",
+      "radios": 4,
+      "spatial_streams": 4,
+      "interfaces": {
+        "10g_rj45": 1
+      },
+      "features": [
+        "Mist AI",
+        "Wi-Fi 7",
+        "tri-band access point"
+      ],
+      "technical_specifications": {
+        "wifi_standard": "Wi-Fi 7",
+        "radios": 4,
+        "spatial_streams": 4,
+        "interfaces": {
+          "10g_rj45": 1
+        }
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "SSR120",
+      "category": "SDWAN_ROUTER",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "Session Smart Routers",
+      "product_url": "https://www.juniper.net/us/en/products/sd-wan/session-smart-router/ssr120-session-smart-router.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/sd-wan/session-smart-router/session-smart-router-datasheet.html",
+      "throughput_gbps": 1,
+      "interfaces": {
+        "1g_rj45": 6
+      },
+      "management_port": true,
+      "features": [
+        "SD-WAN",
+        "Session Smart Routing",
+        "WAN edge"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 1,
+        "interfaces": {
+          "1g_rj45": 6
+        },
+        "management_port": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "SSR130",
+      "category": "SDWAN_ROUTER",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "Session Smart Routers",
+      "product_url": "https://www.juniper.net/us/en/products/sd-wan/session-smart-router/ssr130-session-smart-router.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/sd-wan/session-smart-router/session-smart-router-datasheet.html",
+      "throughput_gbps": 2,
+      "interfaces": {
+        "1g_rj45": 8,
+        "10g_sfp_plus": 2
+      },
+      "management_port": true,
+      "features": [
+        "SD-WAN",
+        "WAN edge",
+        "Session Smart Routing"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 2,
+        "interfaces": {
+          "1g_rj45": 8,
+          "10g_sfp_plus": 2
+        },
+        "management_port": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "SSR1400",
+      "category": "SDWAN_ROUTER",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "Session Smart Routers",
+      "product_url": "https://www.juniper.net/us/en/products/sd-wan/session-smart-router/ssr1400-session-smart-router.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/sd-wan/session-smart-router/session-smart-router-datasheet.html",
+      "throughput_gbps": 20,
+      "interfaces": {
+        "10g_sfp_plus": 8,
+        "1g_rj45": 8
+      },
+      "management_port": true,
+      "redundant_power": true,
+      "features": [
+        "large branch SD-WAN",
+        "WAN edge",
+        "Session Smart Routing"
+      ],
+      "technical_specifications": {
+        "throughput_gbps": 20,
+        "interfaces": {
+          "10g_sfp_plus": 8,
+          "1g_rj45": 8
+        },
+        "management_port": true,
+        "redundant_power": true
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "Apstra Data Center Director",
       "category": "SDN_AUTOMATION",
-      "product_url": "https://www.juniper.net/us/en/products/network-automation/apstra.html",
-      "datasheet_url": "https://www.juniper.net/us/en/products/network-automation/apstra-datasheet.html"
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "Data Center Automation",
+      "product_url": "https://www.juniper.net/us/en/products/network-automation/apstra-data-center-director.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/network-automation/apstra-data-center-director-datasheet.html",
+      "managed_devices": 10000,
+      "features": [
+        "intent-based networking",
+        "data center automation",
+        "EVPN-VXLAN fabric operations"
+      ],
+      "technical_specifications": {
+        "managed_devices": 10000
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "Mist Wired Assurance",
+      "category": "CENTRALIZED_MANAGEMENT",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "Mist AI-Native Networking",
+      "product_url": "https://www.juniper.net/us/en/products/network-management/wired-assurance.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/network-management/mist-ai-native-networking-platform-datasheet.html",
+      "managed_devices": 100000,
+      "features": [
+        "cloud management",
+        "AIOps",
+        "switch assurance"
+      ],
+      "technical_specifications": {
+        "managed_devices": 100000
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "Mist Wireless Assurance",
+      "category": "CENTRALIZED_MANAGEMENT",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "Mist AI-Native Networking",
+      "product_url": "https://www.juniper.net/us/en/products/network-management/wireless-assurance.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/network-management/mist-ai-native-networking-platform-datasheet.html",
+      "managed_devices": 100000,
+      "features": [
+        "cloud management",
+        "AIOps",
+        "wireless assurance"
+      ],
+      "technical_specifications": {
+        "managed_devices": 100000
+      }
+    },
+    {
+      "vendor": "Juniper",
+      "model": "Security Director Cloud",
+      "category": "CENTRALIZED_MANAGEMENT",
+      "main_heading": "Routing, Switching, Security, and AI-Native Networking",
+      "subheading": "Security Management",
+      "product_url": "https://www.juniper.net/us/en/products/security/security-management/security-director-cloud.html",
+      "datasheet_url": "https://www.juniper.net/us/en/products/security/security-management/security-director-cloud-datasheet.html",
+      "managed_devices": 10000,
+      "features": [
+        "firewall management",
+        "security policy",
+        "Zero Trust operations"
+      ],
+      "technical_specifications": {
+        "managed_devices": 10000
+      }
     }
   ]
 }

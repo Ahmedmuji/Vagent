@@ -15,6 +15,7 @@ from admin_guide_enricher import FortinetAdminGuideReferenceEnricher
 from pdf_admin_metadata import build_admin_guide_metadata_index
 from reference_injector import inject_hardware_references
 from fortinet.reference_injector import inject_fortinet_references
+from juniper.reference_injector import inject_juniper_references
 from vertiv.reference_injector import inject_vertiv_references
 from cost_estimator import AbortedByUser, confirm_execution, estimate_cost
 
@@ -133,6 +134,9 @@ def process_pdf_section(filename, input_path, start_page, end_page, extracted_pd
     if reference_provider == "vertiv":
         print("Resolving hardware references from Vertiv RAG catalog...")
         technical_data, hardware_stats = inject_vertiv_references(technical_data)
+    elif reference_provider == "juniper":
+        print("Resolving hardware references from Juniper RAG catalog...")
+        technical_data, hardware_stats = inject_juniper_references(technical_data)
     elif reference_provider in {"fortinet", "fortinet-rag"}:
         print("Resolving hardware references from Fortinet RAG catalog...")
         technical_data, hardware_stats = inject_fortinet_references(technical_data)
@@ -178,7 +182,7 @@ def process_pdf_section(filename, input_path, start_page, end_page, extracted_pd
     elif reference_provider in {"fortinet", "fortinet-rag", "fortinet-rules", "deterministic"}:
         print("  Skipping Admin Guide enrichment (no TOC index available).")
     else:
-        print("  Skipping Fortinet Admin Guide enrichment for Vertiv reference provider.")
+        print(f"  Skipping Fortinet Admin Guide enrichment for {reference_provider} reference provider.")
 
     return {
         "base_name": base_name,

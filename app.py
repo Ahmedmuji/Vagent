@@ -147,7 +147,7 @@ def process_upload():
     model_name = request.form.get("model_name")
     selected_model = resolve_model_pricing(model_name)
     reference_provider = (request.form.get("reference_provider") or "fortinet").strip().lower()
-    if reference_provider not in {"fortinet", "vertiv"}:
+    if reference_provider not in {"fortinet", "vertiv", "juniper"}:
         return jsonify({"error": "Invalid reference provider selected."}), 400
 
     # Two-step flow: /estimate_cost already saved the file; client passes stored_name back.
