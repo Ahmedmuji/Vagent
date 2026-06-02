@@ -140,7 +140,7 @@ const state = {
       const isFortinet = referenceProviderInput.value === 'fortinet';
       enrichmentRow.classList.toggle('opacity-60', !isFortinet);
       skipEnrichmentInput.disabled = !isFortinet;
-      if (!isFortinet) skipEnrichmentInput.checked = true;
+      skipEnrichmentInput.checked = !isFortinet;
     }
 
     function handleFile(file) {

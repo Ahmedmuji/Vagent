@@ -70,9 +70,12 @@ class FortinetReferenceInjector:
             text = self._row_text(headers, row_data)
             contextual_text = self._contextual_row_text(sheet, headers, text)
             effective_metadata = self._effective_metadata(metadata, contextual_text)
+            if not self._is_reference_anchor(metadata, effective_metadata):
+                continue
             if not self._should_reference(contextual_text, effective_metadata):
                 continue
             self.stats["groups_seen"] += 1
+            contextual_text = self._group_contextual_row_text(sheet, headers, row_idx, contextual_text, metadata)
             query = self.matcher._build_query(contextual_text, effective_metadata)
             constraints = self.matcher._parse_constraints(query, effective_metadata)
             vendors = self.matcher._default_vendors(constraints)
@@ -269,6 +272,54 @@ class FortinetReferenceInjector:
         header_context = " | ".join(str(header or "") for header in headers[:5] if str(header or "") not in ignored)
         return " | ".join(part for part in (title, header_context, text) if part.strip())
 
+    @classmethod
+    def _group_contextual_row_text(
+        cls,
+        sheet: Dict[str, Any],
+        headers: List[str],
+        row_idx: int,
+        base_text: str,
+        metadata: Dict[str, Any],
+    ) -> str:
+        group_id = cls._product_group_id(metadata)
+        if not group_id:
+            return base_text
+        grouped_rows: List[str] = []
+        for other_idx, other in enumerate(sheet.get("rows") or []):
+            _, other_data, other_metadata = cls._get_row_parts(other)
+            if cls._product_group_id(other_metadata) != group_id:
+                continue
+            row_text = cls._row_text(headers, other_data)
+            if row_text:
+                marker = "PRIMARY" if other_idx == row_idx else f"SPEC_ROW_{other_idx + 1}"
+                grouped_rows.append(f"{marker}: {row_text}")
+        if len(grouped_rows) <= 1:
+            return base_text
+        return f"{base_text} | Full product requirement block: " + " | ".join(grouped_rows)
+
+    @staticmethod
+    def _product_group_id(metadata: Dict[str, Any]) -> str:
+        if not isinstance(metadata, dict):
+            return ""
+        return str(metadata.get("product_group_id") or metadata.get("requirement_group_id") or "").strip()
+
+    @staticmethod
+    def _is_reference_anchor(metadata: Dict[str, Any], effective_metadata: Dict[str, Any]) -> bool:
+        metadata = metadata if isinstance(metadata, dict) else {}
+        effective_metadata = effective_metadata if isinstance(effective_metadata, dict) else {}
+        for source in (metadata, effective_metadata):
+            if source.get("product_group_primary_row") is False:
+                return False
+            if source.get("group_primary_row") is False:
+                return False
+            if source.get("is_product_spec_continuation") is True:
+                return False
+            if source.get("requires_reference") is False and (
+                source.get("product_group_id") or source.get("requirement_group_id")
+            ):
+                return False
+        return True
+
     @staticmethod
     def _effective_metadata(metadata: Dict[str, Any], text: str) -> Dict[str, Any]:
         effective = copy.deepcopy(metadata) if isinstance(metadata, dict) else {}
@@ -292,7 +343,7 @@ class FortinetReferenceInjector:
         if fallback.get("ha_modes"):
             effective["ha_modes"] = fallback["ha_modes"]
         effective["source_text"] = text[:1000]
-        if FortinetReferenceInjector._has_matchable_requirements(effective):
+        if FortinetReferenceInjector._is_reference_anchor(metadata, effective) and FortinetReferenceInjector._has_matchable_requirements(effective):
             effective["requires_reference"] = True
         return effective
 

@@ -85,14 +85,18 @@ def get_project_paths(project_root):
 def ensure_runtime_dirs(paths):
     for key in ("input_dir", "extracted_pdf_dir", "json_results_dir", "excel_results_dir"):
         os.makedirs(paths[key], exist_ok=True)
+    os.makedirs(os.path.dirname(paths["toc_index_path"]), exist_ok=True)
+    os.makedirs(os.path.dirname(paths["admin_guide_pdf_path"]), exist_ok=True)
 
 def prepare_admin_guide_index(project_root, skip_enrichment=False):
     paths = get_project_paths(project_root)
     if skip_enrichment:
+        print("Skipping Admin Guide enrichment because skip_enrichment is enabled.")
         return None, paths["admin_guide_pdf_path"]
         
     # If the pre-computed TOC index exists, proceed even if the PDF is missing
     if os.path.exists(paths["toc_index_path"]):
+        print(f"Using Admin Guide TOC index: {paths['toc_index_path']}")
         return paths["toc_index_path"], paths["admin_guide_pdf_path"]
         
     # If TOC is missing, try to build it from the PDF
@@ -102,8 +106,10 @@ def prepare_admin_guide_index(project_root, skip_enrichment=False):
         print(f"  Flat index saved: {paths['toc_index_path']} ({len(flat_index)} entries)")
         return paths["toc_index_path"], paths["admin_guide_pdf_path"]
         
-    print(f"WARNING: Neither TOC index nor Admin Guide PDF found.")
-    print("  Skipping Admin Guide enrichment.")
+    print("WARNING: Admin Guide enrichment cannot start.")
+    print(f"  Missing TOC index: {paths['toc_index_path']}")
+    print(f"  Missing Admin Guide PDF: {paths['admin_guide_pdf_path']}")
+    print("  Run git pull to restore data/navigation/fortinet_sidebar_flat.json, or place the Admin Guide PDF at the path above so the TOC can be rebuilt.")
     return None, paths["admin_guide_pdf_path"]
 
 def process_pdf_section(filename, input_path, start_page, end_page, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path=None, admin_guide_pdf_path=None, model_name=None, reference_provider="fortinet"):
