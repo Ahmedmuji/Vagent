@@ -19,6 +19,8 @@ from juniper.reference_injector import inject_juniper_references
 from vertiv.reference_injector import inject_vertiv_references
 from cost_estimator import AbortedByUser, confirm_execution, estimate_cost
 
+FORTINET_REFERENCE_PROVIDERS = {"fortinet", "fortinet-rag", "fortinet-rules", "deterministic"}
+
 def get_unique_dir(parent_dir, base_name):
     """Generates a unique directory path by appending a counter if it exists."""
     dir_path = os.path.join(parent_dir, base_name)
@@ -112,6 +114,30 @@ def prepare_admin_guide_index(project_root, skip_enrichment=False):
     print("  Run git pull to restore data/navigation/fortinet_sidebar_flat.json, or place the Admin Guide PDF at the path above so the TOC can be rebuilt.")
     return None, paths["admin_guide_pdf_path"]
 
+def recover_admin_guide_index(project_root, toc_index_path=None, admin_guide_pdf_path=None):
+    """Recover Fortinet Admin Guide metadata when a caller passed a stale or missing TOC path."""
+    paths = get_project_paths(project_root)
+    preferred_toc_path = paths["toc_index_path"]
+    preferred_pdf_path = paths["admin_guide_pdf_path"]
+    toc_index_path = toc_index_path or preferred_toc_path
+    admin_guide_pdf_path = admin_guide_pdf_path or preferred_pdf_path
+
+    if toc_index_path and os.path.exists(toc_index_path):
+        return toc_index_path, admin_guide_pdf_path
+
+    if os.path.exists(preferred_toc_path):
+        print(f"Recovered Admin Guide TOC index: {preferred_toc_path}")
+        return preferred_toc_path, admin_guide_pdf_path
+
+    pdf_path = admin_guide_pdf_path if os.path.exists(admin_guide_pdf_path) else preferred_pdf_path
+    if os.path.exists(pdf_path):
+        print("Recovering Admin Guide TOC index from PDF...")
+        flat_index = build_admin_guide_metadata_index(pdf_path, preferred_toc_path)
+        print(f"  Flat index saved: {preferred_toc_path} ({len(flat_index)} entries)")
+        return preferred_toc_path, pdf_path
+
+    return toc_index_path, admin_guide_pdf_path
+
 def process_pdf_section(filename, input_path, start_page, end_page, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path=None, admin_guide_pdf_path=None, model_name=None, reference_provider="fortinet"):
     base_name = os.path.splitext(filename)[0].replace("_Requirements", "")
     print(f"\n--- Processing: {base_name} pages {start_page}-{end_page} ---")
@@ -166,7 +192,15 @@ def process_pdf_section(filename, input_path, start_page, end_page, extracted_pd
 
     final_excel_path = excel_path
     enrichment_stats = None
-    if reference_provider in {"fortinet", "fortinet-rag", "fortinet-rules", "deterministic"} and toc_index_path and os.path.exists(toc_index_path):
+    if reference_provider in FORTINET_REFERENCE_PROVIDERS:
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        toc_index_path, admin_guide_pdf_path = recover_admin_guide_index(
+            project_root,
+            toc_index_path,
+            admin_guide_pdf_path,
+        )
+
+    if reference_provider in FORTINET_REFERENCE_PROVIDERS and toc_index_path and os.path.exists(toc_index_path):
         print("Enriching with Fortinet Admin Guide references...")
         enriched_filename = f"{base_name}_enriched_with_admin_guide_references.xlsx"
         enriched_path = os.path.join(pdf_excel_dir, enriched_filename)
@@ -185,7 +219,7 @@ def process_pdf_section(filename, input_path, start_page, end_page, extracted_pd
         enrichment_stats = enricher.stats
         print(f"  Enriched Excel: {enriched_path}")
         print(f"  Enrichment stats: {enrichment_stats}")
-    elif reference_provider in {"fortinet", "fortinet-rag", "fortinet-rules", "deterministic"}:
+    elif reference_provider in FORTINET_REFERENCE_PROVIDERS:
         print("  Skipping Admin Guide enrichment (no TOC index available).")
     else:
         print(f"  Skipping Fortinet Admin Guide enrichment for {reference_provider} reference provider.")
