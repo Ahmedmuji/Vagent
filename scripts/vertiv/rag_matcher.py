@@ -39,6 +39,8 @@ DATASHEET_URL_OVERRIDES = {
     "liebert spm 2 0": "https://www.vertiv.com/48ea64/globalassets/products/critical-power/power-distribution/liebert-spm-1.0/liebert-spm-1.0-brochure.pdf",
 }
 
+PDF_EXTRACTED_SPECS = Path(__file__).resolve().parents[2] / "output" / "json" / "vertiv_specs.json"
+
 BAD_DATASHEET_URL_TERMS = (
     "code-of-conduct",
     "code_of_conduct",
@@ -236,6 +238,7 @@ class VertivRAGMatcher:
                 entries = [item for item in data["items"] if isinstance(item, dict)]
             else:
                 entries = []
+            entries = [self._normalize_catalog_product(item, f"data/product_catalogs/{name}") for item in entries]
             if name == "vertiv_scraped.json":
                 for item in entries:
                     if _norm(item.get("vendor")) not in ("vertiv", ""):
@@ -247,6 +250,9 @@ class VertivRAGMatcher:
                             if not existing or (self._public_datasheet_url(item) and not self._public_datasheet_url(existing)):
                                 public_links_by_model[key] = item
             products.extend(entries)
+        extracted_specs = self._load_extracted_pdf_specs()
+        products = self._hydrate_extracted_specs(products, extracted_specs)
+        products.extend(extracted_specs)
         hydrated = [self._hydrate_public_links(item, public_links_by_model, public_link_products) for item in products]
         vertiv_products = [item for item in hydrated if _norm(item.get("vendor")) in ("vertiv", "")]
         return self._merge_duplicate_products(vertiv_products)
@@ -257,8 +263,6 @@ class VertivRAGMatcher:
         for product in products:
             fields = []
             for key, value in product.items():
-                if key in {"technical_specifications"}:
-                    continue
                 if value in (None, "", {}, []):
                     continue
                 if isinstance(value, (dict, list)):
@@ -270,6 +274,132 @@ class VertivRAGMatcher:
             if text:
                 chunks.append({"product": product, "text": text})
         return chunks
+
+    @classmethod
+    def _load_extracted_pdf_specs(cls) -> List[Dict[str, Any]]:
+        path = Path(os.getenv("VERTIV_EXTRACTED_SPECS_JSON", str(PDF_EXTRACTED_SPECS)))
+        if not path.exists():
+            return []
+        try:
+            data = json.loads(path.read_text(encoding="utf-8-sig"))
+        except Exception:
+            return []
+        if isinstance(data, dict) and isinstance(data.get("products"), list):
+            entries = data["products"]
+        elif isinstance(data, list):
+            entries = data
+        else:
+            return []
+        products: List[Dict[str, Any]] = []
+        for item in entries:
+            if not isinstance(item, dict):
+                continue
+            product = cls._normalize_catalog_product(item, str(path))
+            product["vendor"] = product.get("vendor") or "Vertiv"
+            if not product.get("model") and product.get("product_name"):
+                product["model"] = product["product_name"]
+            product.setdefault("source_catalog", str(path))
+            products.append(product)
+        return products
+
+    @classmethod
+    def _normalize_catalog_product(cls, product: Dict[str, Any], source_catalog: str = "") -> Dict[str, Any]:
+        normalized = dict(product)
+        if not normalized.get("model") and normalized.get("product_name"):
+            normalized["model"] = normalized["product_name"]
+        if not normalized.get("vendor"):
+            normalized["vendor"] = "Vertiv"
+        category = cls._canonical_category(normalized.get("category"))
+        if category:
+            normalized["category"] = category
+        if source_catalog and not normalized.get("source_catalog"):
+            normalized["source_catalog"] = source_catalog
+        specs = normalized.get("technical_specifications")
+        if isinstance(specs, dict):
+            summary = specs.get("normalized_summary")
+            if isinstance(summary, dict):
+                for field, value in summary.items():
+                    normalized.setdefault(field, value)
+        return normalized
+
+    @staticmethod
+    def _canonical_category(category: Any) -> str:
+        text = _norm(category)
+        if not text:
+            return ""
+        if text in VERTIV_CATEGORIES:
+            return text
+        mapping = (
+            ("ENERGY_STORAGE", ("energy storage", "bess", "battery energy")),
+            ("POWER_DISTRIBUTION", ("power distribution", "rack pdu", "pdu")),
+            ("COOLING", ("thermal management", "cooling", "in-row", "in row")),
+            ("MONITORING", ("monitoring", "management")),
+            ("RACK", ("rack", "enclosure")),
+            ("INTEGRATED_RACK_SOLUTION", ("containment", "integrated data center", "smartaisle")),
+            ("UPS", ("ups", "uninterruptible")),
+        )
+        for canonical, terms in mapping:
+            if any(term in text for term in terms):
+                return canonical
+        compact = re.sub(r"[^a-z0-9]+", "_", text).strip("_").upper()
+        return compact
+
+    @classmethod
+    def _hydrate_extracted_specs(
+        cls,
+        products: List[Dict[str, Any]],
+        extracted_specs: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        if not extracted_specs:
+            return products
+        hydrated: List[Dict[str, Any]] = []
+        for product in products:
+            enriched = dict(product)
+            match = cls._matching_extracted_spec(enriched, extracted_specs)
+            if match and not enriched.get("technical_specifications"):
+                enriched["technical_specifications"] = match.get("technical_specifications")
+                enriched["extracted_spec_source"] = match.get("source_pdf") or match.get("source_catalog")
+                if match.get("source_pages"):
+                    enriched["extracted_spec_pages"] = match.get("source_pages")
+                summary = (match.get("technical_specifications") or {}).get("normalized_summary")
+                if isinstance(summary, dict):
+                    for field, value in summary.items():
+                        enriched.setdefault(field, value)
+            hydrated.append(enriched)
+        return hydrated
+
+    @classmethod
+    def _matching_extracted_spec(
+        cls,
+        product: Dict[str, Any],
+        extracted_specs: List[Dict[str, Any]],
+    ) -> Optional[Dict[str, Any]]:
+        product_keys = cls._model_keys(product.get("model"))
+        product_tokens = [set(key.split()) for key in product_keys if key]
+        product_category = str(product.get("category") or "")
+        best: Optional[Tuple[int, Dict[str, Any]]] = None
+        for spec in extracted_specs:
+            spec_category = str(spec.get("category") or "")
+            if product_category and spec_category and not cls._category_is_compatible(product_category, spec_category):
+                continue
+            for spec_key in cls._model_keys(spec.get("model")):
+                spec_tokens = set(spec_key.split())
+                if not spec_tokens:
+                    continue
+                for tokens in product_tokens:
+                    if len(tokens) < 2:
+                        continue
+                    overlap = tokens & spec_tokens
+                    if len(overlap) < min(2, len(spec_tokens)):
+                        continue
+                    if not (spec_tokens.issubset(tokens) or tokens.issubset(spec_tokens) or len(overlap) >= 2):
+                        continue
+                    score = len(overlap)
+                    if spec_tokens.issubset(tokens) or tokens.issubset(spec_tokens):
+                        score += 3
+                    if best is None or score > best[0]:
+                        best = (score, spec)
+        return best[1] if best else None
 
     @staticmethod
     def _build_query(requirement_text: str, metadata: Dict[str, Any]) -> str:
@@ -547,14 +677,14 @@ class VertivRAGMatcher:
     def _format_reference(product: Dict[str, Any]) -> str:
         model = product.get("model")
         datasheet = VertivRAGMatcher._public_datasheet_url(product)
-        return f"Vertiv: {model} — {datasheet}" if datasheet else f"Vertiv: {model}"
+        return f"Vertiv: {model} - {datasheet}" if datasheet else f"Vertiv: {model}"
 
     @staticmethod
     def _model_keys(model: Any) -> List[str]:
         text = _norm(model)
         if not text:
             return []
-        plain = re.sub(r"\bvertiv\b|™|®", " ", text)
+        plain = re.sub(r"\bvertiv\b|\(tm\)|\(r\)|tm|registered", " ", text)
         plain = re.sub(r"[^a-z0-9]+", " ", plain).strip()
         compact = re.sub(r"\s+", " ", plain)
         keys = {text, compact}
