@@ -27,6 +27,7 @@ class VertivReferenceInjector:
             "unmatched_rows": 0,
             "llm_batch_calls": 0,
             "llm_rows_sent": 0,
+            "metadata_fallback_rows": 0,
         }
 
     def inject(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -48,6 +49,7 @@ class VertivReferenceInjector:
         details_idx = headers.index(MATCH_DETAILS_COLUMN)
         rows = sheet.get("rows") or []
         pending: List[Dict[str, Any]] = []
+        skipped_reference_rows: List[Dict[str, Any]] = []
         for row_idx, row in enumerate(rows):
             self.stats["rows_seen"] += 1
             row_type, row_data, metadata = self._get_row_parts(row)
@@ -61,49 +63,32 @@ class VertivReferenceInjector:
             text = self._row_text(headers, row_data)
             contextual_text = self._contextual_row_text(sheet, headers, text)
             if not self._is_reference_anchor(metadata):
+                if self._should_reference(contextual_text, metadata):
+                    skipped_reference_rows.append({
+                        "row_idx": row_idx,
+                        "row": row,
+                        "row_data": row_data,
+                        "metadata": metadata,
+                        "contextual_text": contextual_text,
+                    })
                 continue
             contextual_text = self._group_contextual_row_text(sheet, headers, row_idx, contextual_text, metadata)
-            query = self.matcher._build_query(contextual_text, metadata)
-            constraints = self.matcher._parse_constraints(query, metadata)
-            out_of_scope_reason = self.matcher._out_of_scope_reason(query, constraints)
-            if out_of_scope_reason:
-                self.stats["groups_seen"] += 1
-                pending.append({
-                    "row_id": f"{sheet.get('title') or sheet.get('name') or 'Sheet'}:{row_idx + 1}",
-                    "row": row,
-                    "row_data": row_data,
-                    "query": query,
-                    "constraints": constraints,
-                    "candidates": [],
-                    "local_selected": None,
-                    "forced_result": self.matcher._no_match_result(query, constraints, out_of_scope_reason),
-                })
-                continue
-            if not self._should_reference(contextual_text, metadata):
-                continue
-            self.stats["groups_seen"] += 1
-            retrieved = self.matcher.retrieve(query, constraints)
-            safe_candidates = [
-                candidate for candidate in retrieved
-                if self.matcher._passes_hard_constraints(candidate.product, constraints)
-            ]
-            candidates = safe_candidates or retrieved
-            candidates_with_datasheets = [
-                candidate for candidate in candidates
-                if self.matcher._public_datasheet_url(candidate.product)
-            ]
-            if candidates_with_datasheets:
-                candidates = candidates_with_datasheets
-            local_selected = self.matcher._select_fallback(candidates, constraints) if candidates else None
-            pending.append({
-                "row_id": f"{sheet.get('title') or sheet.get('name') or 'Sheet'}:{row_idx + 1}",
-                "row": row,
-                "row_data": row_data,
-                "query": query,
-                "constraints": constraints,
-                "candidates": candidates,
-                "local_selected": local_selected,
-            })
+            item = self._build_pending_item(sheet, row_idx, row, row_data, metadata, contextual_text)
+            if item:
+                pending.append(item)
+        if not any(item.get("candidates") for item in pending) and skipped_reference_rows:
+            for skipped in skipped_reference_rows:
+                item = self._build_pending_item(
+                    sheet,
+                    skipped["row_idx"],
+                    skipped["row"],
+                    skipped["row_data"],
+                    skipped["metadata"],
+                    skipped["contextual_text"],
+                )
+                if item and item.get("candidates"):
+                    pending.append(item)
+                    self.stats["metadata_fallback_rows"] += 1
         decisions = self._batch_llm_decide(pending)
         for item in pending:
             result = self._result_for_pending_item(item, decisions.get(item["row_id"]))
@@ -120,6 +105,56 @@ class VertivReferenceInjector:
             else:
                 self.stats["unmatched_rows"] += 1
         sheet["headers"] = headers
+
+    def _build_pending_item(
+        self,
+        sheet: Dict[str, Any],
+        row_idx: int,
+        row: Any,
+        row_data: List[Any],
+        metadata: Dict[str, Any],
+        contextual_text: str,
+    ) -> Optional[Dict[str, Any]]:
+        query = self.matcher._build_query(contextual_text, metadata)
+        constraints = self.matcher._parse_constraints(query, metadata)
+        out_of_scope_reason = self.matcher._out_of_scope_reason(query, constraints)
+        if out_of_scope_reason:
+            self.stats["groups_seen"] += 1
+            return {
+                "row_id": f"{sheet.get('title') or sheet.get('name') or 'Sheet'}:{row_idx + 1}",
+                "row": row,
+                "row_data": row_data,
+                "query": query,
+                "constraints": constraints,
+                "candidates": [],
+                "local_selected": None,
+                "forced_result": self.matcher._no_match_result(query, constraints, out_of_scope_reason),
+            }
+        if not self._should_reference(contextual_text, metadata):
+            return None
+        self.stats["groups_seen"] += 1
+        retrieved = self.matcher.retrieve(query, constraints)
+        safe_candidates = [
+            candidate for candidate in retrieved
+            if self.matcher._passes_hard_constraints(candidate.product, constraints)
+        ]
+        candidates = safe_candidates or retrieved
+        candidates_with_datasheets = [
+            candidate for candidate in candidates
+            if self.matcher._public_datasheet_url(candidate.product)
+        ]
+        if candidates_with_datasheets:
+            candidates = candidates_with_datasheets
+        local_selected = self.matcher._select_fallback(candidates, constraints) if candidates else None
+        return {
+            "row_id": f"{sheet.get('title') or sheet.get('name') or 'Sheet'}:{row_idx + 1}",
+            "row": row,
+            "row_data": row_data,
+            "query": query,
+            "constraints": constraints,
+            "candidates": candidates,
+            "local_selected": local_selected,
+        }
 
     def _result_for_pending_item(self, item: Dict[str, Any], decision: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         if item.get("forced_result"):
