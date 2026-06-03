@@ -65,11 +65,20 @@ const state = {
         const res = await fetch('/models');
         const data = await res.json();
         if (!res.ok || !Array.isArray(data.models) || data.models.length === 0) return;
-        renderModelOptions(data.models);
+        renderModelOptions(mergeModelOptions(data.models));
       } catch (err) {
         console.warn('Could not load model options:', err);
         renderModelOptions(FALLBACK_MODELS);
       }
+    }
+
+    function mergeModelOptions(serverModels) {
+      const merged = new Map(FALLBACK_MODELS.map(model => [model.id, { ...model }]));
+      serverModels.forEach(model => {
+        if (!model || !model.id) return;
+        merged.set(model.id, { ...(merged.get(model.id) || {}), ...model });
+      });
+      return Array.from(merged.values());
     }
 
     function renderModelOptions(models) {
@@ -390,16 +399,20 @@ const state = {
         const num = el.querySelector('.step-num');
         const active = i <= step;
         const current = i === step;
-        num.className = active
-          ? `step-num relative z-10 grid h-8 w-8 place-items-center rounded-full bg-brand-grad text-[11px] font-bold text-white ring-4 ring-white shadow-soft ${current ? 'animate-pulse' : ''}`
-          : 'step-num relative z-10 grid h-8 w-8 place-items-center rounded-full bg-steel-100 text-[11px] font-bold text-steel-500 ring-4 ring-white';
-        if (active && !current) num.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+        el.classList.toggle('active', current);
+        el.classList.toggle('complete', active && !current);
+        if (active && !current) num.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
         else num.textContent = String(i);
       }
     }
 
     function clearCurrentDownload(message = 'No workbook has been generated for this upload yet.') {
-      downloadsList.innerHTML = `<div class="rounded-xl border border-dashed border-line bg-steel-50/60 px-4 py-6 text-center text-[12.5px] leading-5 text-steel-500">${escapeHtml(message)}</div>`;
+      downloadsList.innerHTML = `
+        <div class="empty-result">
+          <svg class="mx-auto mb-2 h-5 w-5 text-steel-500" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+          ${escapeHtml(message)}
+        </div>
+      `;
     }
 
     function encodeDownloadPath(path) {
@@ -424,18 +437,21 @@ const state = {
       const size = formatBytes(file.size);
       const href = file.blobUrl || `/download/${encodeDownloadPath(file.path)}`;
       const item = document.createElement('div');
-      item.className = 'fade-in flex flex-col gap-3 rounded-xl border border-line bg-gradient-to-br from-white to-steel-50/50 p-3.5 shadow-soft sm:flex-row sm:items-center sm:justify-between';
+      item.className = 'result-card fade-in';
       item.innerHTML = `
-        <div class="flex min-w-0 items-center gap-3">
-          <div class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand-grad text-white">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <div class="flex min-w-0 items-start gap-3">
+          <div class="excel-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h10l6 6v12H4z"/><path d="M14 3v6h6"/><path d="m8 11 4 6"/><path d="m12 11-4 6"/></svg>
           </div>
           <div class="min-w-0">
-            <div class="truncate text-[13px] font-semibold tracking-tight">${escapeHtml(file.name)}</div>
-            <div class="mt-0.5 text-[11.5px] text-steel-500 font-mono">${escapeHtml(date)} - ${escapeHtml(size)}</div>
+            <div class="truncate font-heading text-sm font-bold tracking-tight text-ink">${escapeHtml(file.name)}</div>
+            <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11.5px] font-semibold text-steel-500">
+              <span>Generated ${escapeHtml(date)}</span>
+              <span class="font-mono">${escapeHtml(size)}</span>
+            </div>
           </div>
         </div>
-        <a class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-ink px-3 text-[12.5px] font-semibold text-white transition hover:bg-steel-700" href="${href}" download="${escapeHtml(file.name)}">
+        <a class="download-button" href="${href}" download="${escapeHtml(file.name)}">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span>Download</span>
         </a>

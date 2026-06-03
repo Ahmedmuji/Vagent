@@ -3,8 +3,8 @@ tailwind.config = {
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
-            serif: ['"Instrument Serif"', 'ui-serif', 'Georgia'],
+            sans: ['"Open Sans"', 'ui-sans-serif', 'system-ui'],
+            heading: ['Poppins', 'ui-sans-serif', 'system-ui'],
             mono: ['"JetBrains Mono"', 'ui-monospace']
           },
           colors: {
