@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import math
 import os
 import re
@@ -78,6 +79,9 @@ class FortinetRAGMatcher:
         self.top_k = top_k
         self.use_llm = use_llm
         self.include_juniper = include_juniper
+        self.embedding_env_var = "FORTINET_USE_SENTENCE_EMBEDDINGS"
+        self.embedding_model_env_var = "FORTINET_EMBEDDING_MODEL"
+        self.embedding_cache_prefix = "fortinet"
         self.products = self._load_products()
         self.chunks = self._build_chunks(self.products)
         self._embedding_model = None
@@ -340,28 +344,83 @@ class FortinetRAGMatcher:
     def _semantic_scores(self, query: str):
         if not self.chunks:
             return self._array([])
-        if os.getenv("FORTINET_USE_SENTENCE_EMBEDDINGS", "").lower() in {"1", "true", "yes"}:
+        if os.getenv(self.embedding_env_var, "1").lower() in {"1", "true", "yes"}:
             try:
                 model = self._get_embedding_model()
                 query_vec = model.encode([query], normalize_embeddings=True)
                 chunk_vecs = self._get_chunk_embeddings(model)
                 return chunk_vecs @ query_vec[0]
-            except Exception:
+            except Exception as exc:
+                print(f"{self.embedding_cache_prefix.title()} embeddings unavailable; falling back to TF-IDF: {exc}")
                 pass
         return self._tfidf_scores(query)
 
     def _get_embedding_model(self):
         if self._embedding_model is None:
             from sentence_transformers import SentenceTransformer
-            model_name = os.getenv("FORTINET_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+            model_name = os.getenv(self.embedding_model_env_var, "all-MiniLM-L6-v2")
             self._embedding_model = SentenceTransformer(model_name)
         return self._embedding_model
 
     def _get_chunk_embeddings(self, model):
         if self._chunk_embeddings is None:
             texts = [chunk["text"] for chunk in self.chunks]
+            model_name = os.getenv(self.embedding_model_env_var, "all-MiniLM-L6-v2")
+            cache_path = self._embedding_cache_path(model_name, texts)
+            cached = self._load_embedding_cache(cache_path, model_name, texts)
+            if cached is not None:
+                self._chunk_embeddings = cached
+                return self._chunk_embeddings
             self._chunk_embeddings = self._array(model.encode(texts, normalize_embeddings=True))
+            self._save_embedding_cache(cache_path, model_name, texts, self._chunk_embeddings)
         return self._chunk_embeddings
+
+    def _embedding_cache_path(self, model_name: str, texts: List[str]) -> Path:
+        cache_dir = self.catalog_dir / ".embedding_cache"
+        safe_model = re.sub(r"[^a-zA-Z0-9_.-]+", "_", model_name).strip("_") or "model"
+        digest = self._chunk_text_hash(texts)
+        return cache_dir / f"{self.embedding_cache_prefix}__{safe_model}__{digest}.npz"
+
+    @staticmethod
+    def _chunk_text_hash(texts: List[str]) -> str:
+        hasher = hashlib.sha256()
+        for text in texts:
+            hasher.update(text.encode("utf-8", errors="ignore"))
+            hasher.update(b"\0")
+        return hasher.hexdigest()[:16]
+
+    def _load_embedding_cache(self, cache_path: Path, model_name: str, texts: List[str]):
+        if np is None or not cache_path.exists():
+            return None
+        try:
+            data = np.load(cache_path)
+            if str(data["model_name"]) != model_name:
+                return None
+            if str(data["chunk_hash"]) != self._chunk_text_hash(texts):
+                return None
+            embeddings = data["embeddings"]
+            if embeddings.shape[0] != len(texts):
+                return None
+            print(f"Loaded {self.embedding_cache_prefix} embedding cache: {cache_path}")
+            return embeddings
+        except Exception as exc:
+            print(f"Could not load {self.embedding_cache_prefix} embedding cache: {exc}")
+            return None
+
+    def _save_embedding_cache(self, cache_path: Path, model_name: str, texts: List[str], embeddings) -> None:
+        if np is None:
+            return
+        try:
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(
+                cache_path,
+                embeddings=embeddings,
+                model_name=model_name,
+                chunk_hash=self._chunk_text_hash(texts),
+            )
+            print(f"Saved {self.embedding_cache_prefix} embedding cache: {cache_path}")
+        except Exception as exc:
+            print(f"Could not save {self.embedding_cache_prefix} embedding cache: {exc}")
 
     def _tfidf_scores(self, query: str):
         try:

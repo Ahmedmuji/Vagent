@@ -23,6 +23,9 @@ JUNIPER_EXTRA_CATEGORY_TERMS = {
 class JuniperRAGMatcher(FortinetRAGMatcher):
     def __init__(self, catalog_dir: str, top_k: int = 8, use_llm: bool = True):
         super().__init__(catalog_dir, top_k=top_k, use_llm=use_llm, include_juniper=True)
+        self.embedding_env_var = "JUNIPER_USE_SENTENCE_EMBEDDINGS"
+        self.embedding_model_env_var = "JUNIPER_EMBEDDING_MODEL"
+        self.embedding_cache_prefix = "juniper"
         self.products = self._load_products()
         self.chunks = self._build_chunks(self.products)
         self._tfidf_vectorizer = None
