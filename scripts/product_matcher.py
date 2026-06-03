@@ -1183,11 +1183,30 @@ class ProductMatcher:
                 continue
             value = cls._to_gbps(float(match.group("num")), match.group("unit"))
             window = text[max(0, match.start() - 80): min(len(text), match.end() + 80)]
-            local_start = max(text.rfind(",", 0, match.start()), text.rfind(";", 0, match.start()), text.rfind("|", 0, match.start())) + 1
-            local_end_candidates = [idx for idx in (text.find(",", match.end()), text.find(";", match.end()), text.find("|", match.end())) if idx != -1]
+            local_start = max(
+                text.rfind(",", 0, match.start()),
+                text.rfind(";", 0, match.start()),
+                text.rfind("|", 0, match.start()),
+                text.rfind("\n", 0, match.start()),
+            ) + 1
+            local_end_candidates = [
+                idx for idx in (
+                    text.find(",", match.end()),
+                    text.find(";", match.end()),
+                    text.find("|", match.end()),
+                    text.find("\n", match.end()),
+                )
+                if idx != -1
+            ]
             local_end = min(local_end_candidates) if local_end_candidates else min(len(text), match.end() + 60)
+            previous_markers = list(re.finditer(r"\b(?:primary|spec_row_\d+):", text[:match.start()]))
+            if previous_markers:
+                local_start = max(local_start, previous_markers[-1].start())
+            next_marker = re.search(r"\b(?:primary|spec_row_\d+):", text[match.end():])
+            if next_marker:
+                local_end = min(local_end, match.end() + next_marker.start())
             local_clause = text[local_start:local_end]
-            classification_clause = f"{local_clause} {window}"
+            classification_clause = local_clause if local_clause.strip() else window
             if "ssl vpn" in classification_clause and cat in ngfw_categories:
                 values["ssl_vpn_gbps"] = max(values.get("ssl_vpn_gbps", 0), value)
             elif any(k in classification_clause for k in ("ipsec", "ipsec vpn", "ipsec vpn throughput")) and cat in ngfw_categories:
@@ -1302,12 +1321,23 @@ class ProductMatcher:
     @staticmethod
     def _extract_interfaces(text: str) -> Dict[str, int]:
         interfaces: Dict[str, int] = {}
+        speed_before_label_patterns = {
+            "1g_rj45": r"(?:1\s*g(?:e|bps)?|gigabit).{0,35}(?:rj45|base-t|copper)?.{0,40}(?:interfaces?|ports?).{0,40}(?:qty|quantity|count)?\s*(?P<count>\d+)",
+            "10g_sfp_plus": r"(?:10\s*g(?:e|bps)?|10gbe).{0,35}(?:sfp\+|sfp plus|sfp)?.{0,40}(?:interfaces?|ports?).{0,40}(?:qty|quantity|count)?\s*(?P<count>\d+)",
+            "25g_sfp28": r"(?:25\s*g(?:e|bps)?|25gbe).{0,35}(?:sfp28)?.{0,40}(?:interfaces?|ports?).{0,40}(?:qty|quantity|count)?\s*(?P<count>\d+)",
+            "40g_qsfp_plus": r"(?:40\s*g(?:e|bps)?|40gbe).{0,35}(?:qsfp\+|qsfp)?.{0,40}(?:interfaces?|ports?).{0,40}(?:qty|quantity|count)?\s*(?P<count>\d+)",
+            "100g_qsfp28": r"(?:100\s*g(?:e|bps)?|100gbe).{0,35}(?:qsfp28|qsfp)?.{0,40}(?:interfaces?|ports?).{0,40}(?:qty|quantity|count)?\s*(?P<count>\d+)",
+        }
         for name, pattern in INTERFACE_PATTERNS.items():
             total = 0
             for match in re.finditer(pattern, text):
                 total += int(match.group("count"))
             for match in re.finditer(INTERFACE_REVERSE_PATTERNS.get(name, ""), text):
                 total += int(match.group("count"))
+            speed_before_label_pattern = speed_before_label_patterns.get(name)
+            if speed_before_label_pattern:
+                for match in re.finditer(speed_before_label_pattern, text):
+                    total += int(match.group("count"))
             if total:
                 interfaces[name] = total
         return interfaces
