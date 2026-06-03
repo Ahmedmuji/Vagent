@@ -399,6 +399,14 @@ class FortinetRAGMatcher:
     def _adjust_solution_scale_constraints(self, query: str, constraints: Dict[str, Any], vendor: str) -> Dict[str, Any]:
         adjusted = dict(constraints or {})
         required = ProductMatcher._parse_catalog_number(adjusted.get("ssl_vpn_users"))
+        scale_required = ProductMatcher._parse_catalog_number(
+            adjusted.get("solution_scale_ssl_vpn_users")
+            or adjusted.get("scalable_ssl_vpn_concurrent_users")
+        )
+        if required is None:
+            required = scale_required
+        elif scale_required is not None:
+            required = max(required, scale_required)
         if required is None:
             return adjusted
         query_lower = query.lower()

@@ -307,16 +307,25 @@ class FortinetReferenceInjector:
     def _is_reference_anchor(metadata: Dict[str, Any], effective_metadata: Dict[str, Any]) -> bool:
         metadata = metadata if isinstance(metadata, dict) else {}
         effective_metadata = effective_metadata if isinstance(effective_metadata, dict) else {}
-        for source in (metadata, effective_metadata):
+        sources = (metadata, effective_metadata)
+        for source in sources:
+            role = str(source.get("row_role") or "").strip().lower()
+            if role in {"spec_continuation", "section", "unrelated"}:
+                return False
+        for source in sources:
+            if str(source.get("row_role") or "").strip().lower() == "product_anchor":
+                return True
+        for source in sources:
             if source.get("product_group_primary_row") is False:
                 return False
             if source.get("group_primary_row") is False:
                 return False
             if source.get("is_product_spec_continuation") is True:
                 return False
+            confidence = str(source.get("reference_needed_confidence") or "").strip().lower()
             if source.get("requires_reference") is False and (
                 source.get("product_group_id") or source.get("requirement_group_id")
-            ):
+            ) and confidence not in {"low", "uncertain"}:
                 return False
         return True
 
