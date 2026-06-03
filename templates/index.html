@@ -1,18 +1,22 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vagent - RFP Processor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap"
+    rel="stylesheet">
   <script src="tailwind.config.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <link rel="stylesheet" href="frontend.css">
   <script src="frontend.js" defer></script>
 </head>
+
 <body class="relative min-h-screen overflow-x-hidden bg-mesh text-ink antialiased grain">
   <nav class="relative z-20 border-b border-white/70 bg-white/72 backdrop-blur-xl">
     <div class="mx-auto flex w-[min(1400px,calc(100vw-28px))] items-center justify-between gap-4 py-4">
@@ -26,16 +30,15 @@
             <div class="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-700">RFP Workbench</div>
           </div>
         </a>
-        <div class="hidden items-center gap-1 md:flex">
-          <a class="nav-link" href="#"><i data-lucide="file-text" class="h-4 w-4"></i><span>Docs</span></a>
-          <a class="nav-link" href="#"><i data-lucide="history" class="h-4 w-4"></i><span>Runs</span></a>
-        </div>
       </div>
 
       <div class="flex min-w-0 items-center justify-end gap-3">
-        <div class="hidden h-10 w-[min(280px,24vw)] items-center gap-2 rounded-full border border-line bg-white px-3 shadow-soft lg:flex">
+        <div
+          class="hidden h-10 w-[min(280px,24vw)] items-center gap-2 rounded-full border border-line bg-white px-3 shadow-soft lg:flex">
           <i data-lucide="search" class="h-4 w-4 shrink-0 text-steel-500"></i>
-          <input aria-label="Search" class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-steel-500" placeholder="Search runs, docs...">
+          <input aria-label="Search"
+            class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-steel-500"
+            placeholder="Search runs, docs...">
           <span class="kbd">/</span>
         </div>
         <div class="ready-pill">
@@ -43,7 +46,8 @@
           <span id="serverState">Ready</span>
         </div>
         <button type="button" class="profile-button" aria-label="Open profile menu">
-          <span class="grid h-8 w-8 place-items-center rounded-full bg-brand-grad text-xs font-bold text-white">PM</span>
+          <span
+            class="grid h-8 w-8 place-items-center rounded-full bg-brand-grad text-xs font-bold text-white">PM</span>
           <i data-lucide="chevron-down" class="hidden h-4 w-4 text-steel-500 sm:block"></i>
         </button>
       </div>
@@ -53,15 +57,18 @@
   <main class="relative z-10 mx-auto w-[min(1400px,calc(100vw-28px))] pb-16 pt-10">
     <header class="mb-9 grid gap-7 lg:grid-cols-[minmax(0,760px)_minmax(280px,1fr)] lg:items-end">
       <div>
-        <div class="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white/82 px-3.5 py-1.5 text-xs font-bold text-brand-700 shadow-soft">
+        <div
+          class="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white/82 px-3.5 py-1.5 text-xs font-bold text-brand-700 shadow-soft">
           <i data-lucide="sparkles" class="h-3.5 w-3.5"></i>
           Gemini 3 Flash extraction
         </div>
-        <h1 class="font-heading text-[42px] font-extrabold leading-[1.03] tracking-tight text-ink sm:text-[56px] lg:text-[68px]">
+        <h1
+          class="font-heading text-[42px] font-extrabold leading-[1.03] tracking-tight text-ink sm:text-[56px] lg:text-[68px]">
           Turn dense RFPs into <span class="text-brand-gradient">decision-ready workbooks.</span>
         </h1>
         <p class="mt-5 max-w-2xl text-[16px] leading-8 text-steel-700 sm:text-[17px]">
-          Extract technical requirements, verify catalog references, and deliver a polished Excel workbook through your secure tunnel.
+          Extract technical requirements, verify catalog references, and deliver a polished Excel workbook through your
+          secure tunnel.
         </p>
       </div>
       <div class="hidden justify-end lg:flex">
@@ -83,124 +90,139 @@
       <div class="space-y-5">
         <section class="premium-card">
           <div class="card-header">
-          <div class="flex items-center gap-3">
-            <span class="header-icon"><i data-lucide="upload-cloud" class="h-5 w-5"></i></span>
-            <div>
-              <h2 class="font-heading text-lg font-bold tracking-tight">Process RFP</h2>
-              <p class="mt-1 text-sm leading-5 text-steel-500">Upload the PDF, choose the provider, and review cost before extraction.</p>
+            <div class="flex items-center gap-3">
+              <span class="header-icon"><i data-lucide="upload-cloud" class="h-5 w-5"></i></span>
+              <div>
+                <h2 class="font-heading text-lg font-bold tracking-tight">Process RFP</h2>
+                <p class="mt-1 text-sm leading-5 text-steel-500">Upload the PDF, choose the provider, and review cost
+                  before extraction.</p>
+              </div>
             </div>
+            <span class="local-badge"><i data-lucide="lock-keyhole" class="h-3.5 w-3.5"></i>Processed Locally</span>
           </div>
-          <span class="local-badge"><i data-lucide="lock-keyhole" class="h-3.5 w-3.5"></i>Processed Locally</span>
-        </div>
 
-        <div class="space-y-7 p-5 sm:p-7">
-          <div id="dropZone" role="button" tabindex="0" aria-label="Upload PDF" class="upload-zone">
-            <input type="file" id="fileInput" accept="application/pdf" hidden>
-            <span class="absolute right-5 top-5 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-brand-700">Gemini 3 Flash extraction</span>
-            <div id="dropZoneContent" class="relative z-10 mx-auto max-w-md text-center">
-              <div class="upload-icon">
-                <i data-lucide="file-up" class="h-8 w-8"></i>
-                <span class="absolute -right-2 -top-2 grid h-8 w-8 place-items-center rounded-full bg-white text-brand-700 shadow-soft ring-1 ring-brand-200">
-                  <i data-lucide="cloud-upload" class="h-4 w-4"></i>
+          <div class="space-y-7 p-5 sm:p-7">
+            <div id="dropZone" role="button" tabindex="0" aria-label="Upload PDF" class="upload-zone">
+              <input type="file" id="fileInput" accept="application/pdf" hidden>
+              <span
+                class="absolute right-5 top-5 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-brand-700">Gemini
+                3 Flash extraction</span>
+              <div id="dropZoneContent" class="relative z-10 mx-auto max-w-md text-center">
+                <div class="upload-icon">
+                  <i data-lucide="file-up" class="h-8 w-8"></i>
+                  <span
+                    class="absolute -right-2 -top-2 grid h-8 w-8 place-items-center rounded-full bg-white text-brand-700 shadow-soft ring-1 ring-brand-200">
+                    <i data-lucide="cloud-upload" class="h-4 w-4"></i>
+                  </span>
+                </div>
+                <div class="font-heading text-xl font-bold tracking-tight">Drop your RFP PDF here</div>
+                <div class="mt-2 text-sm text-steel-500">or <span class="browse-link">Browse from machine</span></div>
+                <div
+                  class="mt-6 flex flex-wrap items-center justify-center gap-2 text-[12px] font-semibold text-steel-700">
+                  <span class="constraint-chip">PDF only</span>
+                  <span class="constraint-chip">Up to 200 MB</span>
+                  <span class="constraint-chip">Stays on your tunnel</span>
+                </div>
+              </div>
+
+              <div id="filePreview" class="relative z-10 hidden w-full items-center gap-4 text-left">
+                <div
+                  class="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-brand-grad text-white shadow-soft">
+                  <i data-lucide="file-text" class="h-7 w-7"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div id="selectedFileName" class="truncate font-heading text-lg font-bold tracking-tight"></div>
+                  <div id="selectedFileSize" class="mt-1 text-sm font-semibold text-steel-500"></div>
+                </div>
+                <button id="removeFile" type="button" aria-label="Remove selected PDF" title="Remove"
+                  class="icon-button danger">
+                  <i data-lucide="x" class="h-4 w-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="rounded-2xl border border-line bg-steel-50/60 p-4 sm:p-5">
+              <div class="mb-4 flex items-center gap-2">
+                <i data-lucide="sliders-horizontal" class="h-4 w-4 text-brand-700"></i>
+                <h3 class="font-heading text-sm font-bold uppercase tracking-[0.14em] text-steel-700">Configuration</h3>
+              </div>
+              <div class="grid gap-4 md:grid-cols-2">
+                <label class="field-shell md:col-span-1">
+                  <span>Reference Provider</span>
+                  <select id="referenceProvider" class="field-control">
+                    <option value="fortinet">Fortinet RAG - network and security</option>
+                    <option value="juniper">Juniper RAG - routing, switching, and security</option>
+                    <option value="vertiv">Vertiv RAG - data center architecture</option>
+                  </select>
+                </label>
+                <label class="field-shell md:col-span-1">
+                  <span>Extraction Model</span>
+                  <select id="modelName" class="field-control">
+                    <option value="gemini-3-flash-preview">Gemini 3 Flash Preview - $0.5/$3 per 1M</option>
+                    <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash-Lite Preview - $0.25/$1.5 per 1M
+                    </option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash - $0.3/$2.5 per 1M</option>
+                    <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite - $0.1/$0.4 per 1M</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro - $1.25/$10 per 1M</option>
+                  </select>
+                </label>
+                <label class="field-shell">
+                  <span>Start Page</span>
+                  <div class="relative">
+                    <i data-lucide="arrow-right-to-line" class="field-icon"></i>
+                    <input type="number" id="startPage" placeholder="Auto" min="1" inputmode="numeric"
+                      class="field-control pl-10">
+                  </div>
+                </label>
+                <label class="field-shell">
+                  <span>End Page</span>
+                  <div class="relative">
+                    <i data-lucide="arrow-left-to-line" class="field-icon"></i>
+                    <input type="number" id="endPage" placeholder="Auto" min="1" inputmode="numeric"
+                      class="field-control pl-10">
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div id="enrichmentRow" class="toggle-card">
+              <div class="flex min-w-0 items-start gap-3">
+                <span
+                  class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-brand-700 shadow-soft ring-1 ring-line">
+                  <i data-lucide="book-open-text" class="h-5 w-5"></i>
                 </span>
-              </div>
-              <div class="font-heading text-xl font-bold tracking-tight">Drop your RFP PDF here</div>
-              <div class="mt-2 text-sm text-steel-500">or <span class="browse-link">Browse from machine</span></div>
-              <div class="mt-6 flex flex-wrap items-center justify-center gap-2 text-[12px] font-semibold text-steel-700">
-                <span class="constraint-chip">PDF only</span>
-                <span class="constraint-chip">Up to 200 MB</span>
-                <span class="constraint-chip">Stays on your tunnel</span>
-              </div>
-            </div>
-
-            <div id="filePreview" class="relative z-10 hidden w-full items-center gap-4 text-left">
-              <div class="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-brand-grad text-white shadow-soft">
-                <i data-lucide="file-text" class="h-7 w-7"></i>
-              </div>
-              <div class="min-w-0 flex-1">
-                <div id="selectedFileName" class="truncate font-heading text-lg font-bold tracking-tight"></div>
-                <div id="selectedFileSize" class="mt-1 text-sm font-semibold text-steel-500"></div>
-              </div>
-              <button id="removeFile" type="button" aria-label="Remove selected PDF" title="Remove" class="icon-button danger">
-                <i data-lucide="x" class="h-4 w-4"></i>
-              </button>
-            </div>
-          </div>
-
-          <div class="rounded-2xl border border-line bg-steel-50/60 p-4 sm:p-5">
-            <div class="mb-4 flex items-center gap-2">
-              <i data-lucide="sliders-horizontal" class="h-4 w-4 text-brand-700"></i>
-              <h3 class="font-heading text-sm font-bold uppercase tracking-[0.14em] text-steel-700">Configuration</h3>
-            </div>
-            <div class="grid gap-4 md:grid-cols-2">
-              <label class="field-shell md:col-span-1">
-                <span>Reference Provider</span>
-                <select id="referenceProvider" class="field-control">
-                  <option value="fortinet">Fortinet RAG - network and security</option>
-                  <option value="juniper">Juniper RAG - routing, switching, and security</option>
-                  <option value="vertiv">Vertiv RAG - data center architecture</option>
-                </select>
-              </label>
-              <label class="field-shell md:col-span-1">
-                <span>Extraction Model</span>
-                <select id="modelName" class="field-control">
-                  <option value="gemini-3-flash-preview">Gemini 3 Flash Preview - $0.5/$3 per 1M</option>
-                  <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash-Lite Preview - $0.25/$1.5 per 1M</option>
-                  <option value="gemini-2.5-flash">Gemini 2.5 Flash - $0.3/$2.5 per 1M</option>
-                  <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite - $0.1/$0.4 per 1M</option>
-                  <option value="gemini-2.5-pro">Gemini 2.5 Pro - $1.25/$10 per 1M</option>
-                </select>
-              </label>
-              <label class="field-shell">
-                <span>Start Page</span>
-                <div class="relative">
-                  <i data-lucide="arrow-right-to-line" class="field-icon"></i>
-                  <input type="number" id="startPage" placeholder="Auto" min="1" inputmode="numeric" class="field-control pl-10">
+                <div class="min-w-0">
+                  <div class="font-heading text-[15px] font-bold tracking-tight">Admin Guide enrichment</div>
+                  <div class="mt-1 text-sm leading-6 text-steel-500">Attach Fortinet guide evidence when
+                    network/security references are selected.</div>
                 </div>
-              </label>
-              <label class="field-shell">
-                <span>End Page</span>
-                <div class="relative">
-                  <i data-lucide="arrow-left-to-line" class="field-icon"></i>
-                  <input type="number" id="endPage" placeholder="Auto" min="1" inputmode="numeric" class="field-control pl-10">
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <div id="enrichmentRow" class="toggle-card">
-            <div class="flex min-w-0 items-start gap-3">
-              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-brand-700 shadow-soft ring-1 ring-line">
-                <i data-lucide="book-open-text" class="h-5 w-5"></i>
-              </span>
-              <div class="min-w-0">
-                <div class="font-heading text-[15px] font-bold tracking-tight">Admin Guide enrichment</div>
-                <div class="mt-1 text-sm leading-6 text-steel-500">Attach Fortinet guide evidence when network/security references are selected.</div>
               </div>
+              <label class="toggle-switch" aria-label="Skip Admin Guide enrichment">
+                <input type="checkbox" id="skipEnrichment" class="peer sr-only">
+                <span class="toggle-track"></span>
+                <span class="toggle-thumb"></span>
+              </label>
             </div>
-            <label class="toggle-switch" aria-label="Skip Admin Guide enrichment">
-              <input type="checkbox" id="skipEnrichment" class="peer sr-only">
-              <span class="toggle-track"></span>
-              <span class="toggle-thumb"></span>
-            </label>
-          </div>
 
-          <div id="statusArea" role="status" aria-live="polite" class="hidden rounded-2xl border p-4">
-            <div id="statusTitle" class="font-heading text-[15px] font-bold tracking-tight"></div>
-            <div id="statusDesc" class="mt-1 text-sm leading-6"></div>
+            <div id="statusArea" role="status" aria-live="polite" class="hidden rounded-2xl border p-4">
+              <div id="statusTitle" class="font-heading text-[15px] font-bold tracking-tight"></div>
+              <div id="statusDesc" class="mt-1 text-sm leading-6"></div>
+            </div>
           </div>
-        </div>
         </section>
 
         <div class="flex flex-col items-center gap-3">
           <button id="submitBtn" type="button" class="primary-action group">
-            <span class="pointer-events-none absolute inset-0 shimmer opacity-0 transition group-hover:opacity-35"></span>
-            <span id="btnSpinner" class="hidden h-5 w-5 animate-spin rounded-full border-2 border-white/35 border-t-white"></span>
+            <span
+              class="pointer-events-none absolute inset-0 shimmer opacity-0 transition group-hover:opacity-35"></span>
+            <span id="btnSpinner"
+              class="hidden h-5 w-5 animate-spin rounded-full border-2 border-white/35 border-t-white"></span>
             <i id="btnIcon" data-lucide="play" class="h-5 w-5"></i>
             <span id="btnText">Estimate &amp; Process</span>
             <i data-lucide="arrow-right" class="h-5 w-5 opacity-90 transition group-hover:translate-x-1"></i>
           </button>
-          <p class="text-center text-xs leading-5 text-steel-500">You will see a cost estimate before any tokens are spent.</p>
+          <p class="text-center text-xs leading-5 text-steel-500">You will see a cost estimate before any tokens are
+            spent.</p>
         </div>
       </div>
 
@@ -214,14 +236,17 @@
                 <p class="mt-1 text-sm text-steel-500">Live extraction flow</p>
               </div>
             </div>
-            <span class="rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-brand-700 ring-1 ring-brand-200">Live</span>
+            <span
+              class="rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-brand-700 ring-1 ring-brand-200">Live</span>
           </div>
           <div class="p-5">
             <ol class="space-y-4">
               <li id="step1" class="timeline-step">
                 <div class="step-num">1</div>
                 <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-2"><i data-lucide="scan-text" class="h-4 w-4 text-brand-700"></i><span class="font-heading text-sm font-bold">Extract</span></div>
+                  <div class="flex items-center gap-2"><i data-lucide="scan-text"
+                      class="h-4 w-4 text-brand-700"></i><span class="font-heading text-sm font-bold">Extract</span>
+                  </div>
                   <p class="mt-1 text-xs leading-5 text-steel-500">Read requirement pages from the PDF.</p>
                   <div class="step-bar"><span class="step-fill"></span></div>
                 </div>
@@ -229,7 +254,9 @@
               <li id="step2" class="timeline-step">
                 <div class="step-num">2</div>
                 <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-2"><i data-lucide="search-check" class="h-4 w-4 text-brand-700"></i><span class="font-heading text-sm font-bold">Analyze</span></div>
+                  <div class="flex items-center gap-2"><i data-lucide="search-check"
+                      class="h-4 w-4 text-brand-700"></i><span class="font-heading text-sm font-bold">Analyze</span>
+                  </div>
                   <p class="mt-1 text-xs leading-5 text-steel-500">Structure compliance rows with Gemini.</p>
                   <div class="step-bar"><span class="step-fill"></span></div>
                 </div>
@@ -237,7 +264,9 @@
               <li id="step3" class="timeline-step">
                 <div class="step-num">3</div>
                 <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-2"><i data-lucide="badge-check" class="h-4 w-4 text-brand-700"></i><span class="font-heading text-sm font-bold">Reference</span></div>
+                  <div class="flex items-center gap-2"><i data-lucide="badge-check"
+                      class="h-4 w-4 text-brand-700"></i><span class="font-heading text-sm font-bold">Reference</span>
+                  </div>
                   <p class="mt-1 text-xs leading-5 text-steel-500">Match catalog and guide evidence.</p>
                   <div class="step-bar"><span class="step-fill"></span></div>
                 </div>
@@ -245,7 +274,9 @@
               <li id="step4" class="timeline-step">
                 <div class="step-num">4</div>
                 <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-2"><i data-lucide="file-spreadsheet" class="h-4 w-4 text-brand-700"></i><span class="font-heading text-sm font-bold">Deliver</span></div>
+                  <div class="flex items-center gap-2"><i data-lucide="file-spreadsheet"
+                      class="h-4 w-4 text-brand-700"></i><span class="font-heading text-sm font-bold">Deliver</span>
+                  </div>
                   <p class="mt-1 text-xs leading-5 text-steel-500">Create the formatted Excel workbook.</p>
                   <div class="step-bar"><span class="step-fill"></span></div>
                 </div>
@@ -274,9 +305,12 @@
     </div>
   </main>
 
-  <div id="costModal" role="dialog" aria-modal="true" aria-labelledby="costTitle" class="fixed inset-0 z-50 hidden items-center justify-center bg-ink/60 p-4 backdrop-blur-sm">
-    <div class="fade-in max-h-[calc(100vh-2rem)] w-full max-w-xl overflow-hidden rounded-3xl border border-line bg-white shadow-2xl">
-      <div class="flex items-start justify-between gap-4 border-b border-line bg-gradient-to-b from-white to-steel-50/70 px-6 py-5">
+  <div id="costModal" role="dialog" aria-modal="true" aria-labelledby="costTitle"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-ink/60 p-4 backdrop-blur-sm">
+    <div
+      class="fade-in max-h-[calc(100vh-2rem)] w-full max-w-xl overflow-hidden rounded-3xl border border-line bg-white shadow-2xl">
+      <div
+        class="flex items-start justify-between gap-4 border-b border-line bg-gradient-to-b from-white to-steel-50/70 px-6 py-5">
         <div>
           <div class="flex items-center gap-2">
             <span class="header-icon h-8 w-8"><i data-lucide="receipt" class="h-4 w-4"></i></span>
@@ -292,15 +326,42 @@
         <div class="overflow-hidden rounded-2xl border border-line">
           <table class="w-full border-collapse text-[13.5px]">
             <tbody class="[&_tr:nth-child(even)]:bg-steel-50/70 [&_td]:px-4 [&_td]:py-2.5">
-              <tr><td class="text-steel-500">Model</td><td id="cModel" class="text-right font-bold"></td></tr>
-              <tr><td class="text-steel-500">Pages</td><td id="cPages" class="text-right font-mono font-bold"></td></tr>
-              <tr><td class="text-steel-500">Chunks</td><td id="cChunks" class="text-right font-mono font-bold"></td></tr>
-              <tr><td class="text-steel-500">Input price / 1M</td><td id="cInputRate" class="text-right font-mono font-bold text-red-700"></td></tr>
-              <tr><td class="text-steel-500">Output price / 1M</td><td id="cOutputRate" class="text-right font-mono font-bold text-red-700"></td></tr>
-              <tr><td class="text-steel-500">Est. input tokens</td><td id="cInputTok" class="text-right font-mono font-bold"></td></tr>
-              <tr><td class="text-steel-500">Est. output tokens</td><td id="cOutputTok" class="text-right font-mono font-bold"></td></tr>
-              <tr><td class="text-steel-500">Input cost</td><td id="cInputCost" class="text-right font-mono font-bold"></td></tr>
-              <tr><td class="text-steel-500">Output cost</td><td id="cOutputCost" class="text-right font-mono font-bold"></td></tr>
+              <tr>
+                <td class="text-steel-500">Model</td>
+                <td id="cModel" class="text-right font-bold"></td>
+              </tr>
+              <tr>
+                <td class="text-steel-500">Pages</td>
+                <td id="cPages" class="text-right font-mono font-bold"></td>
+              </tr>
+              <tr>
+                <td class="text-steel-500">Chunks</td>
+                <td id="cChunks" class="text-right font-mono font-bold"></td>
+              </tr>
+              <tr>
+                <td class="text-steel-500">Input price / 1M</td>
+                <td id="cInputRate" class="text-right font-mono font-bold text-red-700"></td>
+              </tr>
+              <tr>
+                <td class="text-steel-500">Output price / 1M</td>
+                <td id="cOutputRate" class="text-right font-mono font-bold text-red-700"></td>
+              </tr>
+              <tr>
+                <td class="text-steel-500">Est. input tokens</td>
+                <td id="cInputTok" class="text-right font-mono font-bold"></td>
+              </tr>
+              <tr>
+                <td class="text-steel-500">Est. output tokens</td>
+                <td id="cOutputTok" class="text-right font-mono font-bold"></td>
+              </tr>
+              <tr>
+                <td class="text-steel-500">Input cost</td>
+                <td id="cInputCost" class="text-right font-mono font-bold"></td>
+              </tr>
+              <tr>
+                <td class="text-steel-500">Output cost</td>
+                <td id="cOutputCost" class="text-right font-mono font-bold"></td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -310,10 +371,13 @@
         </div>
       </div>
       <div class="flex flex-col gap-3 border-t border-line bg-steel-50/60 px-6 py-4 sm:flex-row">
-        <button id="costCancelBtn" type="button" class="h-11 flex-1 rounded-xl border border-line bg-white px-4 text-sm font-bold text-ink transition hover:bg-steel-50">Cancel</button>
-        <button id="costConfirmBtn" type="button" class="h-11 flex-1 rounded-xl bg-brand-grad px-4 text-sm font-bold text-white shadow-soft transition hover:shadow-ring">Proceed</button>
+        <button id="costCancelBtn" type="button"
+          class="h-11 flex-1 rounded-xl border border-line bg-white px-4 text-sm font-bold text-ink transition hover:bg-steel-50">Cancel</button>
+        <button id="costConfirmBtn" type="button"
+          class="h-11 flex-1 rounded-xl bg-brand-grad px-4 text-sm font-bold text-white shadow-soft transition hover:shadow-ring">Proceed</button>
       </div>
     </div>
   </div>
 </body>
+
 </html>
