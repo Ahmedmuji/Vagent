@@ -16,10 +16,17 @@ class GeminiExtractionError(RuntimeError):
 
 def _call_gemini_once(client, model_name, prompt, uploaded_file, chunk_index):
     try:
-        return client.models.generate_content(
-            model=model_name,
-            contents=[prompt, uploaded_file],
-        )
+        try:
+            return client.models.generate_content(
+                model=model_name,
+                contents=[prompt, uploaded_file],
+                config={"response_mime_type": "application/json"},
+            )
+        except TypeError:
+            return client.models.generate_content(
+                model=model_name,
+                contents=[prompt, uploaded_file],
+            )
     except Exception as exc:
         message = str(exc) or exc.__class__.__name__
         print(f"Gemini extraction failed for chunk {chunk_index}: {message}")
@@ -29,11 +36,25 @@ def _call_gemini_once(client, model_name, prompt, uploaded_file, chunk_index):
 
 def extract_json_from_text(text):
     """Cleans the model's response to extract only the JSON part and repairs common errors."""
-    # Find the JSON block
-    json_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', text)
+    stripped = (text or "").strip().lstrip("\ufeff")
+    candidates = []
+    json_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', stripped, re.IGNORECASE)
     if json_match:
-        return json_match.group(1).strip()
-    return text.strip()
+        candidates.append(json_match.group(1).strip())
+    candidates.append(stripped)
+
+    decoder = json.JSONDecoder()
+    for candidate in candidates:
+        if not candidate:
+            continue
+        starts = [idx for idx in (candidate.find("{"), candidate.find("[")) if idx >= 0]
+        for start in sorted(starts):
+            try:
+                _, end = decoder.raw_decode(candidate[start:])
+                return candidate[start:start + end].strip()
+            except json.JSONDecodeError:
+                continue
+    return stripped
 
 def chunk_pdf(pdf_path, max_pages=10):
     """Splits a PDF into chunks of up to `max_pages` pages."""
@@ -84,7 +105,8 @@ def get_technical_data_from_gemini(pdf_path, model_name="gemini-3-flash-preview"
             prompt = (
                 "Extract EVERY single piece of information from the attached technical document. "
                 "Do not summarize. Do not omit any paragraphs or narrative text. "
-                "The output must be a JSON object with a 'sheets' key containing a list of objects.\n\n"
+                "Return only a valid JSON object with a 'sheets' key containing a list of objects. "
+                "Do not include markdown, commentary, explanations, or text outside the JSON object.\n\n"
             
             "1. FOR TABLES (CRITICAL STRUCTURAL RULES):\n"
             "   - Preserve the EXACT column structure and row order from the source.\n"
@@ -185,6 +207,8 @@ def get_technical_data_from_gemini(pdf_path, model_name="gemini-3-flash-preview"
 
             "4. OUTPUT RULES:\n"
             "   - Return ONLY valid JSON.\n"
+            "   - The first character of the response MUST be { and the last character MUST be }.\n"
+            "   - Do not wrap the JSON in markdown fences.\n"
             "   - Include the 'sheets' root key.\n"
                 "   - Ensure visual order is preserved."
             )
@@ -229,8 +253,9 @@ def get_technical_data_from_gemini(pdf_path, model_name="gemini-3-flash-preview"
                     with open(raw_file_path, "w", encoding="utf-8") as f:
                         f.write(raw_text or "")
                     print(f"Raw chunk response saved to {raw_file_path}")
+                preview = (raw_text or "")[:500].replace("\n", "\\n")
                 raise GeminiExtractionError(
-                    f"Gemini returned invalid JSON for chunk {chunk_index + 1}: {e}"
+                    f"Gemini returned invalid JSON for chunk {chunk_index + 1}: {e}. Raw preview: {preview!r}"
                 ) from e
         finally:
             # Clean up the file from Google's servers after processing or failure.
