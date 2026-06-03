@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import hashlib
 import math
 import os
 import re
@@ -96,7 +95,6 @@ class VertivRAGMatcher:
         self.catalog_dir = Path(catalog_dir)
         self.top_k = top_k
         self.use_llm = use_llm
-        self.embedding_cache_prefix = "vertiv"
         self.products = self._load_products()
         self.chunks = self._build_chunks(self.products)
         self._embedding_model = None
@@ -498,15 +496,14 @@ class VertivRAGMatcher:
     def _semantic_scores(self, query: str) -> np.ndarray:
         if not self.chunks:
             return np.array([])
-        if os.getenv("VERTIV_USE_SENTENCE_EMBEDDINGS", "1").lower() not in {"1", "true", "yes"}:
+        if os.getenv("VERTIV_USE_SENTENCE_EMBEDDINGS", "").lower() not in {"1", "true", "yes"}:
             return self._tfidf_scores(query)
         try:
             model = self._get_embedding_model()
             query_vec = model.encode([query], normalize_embeddings=True)
             chunk_vecs = self._get_chunk_embeddings(model)
             return np.dot(chunk_vecs, query_vec[0])
-        except Exception as exc:
-            print(f"Vertiv embeddings unavailable; falling back to TF-IDF: {exc}")
+        except Exception:
             return self._tfidf_scores(query)
 
     def _get_embedding_model(self):
@@ -519,60 +516,8 @@ class VertivRAGMatcher:
     def _get_chunk_embeddings(self, model) -> np.ndarray:
         if self._chunk_embeddings is None:
             texts = [chunk["text"] for chunk in self.chunks]
-            model_name = os.getenv("VERTIV_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
-            cache_path = self._embedding_cache_path(model_name, texts)
-            cached = self._load_embedding_cache(cache_path, model_name, texts)
-            if cached is not None:
-                self._chunk_embeddings = cached
-                return self._chunk_embeddings
             self._chunk_embeddings = np.array(model.encode(texts, normalize_embeddings=True))
-            self._save_embedding_cache(cache_path, model_name, texts, self._chunk_embeddings)
         return self._chunk_embeddings
-
-    def _embedding_cache_path(self, model_name: str, texts: List[str]) -> Path:
-        cache_dir = self.catalog_dir / ".embedding_cache"
-        safe_model = re.sub(r"[^a-zA-Z0-9_.-]+", "_", model_name).strip("_") or "model"
-        digest = self._chunk_text_hash(texts)
-        return cache_dir / f"{self.embedding_cache_prefix}__{safe_model}__{digest}.npz"
-
-    @staticmethod
-    def _chunk_text_hash(texts: List[str]) -> str:
-        hasher = hashlib.sha256()
-        for text in texts:
-            hasher.update(text.encode("utf-8", errors="ignore"))
-            hasher.update(b"\0")
-        return hasher.hexdigest()[:16]
-
-    def _load_embedding_cache(self, cache_path: Path, model_name: str, texts: List[str]) -> Optional[np.ndarray]:
-        if not cache_path.exists():
-            return None
-        try:
-            data = np.load(cache_path)
-            if str(data["model_name"]) != model_name:
-                return None
-            if str(data["chunk_hash"]) != self._chunk_text_hash(texts):
-                return None
-            embeddings = data["embeddings"]
-            if embeddings.shape[0] != len(texts):
-                return None
-            print(f"Loaded {self.embedding_cache_prefix} embedding cache: {cache_path}")
-            return embeddings
-        except Exception as exc:
-            print(f"Could not load {self.embedding_cache_prefix} embedding cache: {exc}")
-            return None
-
-    def _save_embedding_cache(self, cache_path: Path, model_name: str, texts: List[str], embeddings: np.ndarray) -> None:
-        try:
-            cache_path.parent.mkdir(parents=True, exist_ok=True)
-            np.savez_compressed(
-                cache_path,
-                embeddings=embeddings,
-                model_name=model_name,
-                chunk_hash=self._chunk_text_hash(texts),
-            )
-            print(f"Saved {self.embedding_cache_prefix} embedding cache: {cache_path}")
-        except Exception as exc:
-            print(f"Could not save {self.embedding_cache_prefix} embedding cache: {exc}")
 
     def _tfidf_scores(self, query: str) -> np.ndarray:
         try:
@@ -732,14 +677,14 @@ class VertivRAGMatcher:
     def _format_reference(product: Dict[str, Any]) -> str:
         model = product.get("model")
         datasheet = VertivRAGMatcher._public_datasheet_url(product)
-        return f"Vertiv: {model} — {datasheet}" if datasheet else f"Vertiv: {model}"
+        return f"Vertiv: {model} - {datasheet}" if datasheet else f"Vertiv: {model}"
 
     @staticmethod
     def _model_keys(model: Any) -> List[str]:
         text = _norm(model)
         if not text:
             return []
-        plain = re.sub(r"\bvertiv\b|™|®", " ", text)
+        plain = re.sub(r"\bvertiv\b|\(tm\)|\(r\)|tm|registered", " ", text)
         plain = re.sub(r"[^a-z0-9]+", " ", plain).strip()
         compact = re.sub(r"\s+", " ", plain)
         keys = {text, compact}
