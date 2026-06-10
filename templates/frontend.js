@@ -39,9 +39,9 @@ const state = {
     if (window.lucide) window.lucide.createIcons();
 
     const FALLBACK_MODELS = [
+      { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview', input_per_1m: 0.50, output_per_1m: 3.00 },
       { id: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash', input_per_1m: 1.50, output_per_1m: 9.00 },
       { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview', input_per_1m: 2.00, output_per_1m: 12.00 },
-      { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview', input_per_1m: 0.50, output_per_1m: 3.00 },
       { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite', input_per_1m: 0.25, output_per_1m: 1.50 },
       { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', input_per_1m: 1.25, output_per_1m: 10.00 },
       { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', input_per_1m: 0.30, output_per_1m: 2.50 },

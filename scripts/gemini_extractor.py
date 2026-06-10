@@ -2,6 +2,7 @@ import os
 import json
 import re
 from dotenv import load_dotenv
+from gemini_config import describe_gemini_api_key_source, get_gemini_api_key
 
 # Load environment variables
 load_dotenv()
@@ -168,13 +169,14 @@ def build_extraction_prompt(markdown_chunk, chunk_index, total_chunks):
 
 def get_technical_data_from_gemini(pdf_path, model_name="gemini-3-flash-preview", chunk_output_dir=None):
     """Extract structured requirements by converting the PDF to Markdown before calling Gemini."""
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = get_gemini_api_key()
     if not api_key:
-        raise ValueError("GEMINI_API_KEY not found in .env file.")
+        raise ValueError("Gemini API key not found. Set GEMINI_API_KEY in .env.")
 
     from google import genai
     client = genai.Client(api_key=api_key)
 
+    print(f"Using Gemini key source: {describe_gemini_api_key_source()}")
     print(f"Converting PDF to Markdown with MarkItDown: {pdf_path}...")
     markdown = convert_pdf_to_markdown(pdf_path)
     if chunk_output_dir:

@@ -10,6 +10,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
+from gemini_config import get_gemini_api_key
+
 
 VERTIV_CATEGORIES = {
     "UPS": ("ups", "uninterruptible", "battery", "runtime", "online", "double conversion"),
@@ -616,7 +618,7 @@ class VertivRAGMatcher:
         return sorted(candidates, key=fit)[0]
 
     def _llm_rank(self, query: str, constraints: Dict[str, Any], candidates: List[VertivCandidate]) -> Optional[Dict[str, Any]]:
-        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+        api_key = get_gemini_api_key()
         if not api_key or not candidates:
             return None
         try:

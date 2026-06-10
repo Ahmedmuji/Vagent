@@ -13,6 +13,7 @@ try:
 except Exception:  # pragma: no cover - fallback for minimal runtimes
     np = None
 
+from gemini_config import get_gemini_api_key
 from product_matcher import ProductMatcher
 
 
@@ -484,7 +485,7 @@ class FortinetRAGMatcher:
         candidates: List[FortinetCandidate],
         vendor: str,
     ) -> Optional[Dict[str, Any]]:
-        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+        api_key = get_gemini_api_key()
         if not self.use_llm or not api_key or not candidates:
             return None
         try:

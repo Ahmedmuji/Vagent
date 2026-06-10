@@ -7,6 +7,7 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from fortinet.rag_matcher import FortinetCandidate, FortinetRAGMatcher
+from gemini_config import get_gemini_api_key
 from product_matcher import NUMERIC_REQUIREMENT_FIELDS, ProductMatcher
 
 
@@ -300,7 +301,7 @@ class FortinetReferenceInjector:
         }
 
     def _batch_llm_decide(self, pending: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+        api_key = get_gemini_api_key()
         if not self.batch_llm_enabled or not api_key or not pending:
             return {}
         payload = []

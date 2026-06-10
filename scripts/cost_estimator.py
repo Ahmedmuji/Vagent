@@ -27,6 +27,11 @@ from pypdf import PdfReader
 DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
 
 MODEL_PRICING: Dict[str, Dict[str, object]] = {
+    "gemini-3-flash-preview": {
+        "label": "Gemini 3 Flash Preview",
+        "input_per_1m": 0.50,
+        "output_per_1m": 3.00,
+    },
     "gemini-3.5-flash": {
         "label": "Gemini 3.5 Flash",
         "input_per_1m": 1.50,
@@ -36,11 +41,6 @@ MODEL_PRICING: Dict[str, Dict[str, object]] = {
         "label": "Gemini 3.1 Pro Preview",
         "input_per_1m": 2.00,
         "output_per_1m": 12.00,
-    },
-    "gemini-3-flash-preview": {
-        "label": "Gemini 3 Flash Preview",
-        "input_per_1m": 0.50,
-        "output_per_1m": 3.00,
     },
     "gemini-3.1-flash-lite": {
         "label": "Gemini 3.1 Flash-Lite",
