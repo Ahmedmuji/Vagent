@@ -25,6 +25,7 @@ NETWORK_CATEGORIES = {
     "SWITCH",
     "ROUTER",
     "CENTRALIZED_MANAGEMENT",
+    "LOGGING",
     "SIEM_SOC",
     "NDR",
     "ENDPOINT_SECURITY",
@@ -630,6 +631,11 @@ class FortinetRAGMatcher:
             score += 0.25
         if any(term in query_lower for term in ("manager", "centralized", "fortimanager")) and "fortimanager" in model_text:
             score += 0.45
+        if any(term in query_lower for term in ("fortilogger", "hardware logging", "log reporting", "logging appliance", "firewall logging", "log backup")):
+            if "fortilogger" in model_text or category == "LOGGING":
+                score += 0.75
+            elif "fortianalyzer" in model_text:
+                score -= 0.35
         if any(term in query_lower for term in ("siem", "soc", "logs", "eps")) and ("fortisiem" in model_text or category == "SIEM_SOC"):
             score += 0.45
         if "redundant" in query_lower and any(term in chunk_text for term in ("redundant", "dual power", "dual psu")):

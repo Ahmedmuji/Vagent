@@ -1483,6 +1483,15 @@
     },
     {
       "vendor": "Fortinet",
+      "model": "FortiLogger",
+      "category": "LOGGING",
+      "form_factor": "Software / Virtual Appliance",
+      "description": "Log and reporting platform for FortiGate firewall log collection, reporting, filtering, backup, and monitoring requirements.",
+      "product_url": "https://www.fortilogger.com/",
+      "datasheet_url": "https://www.fortilogger.com/"
+    },
+    {
+      "vendor": "Fortinet",
       "model": "FortiManager 200G",
       "category": "CENTRALIZED_MANAGEMENT",
       "max_devices_vdoms": 30,

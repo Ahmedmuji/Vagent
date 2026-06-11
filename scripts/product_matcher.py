@@ -70,7 +70,7 @@ INTERFACE_METADATA_FIELDS = {
 INTERFACE_COMPATIBILITY = {
     "1g_rj45": ("1g_rj45", "1_10g_rj45"),
     "10g_rj45": ("10g_rj45", "1_10g_rj45"),
-    "1_10g_rj45": ("1_10g_rj45",),
+    "1_10g_rj45": ("1_10g_rj45", "10g_rj45"),
     "1g_sfp": ("1g_sfp",),
     "10g_sfp_plus": ("10g_sfp_plus", "25g_sfp28"),
     "25g_sfp28": ("25g_sfp28", "50g_sfp56"),
@@ -93,6 +93,10 @@ DEVICE_CATEGORY_MAP = {
     "waf": "WAF",
     "centralized_management": "CENTRALIZED_MANAGEMENT",
     "management": "CENTRALIZED_MANAGEMENT",
+    "logging": "LOGGING",
+    "hardware_logging": "LOGGING",
+    "log_reporting": "LOGGING",
+    "fortilogger": "LOGGING",
     "siem_soc": "SIEM_SOC",
     "siem": "SIEM_SOC",
     "soc": "SIEM_SOC",
@@ -169,8 +173,16 @@ INTERFACE_REVERSE_PATTERNS = {
     "1g_rj45": r"(?:interfaces?|ports?).{0,50}(?:copper|rj45|base-t).{0,25}(?:1\s*(?:g|gig|gbe|gbps)|gigabit).{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
 }
 
+INTERFACE_TRAILING_VALUE_PATTERNS = {
+    "25g_sfp28": r"25\s*(?:g|ge|gig|gbe|gbps).{0,40}(?:sfp28|sfp).{0,80}?(?:interfaces?|ports?).{0,80}?(?P<count>\d+)",
+    "10g_sfp_plus": r"10\s*(?:g|ge|gig|gbe|gbps).{0,40}(?:sfp\+|sfp plus|sfp).{0,80}?(?:interfaces?|ports?).{0,80}?(?P<count>\d+)",
+    "1_10g_rj45": r"1\s*/\s*10\s*(?:g|ge|gig|gbe|gbps).{0,60}(?:rj45|base-t|copper).{0,80}?(?P<count>\d+)",
+    "1g_rj45": r"(?:1\s*(?:g|ge|gig|gbe|gbps)|gigabit).{0,50}(?:rj45|base-t|copper).{0,80}?(?:interfaces?|ports?)?.{0,80}?(?P<count>\d+)",
+}
+
 CATEGORY_KEYWORDS = {
     "CENTRALIZED_MANAGEMENT": ("fortimanager", "centralized management", "firewall manager", "security management"),
+    "LOGGING": ("fortilogger", "hardware logging", "log reporting", "logging appliance", "firewall logging", "log backup"),
     "SIEM_SOC": ("fortisiem", " siem ", "soc platform", "security information and event management"),
     "NDR": ("fortindr", "ndr", "network detection and response"),
     "ENDPOINT_SECURITY": ("fortiedr", "fortixdr", "forticlient", "endpoint security", "edr", "xdr"),
@@ -570,6 +582,8 @@ class ProductMatcher:
             return [category, "SWITCH"]
         if category == "CENTRALIZED_MANAGEMENT":
             return ["CENTRALIZED_MANAGEMENT", "SIEM_SOC"]
+        if category == "LOGGING":
+            return ["LOGGING"]
         return [category]
 
     @staticmethod
@@ -1070,7 +1084,19 @@ class ProductMatcher:
             local_end_candidates = [idx for idx in (text.find(",", match.end()), text.find(";", match.end()), text.find("|", match.end())) if idx != -1]
             local_end = min(local_end_candidates) if local_end_candidates else min(len(text), match.end() + 60)
             local_clause = text[local_start:local_end]
-            classification_clause = f"{local_clause} {window}"
+            previous_pipe = text.rfind("|", 0, match.start())
+            previous_previous_pipe = text.rfind("|", 0, previous_pipe) if previous_pipe != -1 else -1
+            next_pipe = text.find("|", match.end())
+            if next_pipe == -1:
+                next_pipe = min(len(text), match.end() + 60)
+            pipe_clause = text[previous_previous_pipe + 1:next_pipe] if previous_pipe != -1 else local_clause
+            signal_clause = pipe_clause if pipe_clause.strip() else local_clause
+            local_has_signal = any(k in signal_clause for k in (
+                "ssl vpn", "ssl-vpn", "ipsec", "ssl", "tls", "inspection", "decrypt",
+                "ips", "intrusion prevention", "threat", "switching", "backplane",
+                "fabric", "next generation firewall", "ngfw", "firewall throughput",
+            ))
+            classification_clause = signal_clause if local_has_signal else f"{local_clause} {window}"
             if "ssl vpn" in classification_clause and cat in ngfw_categories:
                 values["ssl_vpn_gbps"] = max(values.get("ssl_vpn_gbps", 0), value)
             elif any(k in classification_clause for k in ("ipsec", "ipsec vpn", "ipsec vpn throughput")) and cat in ngfw_categories:
@@ -1165,10 +1191,15 @@ class ProductMatcher:
         for label in labels:
             pattern_before = rf"(?P<num>\d[\d,]*(?:\.\d+)?)\s*(?P<suffix>k|m|million|thousand)?\s+{re.escape(label)}"
             pattern_after = rf"{re.escape(label)}(?:\s|\||:|=|-|>|of|at least|minimum|min)*?(?P<num>\d[\d,]*(?:\.\d+)?)\s*(?P<suffix>k|m|million|thousand)?"
-            for pattern in (pattern_before, pattern_after):
-                for match in re.finditer(pattern, text):
+            after_matches = list(re.finditer(pattern_after, text))
+            if after_matches:
+                for match in after_matches:
                     suffix = match.groupdict().get("suffix") or ""
                     found.append(ProductMatcher._parse_count(match.group("num"), suffix))
+                continue
+            for match in re.finditer(pattern_before, text):
+                suffix = match.groupdict().get("suffix") or ""
+                found.append(ProductMatcher._parse_count(match.group("num"), suffix))
         if found:
             values[field] = max(values.get(field, 0), max(found))
 
@@ -1191,6 +1222,10 @@ class ProductMatcher:
                 total += int(match.group("count"))
             for match in re.finditer(INTERFACE_REVERSE_PATTERNS.get(name, ""), text):
                 total += int(match.group("count"))
+            trailing_pattern = INTERFACE_TRAILING_VALUE_PATTERNS.get(name)
+            if trailing_pattern:
+                for match in re.finditer(trailing_pattern, text):
+                    total = max(total, int(match.group("count")))
             if total:
                 interfaces[name] = total
         return interfaces

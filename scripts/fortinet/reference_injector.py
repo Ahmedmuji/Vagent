@@ -70,12 +70,20 @@ class FortinetReferenceInjector:
             text = self._row_text(headers, row_data)
             contextual_text = self._contextual_row_text(sheet, headers, text)
             effective_metadata = self._effective_metadata(metadata, contextual_text)
+            if (
+                self._is_single_product_firewall_sheet(sheet, headers, contextual_text)
+                and row_idx != self._first_data_row_index(sheet)
+                and metadata.get("product_group_primary_row") is not True
+                and metadata.get("group_primary_row") is not True
+            ):
+                continue
             if not self._is_reference_anchor(metadata, effective_metadata):
                 continue
             if not self._should_reference(contextual_text, effective_metadata):
                 continue
             self.stats["groups_seen"] += 1
             contextual_text = self._group_contextual_row_text(sheet, headers, row_idx, contextual_text, metadata)
+            contextual_text = self._single_product_contextual_row_text(sheet, headers, row_idx, contextual_text, effective_metadata)
             query = self.matcher._build_query(contextual_text, effective_metadata)
             constraints = self.matcher._parse_constraints(query, effective_metadata)
             vendors = self.matcher._default_vendors(constraints)
@@ -303,6 +311,61 @@ class FortinetReferenceInjector:
             return ""
         return str(metadata.get("product_group_id") or metadata.get("requirement_group_id") or "").strip()
 
+    @classmethod
+    def _is_single_product_firewall_sheet(cls, sheet: Dict[str, Any], headers: List[str], text: str = "") -> bool:
+        context = " ".join(
+            str(part or "")
+            for part in [
+                sheet.get("title"),
+                sheet.get("name"),
+                sheet.get("sheet_name"),
+                " ".join(str(header or "") for header in headers[:6]),
+                text,
+            ]
+        ).lower()
+        return (
+            "per firewall appliance" in context
+            or "minimum requirements per firewall" in context
+            or "perimeter firewall" in context
+        )
+
+    @classmethod
+    def _first_data_row_index(cls, sheet: Dict[str, Any]) -> int:
+        for idx, row in enumerate(sheet.get("rows") or []):
+            row_type, row_data, _ = cls._get_row_parts(row)
+            if row_type != "section" and any(value not in (None, "") for value in row_data):
+                return idx
+        return -1
+
+    @classmethod
+    def _single_product_contextual_row_text(
+        cls,
+        sheet: Dict[str, Any],
+        headers: List[str],
+        row_idx: int,
+        base_text: str,
+        metadata: Dict[str, Any],
+    ) -> str:
+        if cls._product_group_id(metadata):
+            return base_text
+        if not cls._is_single_product_firewall_sheet(sheet, headers, base_text):
+            return base_text
+        row_snippets: List[str] = []
+        for other_idx, other in enumerate(sheet.get("rows") or []):
+            other_type, other_data, _ = cls._get_row_parts(other)
+            if other_type == "section":
+                continue
+            row_text = cls._row_text(headers, other_data)
+            if not row_text:
+                continue
+            marker = "PRIMARY" if other_idx == row_idx else f"SPEC_ROW_{other_idx + 1}"
+            row_snippets.append(f"{marker}: {row_text}")
+            if len(row_snippets) >= 80:
+                break
+        if len(row_snippets) <= 1:
+            return base_text
+        return f"{base_text} | Full single-product firewall requirement table: " + " | ".join(row_snippets)
+
     @staticmethod
     def _is_reference_anchor(metadata: Dict[str, Any], effective_metadata: Dict[str, Any]) -> bool:
         metadata = metadata if isinstance(metadata, dict) else {}
@@ -376,7 +439,7 @@ class FortinetReferenceInjector:
         normalized = ProductMatcher.normalize_requirements(metadata)
         if normalized.get("device_type") in {
             "NGFW", "SWITCH", "DATACENTER_SWITCH", "ACCESS_SWITCH", "ROUTER",
-            "CENTRALIZED_MANAGEMENT", "SIEM_SOC", "NDR", "ENDPOINT_SECURITY",
+            "CENTRALIZED_MANAGEMENT", "LOGGING", "SIEM_SOC", "NDR", "ENDPOINT_SECURITY",
             "IDENTITY_ACCESS", "PAM", "SANDBOX", "EMAIL_SECURITY", "NAC",
             "DECEPTION", "SOAR", "SASE", "SECURE_WEB_GATEWAY", "DDOS_MITIGATION",
             "DIGITAL_RISK_PROTECTION", "NETWORK_PERFORMANCE_MONITORING",
@@ -387,7 +450,7 @@ class FortinetReferenceInjector:
         lowered = str(text or "").lower()
         terms = (
             "fortigate", "fortiswitch", "fortimanager", "fortianalyzer", "fortisiem",
-            "firewall", "ngfw", "ipsec", "ssl vpn", "vpn throughput", "interfaces",
+            "fortilogger", "hardware logging", "log reporting", "firewall", "ngfw", "ipsec", "ssl vpn", "vpn throughput", "interfaces",
             "sfp", "qsfp", "switch", "router", "fortinet appliance",
         )
         return any(term in lowered for term in terms)
