@@ -14,13 +14,32 @@ class GeminiExtractionError(RuntimeError):
     """Raised when Gemini extraction fails for a specific PDF chunk."""
 
 
+def _env_int(name, default, minimum=None, maximum=None):
+    try:
+        value = int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        value = default
+    if minimum is not None:
+        value = max(value, minimum)
+    if maximum is not None:
+        value = min(value, maximum)
+    return value
+
+
+def _generation_config():
+    return {
+        "response_mime_type": "application/json",
+        "max_output_tokens": _env_int("GEMINI_MAX_OUTPUT_TOKENS", 65536, minimum=1024),
+    }
+
+
 def _call_gemini_once(client, model_name, prompt, uploaded_file, chunk_index):
     try:
         try:
             return client.models.generate_content(
                 model=model_name,
                 contents=[uploaded_file, prompt],
-                config={"response_mime_type": "application/json"},
+                config=_generation_config(),
             )
         except TypeError:
             return client.models.generate_content(
@@ -56,8 +75,9 @@ def extract_json_from_text(text):
                 continue
     return stripped
 
-def chunk_pdf(pdf_path, max_pages=10):
+def chunk_pdf(pdf_path, max_pages=None):
     """Splits a PDF into chunks of up to `max_pages` pages."""
+    max_pages = _env_int("GEMINI_PDF_CHUNK_PAGES", max_pages or 3, minimum=1, maximum=10)
     reader = PdfReader(pdf_path)
     total_pages = len(reader.pages)
     if total_pages <= max_pages:
@@ -90,7 +110,8 @@ def get_technical_data_from_gemini(pdf_path, model_name="gemini-3-flash-preview"
     from google import genai
     client = genai.Client(api_key=api_key)
 
-    chunk_paths = chunk_pdf(pdf_path, max_pages=10)
+    chunk_paths = chunk_pdf(pdf_path)
+    print(f"PDF split into {len(chunk_paths)} Gemini chunk(s); max pages per chunk: {os.getenv('GEMINI_PDF_CHUNK_PAGES', '3')}")
     all_sheets = []
 
     for chunk_index, current_pdf_path in enumerate(chunk_paths):
@@ -190,7 +211,9 @@ def get_technical_data_from_gemini(pdf_path, model_name="gemini-3-flash-preview"
             "4. OUTPUT RULES:\n"
             "   - Return ONLY valid JSON.\n"
             "   - Include the 'sheets' root key.\n"
-                "   - Ensure visual order is preserved."
+            "   - Ensure visual order is preserved.\n"
+            "   - The JSON must be complete and parseable. Do not stop mid-string or mid-object.\n"
+            "   - If the chunk is extremely dense, prioritize complete technical tables and requirements over long narrative prose."
             )
 
             print(f"Requesting extraction from {model_name} for chunk {chunk_index + 1}...")
