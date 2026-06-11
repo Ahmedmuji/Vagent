@@ -54,6 +54,13 @@ class FortinetReferenceInjector:
         reason_idx = headers.index(HARDWARE_REASONING_COLUMN)
         details_idx = headers.index(MATCH_DETAILS_COLUMN)
         rows = sheet.get("rows") or []
+        inferred_blocks = self._infer_product_blocks(sheet, headers)
+        anchor_to_block = {block["anchor_idx"]: block for block in inferred_blocks}
+        covered_to_anchor = {
+            idx: block["anchor_idx"]
+            for block in inferred_blocks
+            for idx in range(block["start_idx"], block["end_idx"] + 1)
+        }
         pending: List[Dict[str, Any]] = []
         for row_idx, row in enumerate(rows):
             self.stats["rows_seen"] += 1
@@ -70,8 +77,12 @@ class FortinetReferenceInjector:
             text = self._row_text(headers, row_data)
             contextual_text = self._contextual_row_text(sheet, headers, text)
             effective_metadata = self._effective_metadata(metadata, contextual_text)
+            inferred_block = anchor_to_block.get(row_idx)
+            if inferred_block is None and row_idx in covered_to_anchor:
+                continue
             if (
-                self._is_single_product_firewall_sheet(sheet, headers, contextual_text)
+                inferred_block is None
+                and self._is_single_product_firewall_sheet(sheet, headers, contextual_text)
                 and row_idx != self._first_data_row_index(sheet)
                 and metadata.get("product_group_primary_row") is not True
                 and metadata.get("group_primary_row") is not True
@@ -82,8 +93,11 @@ class FortinetReferenceInjector:
             if not self._should_reference(contextual_text, effective_metadata):
                 continue
             self.stats["groups_seen"] += 1
+            if inferred_block is not None:
+                contextual_text = self._inferred_block_context(sheet, headers, inferred_block)
             contextual_text = self._group_contextual_row_text(sheet, headers, row_idx, contextual_text, metadata)
-            contextual_text = self._single_product_contextual_row_text(sheet, headers, row_idx, contextual_text, effective_metadata)
+            if inferred_block is None:
+                contextual_text = self._single_product_contextual_row_text(sheet, headers, row_idx, contextual_text, effective_metadata)
             query = self.matcher._build_query(contextual_text, effective_metadata)
             constraints = self.matcher._parse_constraints(query, effective_metadata)
             vendors = self.matcher._default_vendors(constraints)
@@ -279,6 +293,97 @@ class FortinetReferenceInjector:
         ignored = {REFERENCE_COLUMN, HARDWARE_REASONING_COLUMN, MATCH_DETAILS_COLUMN}
         header_context = " | ".join(str(header or "") for header in headers[:5] if str(header or "") not in ignored)
         return " | ".join(part for part in (title, header_context, text) if part.strip())
+
+    @classmethod
+    def _infer_product_blocks(cls, sheet: Dict[str, Any], headers: List[str]) -> List[Dict[str, int]]:
+        rows = sheet.get("rows") or []
+        row_texts: List[str] = []
+        for row in rows:
+            _, row_data, _ = cls._get_row_parts(row)
+            row_texts.append(cls._row_text(headers, row_data))
+
+        raw_anchors: List[int] = []
+        for idx, text in enumerate(row_texts):
+            lowered = text.lower()
+            if not lowered.strip():
+                continue
+            if cls._is_product_anchor_text(lowered):
+                raw_anchors.append(idx)
+
+        if not raw_anchors and any("perimeter firewall" in text.lower() for text in row_texts):
+            for idx, text in enumerate(row_texts):
+                if "perimeter firewall" in text.lower() or "next generation firewall throughput" in text.lower():
+                    raw_anchors.append(idx)
+                    break
+
+        deduped: List[int] = []
+        for anchor in raw_anchors:
+            if (
+                deduped
+                and anchor == deduped[-1] + 1
+                and cls._is_section_only_product_anchor(row_texts[deduped[-1]])
+            ):
+                continue
+            if anchor not in deduped:
+                deduped.append(anchor)
+
+        blocks: List[Dict[str, int]] = []
+        for pos, start_anchor in enumerate(deduped):
+            next_anchor = deduped[pos + 1] if pos + 1 < len(deduped) else len(rows)
+            anchor = start_anchor
+            if cls._is_section_only_product_anchor(row_texts[start_anchor]):
+                for candidate_idx in range(start_anchor + 1, next_anchor):
+                    if row_texts[candidate_idx].strip():
+                        anchor = candidate_idx
+                        break
+            end_idx = max(anchor, next_anchor - 1)
+            blocks.append({"anchor_idx": anchor, "start_idx": start_anchor, "end_idx": end_idx})
+        return blocks
+
+    @staticmethod
+    def _is_product_anchor_text(lowered: str) -> bool:
+        if "virtual router" in lowered or "virtual routers" in lowered:
+            return False
+        if "perimeter firewall" in lowered:
+            return True
+        if re.search(r"\b(?:next generation firewall|ngfw|firewall appliance|remote site firewall|central site firewall)s?\b", lowered):
+            return True
+        if re.search(r"\b(?:data center|datacenter|core|access|distribution)\s+switch(?:es)?\b", lowered):
+            return True
+        if re.search(r"\b(?:router|routing platform|edge router)s?\b", lowered):
+            return True
+        if re.search(r"\b(?:fortigate|fortiswitch|fortimanager|fortianalyzer|fortilogger|fortisiem)\b", lowered):
+            return True
+        return False
+
+    @staticmethod
+    def _is_section_only_product_anchor(text: str) -> bool:
+        lowered = text.lower().strip()
+        if not lowered:
+            return False
+        if re.search(r"\d+\s*(?:gbps|tbps|mbps|ge|gbe|g\b|tb|million|,)", lowered):
+            return False
+        if any(term in lowered for term in (
+            "throughput", "sessions", "policies", "storage", "interfaces",
+            "port", "high availability", "power supply", "routing", "inspection",
+        )):
+            return False
+        return FortinetReferenceInjector._is_product_anchor_text(lowered)
+
+    @classmethod
+    def _inferred_block_context(cls, sheet: Dict[str, Any], headers: List[str], block: Dict[str, int]) -> str:
+        title = str(sheet.get("title") or sheet.get("name") or sheet.get("sheet_name") or "")
+        snippets: List[str] = []
+        rows = sheet.get("rows") or []
+        for idx in range(block["start_idx"], min(block["end_idx"] + 1, len(rows))):
+            row_type, row_data, _ = cls._get_row_parts(rows[idx])
+            if row_type == "section":
+                continue
+            row_text = cls._row_text(headers, row_data)
+            if row_text:
+                marker = "PRIMARY" if idx == block["anchor_idx"] else f"SPEC_ROW_{idx + 1}"
+                snippets.append(f"{marker}: {row_text}")
+        return " | ".join(part for part in (title, "Full inferred product requirement block: " + " | ".join(snippets)) if part.strip())
 
     @classmethod
     def _group_contextual_row_text(

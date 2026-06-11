@@ -1187,19 +1187,18 @@ class ProductMatcher:
 
     @staticmethod
     def _extract_count(text: str, values: Dict[str, Any], field: str, labels: Tuple[str, ...]) -> None:
-        found: List[int] = []
+        after_found: List[int] = []
+        before_found: List[int] = []
         for label in labels:
             pattern_before = rf"(?P<num>\d[\d,]*(?:\.\d+)?)\s*(?P<suffix>k|m|million|thousand)?\s+{re.escape(label)}"
             pattern_after = rf"{re.escape(label)}(?:\s|\||:|=|-|>|of|at least|minimum|min)*?(?P<num>\d[\d,]*(?:\.\d+)?)\s*(?P<suffix>k|m|million|thousand)?"
-            after_matches = list(re.finditer(pattern_after, text))
-            if after_matches:
-                for match in after_matches:
-                    suffix = match.groupdict().get("suffix") or ""
-                    found.append(ProductMatcher._parse_count(match.group("num"), suffix))
-                continue
+            for match in re.finditer(pattern_after, text):
+                suffix = match.groupdict().get("suffix") or ""
+                after_found.append(ProductMatcher._parse_count(match.group("num"), suffix))
             for match in re.finditer(pattern_before, text):
                 suffix = match.groupdict().get("suffix") or ""
-                found.append(ProductMatcher._parse_count(match.group("num"), suffix))
+                before_found.append(ProductMatcher._parse_count(match.group("num"), suffix))
+        found = after_found or before_found
         if found:
             values[field] = max(values.get(field, 0), max(found))
 
