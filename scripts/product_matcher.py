@@ -41,12 +41,8 @@ NUMERIC_REQUIREMENT_FIELDS = (
     "cooling_capacity_kw",
     "rack_units",
     "static_load_kg",
-    "dynamic_load_kg",
     "sensor_capacity",
     "outlet_count",
-    "backup_runtime_minutes",
-    "voltage_v",
-    "phase_count",
 )
 
 PRODUCT_SPEC_ALIASES = {
@@ -56,37 +52,8 @@ PRODUCT_SPEC_ALIASES = {
     "switching_capacity_gbps": ("throughput_gbps",),
     "throughput_gbps": ("switching_capacity_gbps", "ngfw_throughput_gbps"),
     "connections_per_second": ("cps",),
-    "ssl_vpn_users": ("ssl_vpn_concurrent_users", "concurrent_ssl_vpn_users"),
     "performance_eps": ("analytic_rate_logs_sec", "collector_rate_logs_sec"),
     "max_ports": ("ports",),
-}
-
-GENERIC_SPEC_ALIASES = {
-    "ipsec_vpn_throughput_gbps": ("ipsec vpn throughput", "ipsec_vpn_throughput", "vpn throughput"),
-    "ngfw_throughput_gbps": ("ngfw throughput", "next generation firewall throughput"),
-    "firewall_throughput_gbps": ("firewall throughput", "fw throughput"),
-    "ips_throughput_gbps": ("ips throughput", "intrusion prevention throughput"),
-    "threat_protection_gbps": ("threat protection throughput", "threat throughput"),
-    "ssl_tls_inspection_gbps": ("ssl inspection throughput", "tls inspection throughput", "ssl/tls inspection"),
-    "scalable_ssl_vpn_concurrent_users": ("scalable ssl vpn concurrent users", "scalable ssl-vpn concurrent users", "scale to ssl vpn users"),
-    "ssl_vpn_gbps": ("ssl vpn throughput", "ssl-vpn throughput"),
-    "ssl_vpn_users": ("ssl vpn concurrent users", "ssl-vpn concurrent users", "ssl vpn users", "concurrent ssl vpn users"),
-    "switching_capacity_gbps": ("switching capacity", "fabric capacity", "switch capacity"),
-    "concurrent_sessions": ("concurrent sessions", "sessions"),
-    "connections_per_second": ("connections per second", "cps", "new sessions per second"),
-    "ports": ("ports", "interfaces"),
-    "policies": ("policies", "firewall policies"),
-    "storage_tb": ("storage", "local storage"),
-    "power_capacity_kw": ("kw", "power capacity", "active power"),
-    "power_capacity_kva": ("kva", "ups capacity", "apparent power"),
-    "cooling_capacity_kw": ("cooling capacity", "net sensible cooling", "sensible cooling"),
-    "rack_units": ("rack units", "rack height", "u height"),
-    "static_load_kg": ("static load", "static load capacity"),
-    "dynamic_load_kg": ("dynamic load", "dynamic load capacity"),
-    "outlet_count": ("outlets", "outlet count", "sockets"),
-    "backup_runtime_minutes": ("backup runtime", "runtime", "backup time"),
-    "voltage_v": ("voltage", "input voltage", "output voltage"),
-    "phase_count": ("phase", "phases"),
 }
 
 INTERFACE_METADATA_FIELDS = {
@@ -162,24 +129,15 @@ DEVICE_CATEGORY_MAP = {
     "automation": "SDN_AUTOMATION",
     "ups": "UPS",
     "uninterruptible_power_supply": "UPS",
-    "battery_energy_storage": "BATTERY_ENERGY_STORAGE",
-    "battery_storage": "BATTERY_ENERGY_STORAGE",
-    "lithium_ion_battery": "BATTERY_ENERGY_STORAGE",
     "cooling": "COOLING",
-    "cooling_control": "COOLING",
     "precision_cooling": "COOLING",
     "row_cooling": "COOLING",
     "pdu": "RACK_PDU",
     "rack_pdu": "RACK_PDU",
     "power_distribution": "POWER_DISTRIBUTION",
-    "transfer_switch": "TRANSFER_SWITCH",
-    "busway": "BUSWAY",
     "containment": "CONTAINMENT",
     "rack": "RACK",
-    "rack_accessory": "RACK_ACCESSORY",
     "monitoring": "MONITORING",
-    "kvm": "KVM",
-    "serial_console": "SERIAL_CONSOLE",
     "fire_suppression": "FIRE_SUPPRESSION",
     "fire_detection": "FIRE_DETECTION",
     "fire_alarm": "FIRE_ALARM",
@@ -242,18 +200,12 @@ CATEGORY_KEYWORDS = {
     "ROUTER": ("router", "routing platform", "edge routing", "wan router"),
     "NGFW": ("ngfw", "next generation firewall", "firewall", "security gateway", "ssl-vpn", "ssl vpn", "vpn appliance"),
     "UPS": ("ups", "uninterruptible power", "battery backup", "kva ups", "kw ups", "liebert apm", "liebert mtp"),
-    "BATTERY_ENERGY_STORAGE": ("lithium-ion battery", "lithium ion battery", "battery cabinet", "battery energy storage", "battery rack"),
     "COOLING": ("precision cooling", "row cooling", "cooling unit", "thermal management", "crv4", "computer room air"),
     "POWER_DISTRIBUTION": ("power distribution", "server power distribution", "spm", "distribution panel"),
-    "TRANSFER_SWITCH": ("transfer switch", "static transfer", "sts", "ats"),
-    "BUSWAY": ("busway", "busduct", "bus duct"),
     "RACK_PDU": ("rack pdu", "rpdu", "geist", "power distribution unit"),
     "CONTAINMENT": ("containment", "cold aisle", "hot aisle", "smartaisle"),
     "RACK": ("rack enclosure", "server rack", "ve rack", "42u rack", "48u rack"),
-    "RACK_ACCESSORY": ("rack accessory", "cable manager", "blank panel", "brush strip"),
     "MONITORING": ("infrastructure monitoring", "environmental monitoring", "rdu501", "monitoring gateway"),
-    "KVM": ("kvm", "keyboard video mouse", "console tray"),
-    "SERIAL_CONSOLE": ("serial console", "console server"),
     "FIRE_SUPPRESSION": ("fire suppression", "extinguishing", "fk-5-1-12", "nozzle", "check valve", "releasing control"),
     "FIRE_DETECTION": ("smoke detector", "fire detection", "airsense", "truealarm", "aspirating smoke"),
     "FIRE_ALARM": ("fire alarm", "manual station", "nac extender", "horn", "bacpac"),
@@ -411,11 +363,8 @@ class ProductMatcher:
             ),
             "source_text": source_text or str(metadata.get("source_text") or "")[:1000],
         }
-        detected_specs = dict(metadata.get("detected_specs")) if isinstance(metadata.get("detected_specs"), dict) else {}
-        nested_requirements = dict(metadata.get("requirements")) if isinstance(metadata.get("requirements"), dict) else {}
-        for key, value in cls._extract_generic_specs(metadata.get("specs")).items():
-            detected_specs.setdefault(key, value)
-            nested_requirements.setdefault(key, value)
+        detected_specs = metadata.get("detected_specs") if isinstance(metadata.get("detected_specs"), dict) else {}
+        nested_requirements = metadata.get("requirements") if isinstance(metadata.get("requirements"), dict) else {}
         for field in NUMERIC_REQUIREMENT_FIELDS:
             value = metadata.get(field, detected_specs.get(field, nested_requirements.get(field)))
             if value not in (None, ""):
@@ -440,20 +389,6 @@ class ProductMatcher:
             parsed_cps = cls._parse_catalog_number(detected_specs.get("cps", nested_requirements.get("cps")))
             if parsed_cps is not None:
                 normalized["connections_per_second"] = parsed_cps
-        ssl_users = detected_specs.get("ssl_vpn_concurrent_users", nested_requirements.get("ssl_vpn_concurrent_users"))
-        if ssl_users not in (None, "") and "ssl_vpn_users" not in normalized:
-            parsed_ssl_users = cls._parse_catalog_number(ssl_users)
-            if parsed_ssl_users is not None:
-                normalized["ssl_vpn_users"] = parsed_ssl_users
-        scalable_ssl_users = detected_specs.get(
-            "scalable_ssl_vpn_concurrent_users",
-            nested_requirements.get("scalable_ssl_vpn_concurrent_users"),
-        )
-        if scalable_ssl_users not in (None, "") and "scalable_ssl_vpn_concurrent_users" not in normalized:
-            parsed_scalable_ssl_users = cls._parse_catalog_number(scalable_ssl_users)
-            if parsed_scalable_ssl_users is not None:
-                normalized["scalable_ssl_vpn_concurrent_users"] = parsed_scalable_ssl_users
-                normalized["solution_scale_ssl_vpn_users"] = parsed_scalable_ssl_users
         for range_field in ("power_capacity_kw", "power_capacity_kva", "cooling_capacity_kw"):
             if range_field in normalized:
                 continue
@@ -520,58 +455,6 @@ class ProductMatcher:
         requirements = {k: v for k, v in normalized.items() if k not in ("device_type", "source_text", "fortinet_feature_candidates")}
         normalized["requirements"] = requirements
         return normalized
-
-    @classmethod
-    def _extract_generic_specs(cls, specs: Any) -> Dict[str, Any]:
-        extracted: Dict[str, Any] = {}
-        if not isinstance(specs, list):
-            return extracted
-        for item in specs:
-            if not isinstance(item, dict):
-                continue
-            target = cls._generic_spec_target(str(item.get("name") or ""))
-            if not target:
-                continue
-            value = item.get("value")
-            if value in (None, ""):
-                value = item.get("raw_text")
-            parsed = cls._parse_catalog_number(value)
-            if parsed is None:
-                continue
-            extracted[target] = cls._convert_generic_spec_units(target, parsed, item.get("unit"))
-        if "ssl_vpn_users" in extracted and "ssl_vpn_concurrent_users" not in extracted:
-            extracted["ssl_vpn_concurrent_users"] = extracted["ssl_vpn_users"]
-        if "scalable_ssl_vpn_concurrent_users" in extracted and "ssl_vpn_users" not in extracted:
-            extracted["ssl_vpn_users"] = extracted["scalable_ssl_vpn_concurrent_users"]
-        return extracted
-
-    @staticmethod
-    def _generic_spec_target(name: str) -> Optional[str]:
-        normalized_name = re.sub(r"[^a-z0-9]+", " ", str(name or "").lower()).strip()
-        compact_name = normalized_name.replace(" ", "_")
-        for target, aliases in GENERIC_SPEC_ALIASES.items():
-            if compact_name == target:
-                return target
-            for alias in aliases:
-                normalized_alias = re.sub(r"[^a-z0-9]+", " ", alias.lower()).strip()
-                if normalized_alias and normalized_alias in normalized_name:
-                    return target
-        return None
-
-    @staticmethod
-    def _convert_generic_spec_units(target: str, value: float, unit: Any) -> float:
-        unit_text = str(unit or "").lower()
-        if target.endswith("_gbps") and "mbps" in unit_text:
-            return value / 1000
-        if target.endswith("_gbps") and "tbps" in unit_text:
-            return value * 1000
-        if target == "storage_tb" and re.search(r"\bgb\b|gbyte|gigabyte", unit_text):
-            return value / 1024
-        if target == "backup_runtime_minutes" and re.search(r"\bhours?\b|\bhr\b", unit_text):
-            return value * 60
-        if target == "voltage_v" and re.search(r"\bkv\b|kilovolt", unit_text):
-            return value * 1000
-        return value
 
     @staticmethod
     def _normalize_category(category: Any) -> Optional[str]:
@@ -1183,30 +1066,11 @@ class ProductMatcher:
                 continue
             value = cls._to_gbps(float(match.group("num")), match.group("unit"))
             window = text[max(0, match.start() - 80): min(len(text), match.end() + 80)]
-            local_start = max(
-                text.rfind(",", 0, match.start()),
-                text.rfind(";", 0, match.start()),
-                text.rfind("|", 0, match.start()),
-                text.rfind("\n", 0, match.start()),
-            ) + 1
-            local_end_candidates = [
-                idx for idx in (
-                    text.find(",", match.end()),
-                    text.find(";", match.end()),
-                    text.find("|", match.end()),
-                    text.find("\n", match.end()),
-                )
-                if idx != -1
-            ]
+            local_start = max(text.rfind(",", 0, match.start()), text.rfind(";", 0, match.start()), text.rfind("|", 0, match.start())) + 1
+            local_end_candidates = [idx for idx in (text.find(",", match.end()), text.find(";", match.end()), text.find("|", match.end())) if idx != -1]
             local_end = min(local_end_candidates) if local_end_candidates else min(len(text), match.end() + 60)
-            previous_markers = list(re.finditer(r"\b(?:primary|spec_row_\d+):", text[:match.start()]))
-            if previous_markers:
-                local_start = max(local_start, previous_markers[-1].start())
-            next_marker = re.search(r"\b(?:primary|spec_row_\d+):", text[match.end():])
-            if next_marker:
-                local_end = min(local_end, match.end() + next_marker.start())
             local_clause = text[local_start:local_end]
-            classification_clause = local_clause if local_clause.strip() else window
+            classification_clause = f"{local_clause} {window}"
             if "ssl vpn" in classification_clause and cat in ngfw_categories:
                 values["ssl_vpn_gbps"] = max(values.get("ssl_vpn_gbps", 0), value)
             elif any(k in classification_clause for k in ("ipsec", "ipsec vpn", "ipsec vpn throughput")) and cat in ngfw_categories:
@@ -1321,23 +1185,12 @@ class ProductMatcher:
     @staticmethod
     def _extract_interfaces(text: str) -> Dict[str, int]:
         interfaces: Dict[str, int] = {}
-        speed_before_label_patterns = {
-            "1g_rj45": r"(?:1\s*g(?:e|bps)?|gigabit).{0,35}(?:rj45|base-t|copper)?.{0,40}(?:interfaces?|ports?).{0,40}(?:qty|quantity|count)?\s*(?P<count>\d+)",
-            "10g_sfp_plus": r"(?:10\s*g(?:e|bps)?|10gbe).{0,35}(?:sfp\+|sfp plus|sfp)?.{0,40}(?:interfaces?|ports?).{0,40}(?:qty|quantity|count)?\s*(?P<count>\d+)",
-            "25g_sfp28": r"(?:25\s*g(?:e|bps)?|25gbe).{0,35}(?:sfp28)?.{0,40}(?:interfaces?|ports?).{0,40}(?:qty|quantity|count)?\s*(?P<count>\d+)",
-            "40g_qsfp_plus": r"(?:40\s*g(?:e|bps)?|40gbe).{0,35}(?:qsfp\+|qsfp)?.{0,40}(?:interfaces?|ports?).{0,40}(?:qty|quantity|count)?\s*(?P<count>\d+)",
-            "100g_qsfp28": r"(?:100\s*g(?:e|bps)?|100gbe).{0,35}(?:qsfp28|qsfp)?.{0,40}(?:interfaces?|ports?).{0,40}(?:qty|quantity|count)?\s*(?P<count>\d+)",
-        }
         for name, pattern in INTERFACE_PATTERNS.items():
             total = 0
             for match in re.finditer(pattern, text):
                 total += int(match.group("count"))
             for match in re.finditer(INTERFACE_REVERSE_PATTERNS.get(name, ""), text):
                 total += int(match.group("count"))
-            speed_before_label_pattern = speed_before_label_patterns.get(name)
-            if speed_before_label_pattern:
-                for match in re.finditer(speed_before_label_pattern, text):
-                    total += int(match.group("count"))
             if total:
                 interfaces[name] = total
         return interfaces

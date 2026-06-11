@@ -13,7 +13,6 @@ try:
 except Exception:  # pragma: no cover - fallback for minimal runtimes
     np = None
 
-from gemini_config import get_gemini_api_key
 from product_matcher import ProductMatcher
 
 
@@ -400,14 +399,6 @@ class FortinetRAGMatcher:
     def _adjust_solution_scale_constraints(self, query: str, constraints: Dict[str, Any], vendor: str) -> Dict[str, Any]:
         adjusted = dict(constraints or {})
         required = ProductMatcher._parse_catalog_number(adjusted.get("ssl_vpn_users"))
-        scale_required = ProductMatcher._parse_catalog_number(
-            adjusted.get("solution_scale_ssl_vpn_users")
-            or adjusted.get("scalable_ssl_vpn_concurrent_users")
-        )
-        if required is None:
-            required = scale_required
-        elif scale_required is not None:
-            required = max(required, scale_required)
         if required is None:
             return adjusted
         query_lower = query.lower()
@@ -485,7 +476,7 @@ class FortinetRAGMatcher:
         candidates: List[FortinetCandidate],
         vendor: str,
     ) -> Optional[Dict[str, Any]]:
-        api_key = get_gemini_api_key()
+        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         if not self.use_llm or not api_key or not candidates:
             return None
         try:

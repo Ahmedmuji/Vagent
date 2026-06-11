@@ -7,7 +7,6 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from fortinet.rag_matcher import FortinetCandidate, FortinetRAGMatcher
-from gemini_config import get_gemini_api_key
 from product_matcher import NUMERIC_REQUIREMENT_FIELDS, ProductMatcher
 
 
@@ -56,7 +55,6 @@ class FortinetReferenceInjector:
         details_idx = headers.index(MATCH_DETAILS_COLUMN)
         rows = sheet.get("rows") or []
         pending: List[Dict[str, Any]] = []
-        row_infos: List[Dict[str, Any]] = []
         for row_idx, row in enumerate(rows):
             self.stats["rows_seen"] += 1
             row_type, row_data, metadata = self._get_row_parts(row)
@@ -68,52 +66,45 @@ class FortinetReferenceInjector:
                 row[REFERENCE_COLUMN] = ""
             if row_type == "section":
                 self.stats["sections_skipped"] += 1
+                continue
             text = self._row_text(headers, row_data)
             contextual_text = self._contextual_row_text(sheet, headers, text)
             effective_metadata = self._effective_metadata(metadata, contextual_text)
-            row_infos.append({
-                "row_idx": row_idx,
+            if not self._is_reference_anchor(metadata, effective_metadata):
+                continue
+            if not self._should_reference(contextual_text, effective_metadata):
+                continue
+            self.stats["groups_seen"] += 1
+            contextual_text = self._group_contextual_row_text(sheet, headers, row_idx, contextual_text, metadata)
+            query = self.matcher._build_query(contextual_text, effective_metadata)
+            constraints = self.matcher._parse_constraints(query, effective_metadata)
+            vendors = self.matcher._default_vendors(constraints)
+            vendor_items: Dict[str, Dict[str, Any]] = {}
+            for vendor in vendors:
+                retrieved = self.matcher.retrieve(query, constraints, vendor=vendor)
+                safe_candidates = [
+                    candidate for candidate in retrieved
+                    if self.matcher._passes_hard_constraints(candidate.product, constraints)
+                ]
+                candidates = self.matcher._merge_candidates(
+                    safe_candidates,
+                    self.matcher._safe_catalog_candidates(query, constraints, vendor),
+                    constraints,
+                )
+                local_selected = self.matcher._select_fallback(candidates, constraints) if candidates else None
+                vendor_items[vendor] = {
+                    "retrieved": retrieved,
+                    "candidates": candidates,
+                    "local_selected": local_selected,
+                }
+            pending.append({
+                "row_id": f"{sheet.get('title') or sheet.get('name') or 'Sheet'}:{row_idx + 1}",
                 "row": row,
-                "row_type": row_type,
                 "row_data": row_data,
-                "metadata": metadata,
-                "text": text,
-                "contextual_text": contextual_text,
-                "effective_metadata": effective_metadata,
+                "query": query,
+                "constraints": constraints,
+                "vendors": vendor_items,
             })
-
-        if self._is_single_product_spec_sheet(sheet, headers, row_infos):
-            item = self._build_single_product_pending_item(sheet, headers, row_infos)
-            if item:
-                pending.append(item)
-        else:
-            for info in row_infos:
-                if info["row_type"] == "section":
-                    continue
-                metadata = info["metadata"]
-                effective_metadata = info["effective_metadata"]
-                contextual_text = info["contextual_text"]
-                if not self._is_reference_anchor(metadata, effective_metadata):
-                    continue
-                if not self._should_reference(contextual_text, effective_metadata):
-                    continue
-                contextual_text = self._group_contextual_row_text(
-                    sheet,
-                    headers,
-                    info["row_idx"],
-                    contextual_text,
-                    metadata,
-                )
-                item = self._build_pending_item(
-                    sheet,
-                    info["row_idx"],
-                    info["row"],
-                    info["row_data"],
-                    effective_metadata,
-                    contextual_text,
-                )
-                if item:
-                    pending.append(item)
         decisions = self._batch_llm_decide(pending)
         for item in pending:
             result = self._result_for_pending_item(item, decisions)
@@ -130,124 +121,6 @@ class FortinetReferenceInjector:
             else:
                 self.stats["unmatched_rows"] += 1
         sheet["headers"] = headers
-
-    def _build_pending_item(
-        self,
-        sheet: Dict[str, Any],
-        row_idx: int,
-        row: Any,
-        row_data: List[Any],
-        metadata: Dict[str, Any],
-        contextual_text: str,
-    ) -> Optional[Dict[str, Any]]:
-        if not self._should_reference(contextual_text, metadata):
-            return None
-        self.stats["groups_seen"] += 1
-        query = self.matcher._build_query(contextual_text, metadata)
-        constraints = self.matcher._parse_constraints(query, metadata)
-        vendors = self.matcher._default_vendors(constraints)
-        vendor_items: Dict[str, Dict[str, Any]] = {}
-        for vendor in vendors:
-            retrieved = self.matcher.retrieve(query, constraints, vendor=vendor)
-            safe_candidates = [
-                candidate for candidate in retrieved
-                if self.matcher._passes_hard_constraints(candidate.product, constraints)
-            ]
-            candidates = self.matcher._merge_candidates(
-                safe_candidates,
-                self.matcher._safe_catalog_candidates(query, constraints, vendor),
-                constraints,
-            )
-            local_selected = self.matcher._select_fallback(candidates, constraints) if candidates else None
-            vendor_items[vendor] = {
-                "retrieved": retrieved,
-                "candidates": candidates,
-                "local_selected": local_selected,
-            }
-        return {
-            "row_id": f"{sheet.get('title') or sheet.get('name') or 'Sheet'}:{row_idx + 1}",
-            "row": row,
-            "row_data": row_data,
-            "query": query,
-            "constraints": constraints,
-            "vendors": vendor_items,
-        }
-
-    def _build_single_product_pending_item(
-        self,
-        sheet: Dict[str, Any],
-        headers: List[str],
-        row_infos: List[Dict[str, Any]],
-    ) -> Optional[Dict[str, Any]]:
-        spec_rows = [
-            info for info in row_infos
-            if info["row_type"] != "section" and info.get("text") and self._looks_like_spec_row(info["text"])
-        ]
-        if not spec_rows:
-            return None
-        anchor = spec_rows[0]
-        grouped_rows = []
-        for info in row_infos:
-            if info["row_type"] == "section" and info.get("text"):
-                grouped_rows.append(f"SECTION: {info['text']}")
-            elif info["row_type"] != "section" and info.get("text"):
-                marker = "PRIMARY" if info["row_idx"] == anchor["row_idx"] else f"SPEC_ROW_{info['row_idx'] + 1}"
-                grouped_rows.append(f"{marker}: {info['text']}")
-        base_text = self._contextual_row_text(sheet, headers, anchor["text"])
-        contextual_text = f"{base_text}\nFull single firewall appliance requirement block:\n" + "\n".join(grouped_rows)
-        effective_metadata = self._effective_metadata(anchor["metadata"], contextual_text)
-        effective_metadata["device_category"] = "ngfw"
-        effective_metadata["device_type"] = "NGFW"
-        effective_metadata["requires_reference"] = True
-        effective_metadata["row_role"] = "product_anchor"
-        return self._build_pending_item(
-            sheet,
-            anchor["row_idx"],
-            anchor["row"],
-            anchor["row_data"],
-            effective_metadata,
-            contextual_text,
-        )
-
-    @classmethod
-    def _is_single_product_spec_sheet(
-        cls,
-        sheet: Dict[str, Any],
-        headers: List[str],
-        row_infos: List[Dict[str, Any]],
-    ) -> bool:
-        metadata = sheet.get("sheet_metadata") if isinstance(sheet.get("sheet_metadata"), dict) else {}
-        layout = str(metadata.get("product_layout") or "").strip().lower()
-        text = " ".join(
-            [
-                str(sheet.get("title") or sheet.get("name") or sheet.get("sheet_name") or ""),
-                " ".join(str(header or "") for header in headers),
-                " ".join(str(info.get("text") or "") for info in row_infos[:25]),
-            ]
-        ).lower()
-        spec_count = sum(1 for info in row_infos if cls._looks_like_spec_row(info.get("text")))
-        if layout == "single_product" and spec_count >= 3:
-            return True
-        has_per_device_shape = any(term in text for term in (
-            "minimum requirements per firewall appliance",
-            "required specifications per device",
-            "per firewall appliance",
-            "per device",
-        ))
-        has_firewall_context = any(term in text for term in ("firewall", "ngfw", "ips throughput", "ssl vpn"))
-        return has_per_device_shape and has_firewall_context and spec_count >= 3
-
-    @staticmethod
-    def _looks_like_spec_row(text: Any) -> bool:
-        lowered = str(text or "").lower()
-        if not lowered or not re.search(r"\d", lowered):
-            return False
-        terms = (
-            "throughput", "concurrent sessions", "connections per second", "policies",
-            "storage", "ssl", "tls", "vpn", "ips", "interface", "interfaces",
-            "sfp", "qsfp", "ha", "redundant", "ports", "sessions",
-        )
-        return any(term in lowered for term in terms)
 
     def _result_for_pending_item(self, item: Dict[str, Any], decisions: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
         references: List[str] = []
@@ -301,7 +174,7 @@ class FortinetReferenceInjector:
         }
 
     def _batch_llm_decide(self, pending: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-        api_key = get_gemini_api_key()
+        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         if not self.batch_llm_enabled or not api_key or not pending:
             return {}
         payload = []
@@ -434,25 +307,16 @@ class FortinetReferenceInjector:
     def _is_reference_anchor(metadata: Dict[str, Any], effective_metadata: Dict[str, Any]) -> bool:
         metadata = metadata if isinstance(metadata, dict) else {}
         effective_metadata = effective_metadata if isinstance(effective_metadata, dict) else {}
-        sources = (metadata, effective_metadata)
-        for source in sources:
-            role = str(source.get("row_role") or "").strip().lower()
-            if role in {"spec_continuation", "section", "unrelated"}:
-                return False
-        for source in sources:
-            if str(source.get("row_role") or "").strip().lower() == "product_anchor":
-                return True
-        for source in sources:
+        for source in (metadata, effective_metadata):
             if source.get("product_group_primary_row") is False:
                 return False
             if source.get("group_primary_row") is False:
                 return False
             if source.get("is_product_spec_continuation") is True:
                 return False
-            confidence = str(source.get("reference_needed_confidence") or "").strip().lower()
             if source.get("requires_reference") is False and (
                 source.get("product_group_id") or source.get("requirement_group_id")
-            ) and confidence not in {"low", "uncertain"}:
+            ):
                 return False
         return True
 

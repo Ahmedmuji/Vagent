@@ -6,7 +6,6 @@ import os
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-from gemini_config import get_gemini_api_key
 from vertiv.rag_matcher import VertivCandidate, VertivRAGMatcher
 
 
@@ -187,7 +186,7 @@ class VertivReferenceInjector:
         )
 
     def _batch_llm_decide(self, pending: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-        api_key = get_gemini_api_key()
+        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         if not self.batch_llm_enabled or not api_key or not pending:
             return {}
         payload = []
@@ -312,21 +311,15 @@ class VertivReferenceInjector:
     @staticmethod
     def _is_reference_anchor(metadata: Dict[str, Any]) -> bool:
         metadata = metadata if isinstance(metadata, dict) else {}
-        role = str(metadata.get("row_role") or "").strip().lower()
-        if role in {"spec_continuation", "section", "unrelated"}:
-            return False
-        if role == "product_anchor":
-            return True
         if metadata.get("product_group_primary_row") is False:
             return False
         if metadata.get("group_primary_row") is False:
             return False
         if metadata.get("is_product_spec_continuation") is True:
             return False
-        confidence = str(metadata.get("reference_needed_confidence") or "").strip().lower()
         if metadata.get("requires_reference") is False and (
             metadata.get("product_group_id") or metadata.get("requirement_group_id")
-        ) and confidence not in {"low", "uncertain"}:
+        ):
             return False
         return True
 
