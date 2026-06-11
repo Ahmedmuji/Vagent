@@ -18,7 +18,11 @@ from pypdf import PdfReader
 
 # ---------------------------------------------------------------------------
 # Pricing config. Paid-tier text/image/video prices are per 1M tokens in USD.
-# Source checked 2026-05-15: https://ai.google.dev/gemini-api/docs/pricing
+# Source checked 2026-06-11:
+# - https://ai.google.dev/gemini-api/docs/models
+# - https://ai.google.dev/gemini-api/docs/pricing
+# These are document-capable Gemini text/multimodal models, excluding Live,
+# TTS, image-generation-only, embedding, robotics, and shut-down models.
 # ---------------------------------------------------------------------------
 DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
 
@@ -28,10 +32,25 @@ MODEL_PRICING: Dict[str, Dict[str, object]] = {
         "input_per_1m": 0.50,
         "output_per_1m": 3.00,
     },
-    "gemini-3.1-flash-lite-preview": {
-        "label": "Gemini 3.1 Flash-Lite Preview",
+    "gemini-3.5-flash": {
+        "label": "Gemini 3.5 Flash",
+        "input_per_1m": 1.50,
+        "output_per_1m": 9.00,
+    },
+    "gemini-3.1-pro-preview": {
+        "label": "Gemini 3.1 Pro Preview",
+        "input_per_1m": 2.00,
+        "output_per_1m": 12.00,
+    },
+    "gemini-3.1-flash-lite": {
+        "label": "Gemini 3.1 Flash-Lite",
         "input_per_1m": 0.25,
         "output_per_1m": 1.50,
+    },
+    "gemini-2.5-pro": {
+        "label": "Gemini 2.5 Pro",
+        "input_per_1m": 1.25,
+        "output_per_1m": 10.00,
     },
     "gemini-2.5-flash": {
         "label": "Gemini 2.5 Flash",
@@ -43,10 +62,10 @@ MODEL_PRICING: Dict[str, Dict[str, object]] = {
         "input_per_1m": 0.10,
         "output_per_1m": 0.40,
     },
-    "gemini-2.5-pro": {
-        "label": "Gemini 2.5 Pro",
-        "input_per_1m": 1.25,
-        "output_per_1m": 10.00,
+    "gemini-2.5-flash-lite-preview-09-2025": {
+        "label": "Gemini 2.5 Flash-Lite Preview 09-2025",
+        "input_per_1m": 0.10,
+        "output_per_1m": 0.40,
     },
 }
 
