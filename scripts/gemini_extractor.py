@@ -19,13 +19,13 @@ def _call_gemini_once(client, model_name, prompt, uploaded_file, chunk_index):
         try:
             return client.models.generate_content(
                 model=model_name,
-                contents=[prompt, uploaded_file],
+                contents=[uploaded_file, prompt],
                 config={"response_mime_type": "application/json"},
             )
         except TypeError:
             return client.models.generate_content(
                 model=model_name,
-                contents=[prompt, uploaded_file],
+                contents=[uploaded_file, prompt],
             )
     except Exception as exc:
         message = str(exc) or exc.__class__.__name__
@@ -100,7 +100,13 @@ def get_technical_data_from_gemini(pdf_path, model_name="gemini-3-flash-preview"
         try:
             # Upload the file chunk using the official SDK
             print(f"Uploading chunk {chunk_index + 1} to Google Gemini...")
-            uploaded_file = client.files.upload(file=current_pdf_path)
+            try:
+                uploaded_file = client.files.upload(
+                    file=current_pdf_path,
+                    config={"mime_type": "application/pdf"},
+                )
+            except TypeError:
+                uploaded_file = client.files.upload(file=current_pdf_path)
 
             prompt = (
                 "Extract EVERY single piece of information from the attached technical document. "
