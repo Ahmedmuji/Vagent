@@ -346,8 +346,6 @@ class FortinetReferenceInjector:
         base_text: str,
         metadata: Dict[str, Any],
     ) -> str:
-        if cls._product_group_id(metadata):
-            return base_text
         if not cls._is_single_product_firewall_sheet(sheet, headers, base_text):
             return base_text
         row_snippets: List[str] = []

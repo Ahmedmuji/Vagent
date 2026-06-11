@@ -308,6 +308,10 @@ class FortinetRAGMatcher:
     def _parse_constraints(text: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
         extracted = ProductMatcher.extract_requirement_metadata(text)
         merged = dict(metadata or {})
+        query_lower = str(text or "").lower()
+        if re.search(r"\b(fortilogger|hardware logging|log reporting|log backup|logging appliance|firewall logs?)\b", query_lower):
+            merged["device_category"] = "LOGGING"
+            merged["device_type"] = "LOGGING"
         for key, value in extracted.items():
             if key == "requirements" and isinstance(value, dict):
                 existing = merged.setdefault("requirements", {})
@@ -636,7 +640,7 @@ class FortinetRAGMatcher:
                 score += 0.75
             elif "fortianalyzer" in model_text:
                 score -= 0.35
-        if any(term in query_lower for term in ("siem", "soc", "logs", "eps")) and ("fortisiem" in model_text or category == "SIEM_SOC"):
+        if any(term in query_lower for term in ("siem", "soc", "eps")) and ("fortisiem" in model_text or category == "SIEM_SOC"):
             score += 0.45
         if "redundant" in query_lower and any(term in chunk_text for term in ("redundant", "dual power", "dual psu")):
             score += 0.15
