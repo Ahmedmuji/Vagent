@@ -77,7 +77,7 @@ def extract_json_from_text(text):
 
 def chunk_pdf(pdf_path, max_pages=None):
     """Splits a PDF into chunks of up to `max_pages` pages."""
-    max_pages = _env_int("GEMINI_PDF_CHUNK_PAGES", max_pages or 3, minimum=1, maximum=10)
+    max_pages = _env_int("GEMINI_PDF_CHUNK_PAGES", max_pages or 10, minimum=1, maximum=10)
     reader = PdfReader(pdf_path)
     total_pages = len(reader.pages)
     if total_pages <= max_pages:
@@ -111,7 +111,7 @@ def get_technical_data_from_gemini(pdf_path, model_name="gemini-3-flash-preview"
     client = genai.Client(api_key=api_key)
 
     chunk_paths = chunk_pdf(pdf_path)
-    print(f"PDF split into {len(chunk_paths)} Gemini chunk(s); max pages per chunk: {os.getenv('GEMINI_PDF_CHUNK_PAGES', '3')}")
+    print(f"PDF split into {len(chunk_paths)} Gemini chunk(s); max pages per chunk: {os.getenv('GEMINI_PDF_CHUNK_PAGES', '10')}")
     all_sheets = []
 
     for chunk_index, current_pdf_path in enumerate(chunk_paths):
