@@ -55,12 +55,25 @@ class FortinetReferenceInjector:
         details_idx = headers.index(MATCH_DETAILS_COLUMN)
         rows = sheet.get("rows") or []
         inferred_blocks = self._infer_product_blocks(sheet, headers)
+        if not inferred_blocks and self._is_narrative_or_admin_sheet(sheet):
+            ref_idx = headers.index(REFERENCE_COLUMN)
+            reason_idx = headers.index(HARDWARE_REASONING_COLUMN)
+            details_idx = headers.index(MATCH_DETAILS_COLUMN)
+            for row in rows:
+                _, row_data, _ = self._get_row_parts(row)
+                self._ensure_len(row_data, len(headers))
+                row_data[ref_idx] = ""
+                row_data[reason_idx] = ""
+                row_data[details_idx] = ""
+            sheet["headers"] = headers
+            return
         anchor_to_block = {block["anchor_idx"]: block for block in inferred_blocks}
         covered_to_anchor = {
             idx: block["anchor_idx"]
             for block in inferred_blocks
             for idx in range(block["start_idx"], block["end_idx"] + 1)
         }
+        first_block_start = min((block["start_idx"] for block in inferred_blocks), default=0)
         pending: List[Dict[str, Any]] = []
         for row_idx, row in enumerate(rows):
             self.stats["rows_seen"] += 1
@@ -78,7 +91,16 @@ class FortinetReferenceInjector:
             contextual_text = self._contextual_row_text(sheet, headers, text)
             effective_metadata = self._effective_metadata(metadata, contextual_text)
             inferred_block = anchor_to_block.get(row_idx)
+            if inferred_blocks and row_idx < first_block_start:
+                continue
             if inferred_block is None and row_idx in covered_to_anchor:
+                continue
+            if inferred_block is None and not self._has_concrete_reference_signal(
+                contextual_text,
+                effective_metadata,
+                sheet,
+                headers,
+            ):
                 continue
             if (
                 inferred_block is None
@@ -90,7 +112,7 @@ class FortinetReferenceInjector:
                 continue
             if not self._is_reference_anchor(metadata, effective_metadata):
                 continue
-            if not self._should_reference(contextual_text, effective_metadata):
+            if inferred_block is None and not self._should_reference(contextual_text, effective_metadata):
                 continue
             self.stats["groups_seen"] += 1
             if inferred_block is not None:
@@ -100,21 +122,25 @@ class FortinetReferenceInjector:
                 contextual_text = self._single_product_contextual_row_text(sheet, headers, row_idx, contextual_text, effective_metadata)
             query = self.matcher._build_query(contextual_text, effective_metadata)
             constraints = self.matcher._parse_constraints(query, effective_metadata)
+            if not self.matcher.has_matchable_product_intent(query, constraints):
+                continue
             vendors = self.matcher._default_vendors(constraints)
             vendor_items: Dict[str, Dict[str, Any]] = {}
             for vendor in vendors:
-                retrieved = self.matcher.retrieve(query, constraints, vendor=vendor)
+                vendor_constraints = self.matcher._adjust_solution_scale_constraints(query, constraints, vendor)
+                retrieved = self.matcher.retrieve(query, vendor_constraints, vendor=vendor)
                 safe_candidates = [
                     candidate for candidate in retrieved
-                    if self.matcher._passes_hard_constraints(candidate.product, constraints)
+                    if self.matcher._passes_hard_constraints(candidate.product, vendor_constraints)
                 ]
                 candidates = self.matcher._merge_candidates(
                     safe_candidates,
-                    self.matcher._safe_catalog_candidates(query, constraints, vendor),
-                    constraints,
+                    self.matcher._safe_catalog_candidates(query, vendor_constraints, vendor),
+                    vendor_constraints,
                 )
-                local_selected = self.matcher._select_fallback(candidates, constraints) if candidates else None
+                local_selected = self.matcher._select_fallback(candidates, vendor_constraints) if candidates else None
                 vendor_items[vendor] = {
+                    "constraints": vendor_constraints,
                     "retrieved": retrieved,
                     "candidates": candidates,
                     "local_selected": local_selected,
@@ -153,6 +179,7 @@ class FortinetReferenceInjector:
             retrieved: List[FortinetCandidate] = vendor_item["retrieved"]
             decision = decisions.get(f"{item['row_id']}::{vendor.lower()}")
             if not candidates:
+                vendor_constraints = vendor_item.get("constraints") or item["constraints"]
                 vendor_result = {
                     "reference": "",
                     "reasoning": f"{vendor}: no catalog item met all hard constraints without being under-spec.",
@@ -161,7 +188,7 @@ class FortinetReferenceInjector:
                         "vendor": vendor,
                         "match_status": "no_safe_match",
                         "query": item["query"],
-                        "constraints": item["constraints"],
+                        "constraints": vendor_constraints,
                         "top_candidates": self.matcher._candidate_summaries(retrieved),
                     },
                 }
@@ -172,10 +199,11 @@ class FortinetReferenceInjector:
                 if selected is None:
                     selected = vendor_item.get("local_selected") or candidates[0]
                     decision = None
+                vendor_constraints = vendor_item.get("constraints") or item["constraints"]
                 vendor_result = self.matcher._format_result(
                     selected,
                     item["query"],
-                    item["constraints"],
+                    vendor_constraints,
                     retrieved,
                     decision,
                 )
@@ -210,7 +238,7 @@ class FortinetReferenceInjector:
                     "row_id": item["row_id"],
                     "vendor": vendor,
                     "requirement": item["query"][:1200],
-                    "parsed_constraints": item["constraints"],
+                    "parsed_constraints": vendor_item.get("constraints") or item["constraints"],
                     "candidates": [
                         {
                             "model": candidate.product.get("model"),
@@ -277,11 +305,23 @@ class FortinetReferenceInjector:
 
     @staticmethod
     def _row_text(headers: List[str], row_data: List[Any]) -> str:
-        ignored = {REFERENCE_COLUMN, HARDWARE_REASONING_COLUMN, MATCH_DETAILS_COLUMN}
+        ignored = {
+            REFERENCE_COLUMN,
+            HARDWARE_REASONING_COLUMN,
+            MATCH_DETAILS_COLUMN,
+            "Admin_Guide_Reference",
+            "Admin_Guide_Reference_Reasoning",
+            "SN",
+            "S/N",
+            "S.No",
+            "Sr No",
+            "Serial No",
+        }
         values: List[str] = []
         for idx, value in enumerate(row_data):
             header = str(headers[idx]).strip() if idx < len(headers) else ""
-            if header in ignored:
+            header_key = re.sub(r"[^a-z0-9]", "", header.lower())
+            if header in ignored or header_key in {"sn", "sno", "srno", "serialno", "no"}:
                 continue
             if value not in (None, ""):
                 values.append(str(value))
@@ -290,7 +330,18 @@ class FortinetReferenceInjector:
     @staticmethod
     def _contextual_row_text(sheet: Dict[str, Any], headers: List[str], text: str) -> str:
         title = str(sheet.get("title") or sheet.get("name") or sheet.get("sheet_name") or "")
-        ignored = {REFERENCE_COLUMN, HARDWARE_REASONING_COLUMN, MATCH_DETAILS_COLUMN}
+        ignored = {
+            REFERENCE_COLUMN,
+            HARDWARE_REASONING_COLUMN,
+            MATCH_DETAILS_COLUMN,
+            "Admin_Guide_Reference",
+            "Admin_Guide_Reference_Reasoning",
+            "SN",
+            "S/N",
+            "S.No",
+            "Sr No",
+            "Serial No",
+        }
         header_context = " | ".join(str(header or "") for header in headers[:5] if str(header or "") not in ignored)
         return " | ".join(part for part in (title, header_context, text) if part.strip())
 
@@ -315,6 +366,18 @@ class FortinetReferenceInjector:
                 if "perimeter firewall" in text.lower() or "next generation firewall throughput" in text.lower():
                     raw_anchors.append(idx)
                     break
+
+        if not raw_anchors:
+            sheet_title = str(sheet.get("title") or sheet.get("name") or sheet.get("sheet_name") or "").lower()
+            if "hardware based logging" in sheet_title or "logging solut" in sheet_title:
+                anchor = cls._best_sheet_level_anchor(row_texts, preferred_terms=("100gb", "eps", "centralized logging", "firewall logs", "log analytics"))
+                return [{"anchor_idx": anchor, "start_idx": 0, "end_idx": max(0, len(rows) - 1)}] if anchor >= 0 else []
+            if "management" in sheet_title and "monitor" in sheet_title:
+                anchor = cls._best_sheet_level_anchor(row_texts, preferred_terms=("centralized management", "unified dashboard", "configuration", "orchestration"))
+                return [{"anchor_idx": anchor, "start_idx": 0, "end_idx": max(0, len(rows) - 1)}] if anchor >= 0 else []
+            if "ssl" in sheet_title and "vpn" in sheet_title:
+                anchor = cls._best_sheet_level_anchor(row_texts, preferred_terms=("concurrent users", "ssl-vpn concurrent", "ssl vpn users", "scalable"))
+                return [{"anchor_idx": anchor, "start_idx": 0, "end_idx": max(0, len(rows) - 1)}] if anchor >= 0 else []
 
         deduped: List[int] = []
         for anchor in raw_anchors:
@@ -341,7 +404,22 @@ class FortinetReferenceInjector:
         return blocks
 
     @staticmethod
+    def _best_sheet_level_anchor(row_texts: List[str], preferred_terms: Tuple[str, ...]) -> int:
+        first_non_empty = -1
+        for idx, text in enumerate(row_texts):
+            lowered = text.lower().strip()
+            if not lowered:
+                continue
+            if first_non_empty < 0:
+                first_non_empty = idx
+            if any(term in lowered for term in preferred_terms):
+                return idx
+        return first_non_empty
+
+    @staticmethod
     def _is_product_anchor_text(lowered: str) -> bool:
+        if any(term in lowered for term in ("gartner", "quoted firewall", "quoted firewalls", "oem of quoted", "leaders/challengers")):
+            return False
         if "virtual router" in lowered or "virtual routers" in lowered:
             return False
         if "perimeter firewall" in lowered:
@@ -535,6 +613,72 @@ class FortinetReferenceInjector:
                 continue
         return False
 
+    @classmethod
+    def _has_concrete_reference_signal(
+        cls,
+        text: str,
+        metadata: Dict[str, Any],
+        sheet: Dict[str, Any],
+        headers: List[str],
+    ) -> bool:
+        normalized = ProductMatcher.normalize_requirements(metadata)
+        if ProductMatcher._has_hard_constraints(normalized):
+            return True
+
+        lowered = str(text or "").lower()
+        title = str(sheet.get("title") or sheet.get("name") or sheet.get("sheet_name") or "").lower()
+        header_text = " ".join(str(header or "") for header in headers[:6]).lower()
+        context = " ".join([title, header_text, lowered])
+
+        if cls._looks_like_narrative_without_hardware_specs(context):
+            return False
+
+        explicit_patterns = (
+            r"\b(?:fortigate|fortiswitch|fortimanager|fortianalyzer|fortilogger|fortisiem)\b",
+            r"\bhardware\s+based\s+(?:next\s+generation\s+firewall|firewall|logging|management)\b",
+            r"\b(?:firewall|ngfw)\s+(?:appliance|equipment|hardware|throughput)\b",
+            r"\b(?:remote|central)\s+site\s+(?:equipment|firewall)s?\b",
+            r"\b(?:ssl[-\s]?vpn)\s+(?:users?|throughput|appliance|concurrent)\b",
+            r"\b(?:data\s*center|datacenter|core|access|distribution)\s+switch(?:es)?\b",
+            r"\bswitching\s+capacity\b",
+            r"\b(?:hardware\s+logging|logging\s+appliance|log\s+reporting|log\s+backup|firewall\s+logs?)\b",
+            r"\b(?:centralized|network)\s+management\s+(?:appliance|hardware|solution)\b",
+            r"\b(?:ips|threat\s+protection|ssl/tls\s+inspection)\s+throughput\b",
+            r"\b(?:sfp\+?|sfp28|qsfp|rj45|ge\s+interfaces?)\b",
+        )
+        if any(re.search(pattern, context) for pattern in explicit_patterns):
+            return True
+
+        device_type = normalized.get("device_type")
+        if device_type in {"LOGGING", "CENTRALIZED_MANAGEMENT"} and any(
+            term in context for term in ("hardware", "appliance", "device", "equipment", "logs", "management")
+        ):
+            return True
+        return False
+
+    @staticmethod
+    def _looks_like_narrative_without_hardware_specs(context: str) -> bool:
+        if ProductMatcher._has_hard_constraints(ProductMatcher.extract_requirement_metadata(context)):
+            return False
+        narrative_terms = (
+            "procurement title",
+            "scope of work",
+            "delivery schedule",
+            "invitation to bid",
+            "bidder",
+            "eligibility",
+            "qualification",
+            "support, warranty",
+            "warranty, subscription",
+            "training",
+            "project timeline",
+            "payment terms",
+            "general content",
+            "misc requirements",
+            "notes",
+        )
+        return any(term in context for term in narrative_terms)
+
     @staticmethod
     def _should_reference(text: str, metadata: Dict[str, Any]) -> bool:
         if metadata.get("requires_reference") is True:
@@ -564,6 +708,18 @@ class FortinetReferenceInjector:
         return any(term in title for term in (
             "qualification", "pre-qualification", "prequalification", "eligibility",
             "evaluation criteria", "bid evaluation", "financial criteria", "commercial criteria",
+        ))
+
+    @staticmethod
+    def _is_narrative_or_admin_sheet(sheet: Dict[str, Any]) -> bool:
+        title = str(sheet.get("title") or sheet.get("name") or sheet.get("sheet_name") or "").lower()
+        return any(term in title for term in (
+            "general content",
+            "support",
+            "warranty",
+            "subscription",
+            "misc requirement",
+            "notes",
         ))
 
 

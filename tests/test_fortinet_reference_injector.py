@@ -121,6 +121,94 @@ class FortinetReferenceInjectorTests(unittest.TestCase):
         self.assertIn("Fortinet: FortiLogger", ref)
         self.assertNotIn("FortiAnalyzer", ref)
 
+    def test_procurement_narrative_does_not_get_hardware_reference(self):
+        data = {
+            "sheets": [{
+                "title": "General Content",
+                "headers": ["Description"],
+                "rows": [
+                    ["Procurement Title: Supply, Installation, Configuration and Maintenance of SSL-VPN Solution"],
+                    ["Scope of Work: The bidder shall provide services, support, warranty and documentation."],
+                ],
+            }]
+        }
+
+        enriched, stats = inject_fortinet_references(data, CATALOG_DIR)
+        sheet = enriched["sheets"][0]
+        ref_idx = _reference_index(sheet)
+
+        self.assertEqual(stats["matched_rows"], 0)
+        self.assertEqual(sheet["rows"][0][ref_idx], "")
+        self.assertEqual(sheet["rows"][1][ref_idx], "")
+
+    def test_generic_ssl_vpn_scope_without_specs_is_not_fallback_matched(self):
+        data = {
+            "sheets": [{
+                "title": "Connectivity Requirements",
+                "headers": ["SN", "Requirement", "Required Value / Spec"],
+                "rows": [
+                    ["1.", "SSL-VPN solution shall be provided for remote users as part of project scope", "Yes"],
+                ],
+            }]
+        }
+
+        enriched, stats = inject_fortinet_references(data, CATALOG_DIR)
+        sheet = enriched["sheets"][0]
+        ref = sheet["rows"][0][_reference_index(sheet)]
+
+        self.assertEqual(stats["matched_rows"], 0)
+        self.assertEqual(ref, "")
+
+    def test_ssl_vpn_user_sheet_groups_scale_rows_into_one_firewall_reference(self):
+        data = {
+            "sheets": [{
+                "title": "SSL-VPN Users",
+                "headers": ["SN", "Requirement", "Required Value / Spec"],
+                "rows": [
+                    ["Deployment and Hardware", "", ""],
+                    ["1.", "All solution and its components must be deployed on-prem", "Yes"],
+                    ["2.", "All proposed hardware must have minimum 4 x 10/25 fiber and 4 x 10G fiber ready to use interfaces", "Yes"],
+                    ["Scalability", "", ""],
+                    ["1.", "Fully licensed SSL-VPN concurrent users", "17,000"],
+                    ["2.", "Hardware must be scalable to handle 47,000 concurrent SSL VPN users", "Yes"],
+                    ["Security", "", ""],
+                    ["1.", "MFA and access control policies must be supported", "Yes"],
+                ],
+            }]
+        }
+
+        enriched, stats = inject_fortinet_references(data, CATALOG_DIR)
+        sheet = enriched["sheets"][0]
+        ref_idx = _reference_index(sheet)
+
+        self.assertEqual(stats["matched_rows"], 1)
+        self.assertIn("Fortinet: FortiGate", sheet["rows"][4][ref_idx])
+        self.assertIn("data-sheets", sheet["rows"][4][ref_idx])
+        self.assertTrue(all(row[ref_idx] == "" for idx, row in enumerate(sheet["rows"]) if idx != 4))
+
+    def test_logging_sheet_groups_rows_and_quotes_fortilogger_once(self):
+        data = {
+            "sheets": [{
+                "title": "Hardware Based Logging Solution",
+                "headers": ["No.", "Requirement Description", "Compliance"],
+                "rows": [
+                    ["1.", "Reporting", "Yes"],
+                    ["2.", "Logging", "Yes"],
+                    ["3.", "Must support 100GB Per day Or 10,000EPS and quote the solution accordingly.", "100GB Logs Per day Or 10,000 EPS"],
+                    ["4.", "Centralized logging", "Yes"],
+                    ["5.", "Must provide all type of logs including firewall logs, traffic logs, attack and audit logs.", "Yes"],
+                ],
+            }]
+        }
+
+        enriched, stats = inject_fortinet_references(data, CATALOG_DIR)
+        sheet = enriched["sheets"][0]
+        ref_idx = _reference_index(sheet)
+
+        self.assertEqual(stats["matched_rows"], 1)
+        self.assertIn("Fortinet: FortiLogger", sheet["rows"][2][ref_idx])
+        self.assertTrue(all(row[ref_idx] == "" for idx, row in enumerate(sheet["rows"]) if idx != 2))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -125,6 +125,19 @@ class FortinetRAGMatcher:
 
     def match_vendor(self, query: str, constraints: Dict[str, Any], vendor: str) -> Dict[str, Any]:
         constraints = self._adjust_solution_scale_constraints(query, constraints, vendor)
+        if not self.has_matchable_product_intent(query, constraints):
+            return {
+                "reference": "",
+                "reasoning": f"{vendor}: skipped because the row has no concrete hardware constraints or explicit product intent.",
+                "details": {
+                    "provider": "fortinet-rag",
+                    "vendor": vendor,
+                    "match_status": "not_a_hardware_reference_row",
+                    "query": query,
+                    "constraints": constraints,
+                    "top_candidates": [],
+                },
+            }
         retrieved = self.retrieve(query, constraints, vendor=vendor)
         safe_candidates = [
             candidate for candidate in retrieved
@@ -200,6 +213,8 @@ class FortinetRAGMatcher:
         return deduped
 
     def _safe_catalog_candidates(self, query: str, constraints: Dict[str, Any], vendor: str) -> List[FortinetCandidate]:
+        if not self.has_matchable_product_intent(query, constraints):
+            return []
         category = constraints.get("device_type") or constraints.get("category")
         categories = set(ProductMatcher._candidate_categories(category)) if category else set()
         query_terms = {term for term in re.findall(r"[a-z0-9]+", query.lower()) if len(term) > 2}
@@ -253,6 +268,8 @@ class FortinetRAGMatcher:
             for item in entries:
                 if not isinstance(item, dict):
                     continue
+                item = dict(item)
+                self._normalize_product_link(item)
                 vendor = str(item.get("vendor") or "").strip()
                 model = str(item.get("model") or "").strip()
                 if not vendor or not model:
@@ -265,6 +282,23 @@ class FortinetRAGMatcher:
                 seen.add(key)
                 products.append(item)
         return products
+
+    @staticmethod
+    def _normalize_product_link(product: Dict[str, Any]) -> None:
+        vendor = _norm(product.get("vendor") or "")
+        model = str(product.get("model") or "")
+        url = str(product.get("datasheet_url") or "").lower()
+        if vendor != "fortinet" or "infographic" not in url:
+            return
+        match = re.search(r"fortigate\s+(\d{3,4})([a-z])", model, flags=re.I)
+        if not match:
+            return
+        series_number = (int(match.group(1)) // 100) * 100
+        series_letter = match.group(2).lower()
+        product["datasheet_url"] = (
+            f"https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/"
+            f"fortigate-{series_number}{series_letter}-series.pdf"
+        )
 
     @staticmethod
     def _build_chunks(products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -309,9 +343,15 @@ class FortinetRAGMatcher:
         extracted = ProductMatcher.extract_requirement_metadata(text)
         merged = dict(metadata or {})
         query_lower = str(text or "").lower()
-        if re.search(r"\b(fortilogger|hardware logging|log reporting|log backup|logging appliance|firewall logs?)\b", query_lower):
+        if re.search(r"\b(fortilogger|hardware logging|centralized logging|log reporting|log backup|logging appliance|firewall logs?)\b", query_lower):
             merged["device_category"] = "LOGGING"
             merged["device_type"] = "LOGGING"
+        elif re.search(r"\b(perimeter firewall|next generation firewall|ngfw|firewall appliance|firewall throughput|threat protection throughput|ssl[-\s]?vpn\s+(?:throughput|users?|concurrent)|remote site firewall|central site firewall)\b", query_lower):
+            merged["device_category"] = "NGFW"
+            merged["device_type"] = "NGFW"
+        elif re.search(r"\b(data\s*center|datacenter|core|access|distribution)\s+switch(?:es)?\b|\bswitching capacity\b", query_lower):
+            merged["device_category"] = "DATACENTER_SWITCH"
+            merged["device_type"] = "DATACENTER_SWITCH"
         for key, value in extracted.items():
             if key == "requirements" and isinstance(value, dict):
                 existing = merged.setdefault("requirements", {})
@@ -327,7 +367,72 @@ class FortinetRAGMatcher:
         normalized = ProductMatcher.normalize_requirements(merged, source_text=text[:1000])
         if not normalized.get("device_type"):
             normalized["device_type"] = extracted.get("device_type")
+        FortinetRAGMatcher._apply_explicit_throughput_labels(normalized, text)
+        FortinetRAGMatcher._apply_explicit_ssl_vpn_user_labels(normalized, text)
         return normalized
+
+    @staticmethod
+    def _apply_explicit_throughput_labels(requirements: Dict[str, Any], text: str) -> None:
+        lowered = str(text or "").lower()
+
+        def labeled_gbps(label_pattern: str) -> Optional[float]:
+            match = re.search(
+                rf"(?:{label_pattern})[^\d]{{0,80}}(?P<value>\d+(?:\.\d+)?)\s*(?P<unit>tbps|gbps|mbps)\b",
+                lowered,
+                flags=re.I,
+            )
+            if not match:
+                return None
+            value = float(match.group("value"))
+            unit = match.group("unit").lower()
+            if unit == "tbps":
+                return value * 1000
+            if unit == "mbps":
+                return value / 1000
+            return value
+
+        explicit_fields = {
+            "firewall_throughput_gbps": r"(?:next\s+generation\s+firewall|ngfw|firewall)\s+throughput",
+            "ips_throughput_gbps": r"\bips\s+throughput",
+            "threat_protection_gbps": r"threat\s+protection\s+throughput",
+            "ssl_tls_inspection_gbps": r"ssl\s*/\s*tls\s+inspection\s+throughput|ssl\s+inspection\s+throughput|tls\s+inspection\s+throughput",
+            "ssl_vpn_gbps": r"ssl[-\s]?vpn\s+throughput",
+            "ipsec_vpn_throughput_gbps": r"ipsec\s+(?:vpn\s+)?throughput",
+        }
+        for field, pattern in explicit_fields.items():
+            value = labeled_gbps(pattern)
+            if value is not None:
+                requirements[field] = value
+
+    @staticmethod
+    def _apply_explicit_ssl_vpn_user_labels(requirements: Dict[str, Any], text: str) -> None:
+        lowered = str(text or "").lower()
+
+        def parse_int(value: str) -> float:
+            return float(value.replace(",", ""))
+
+        values: List[float] = []
+        scalable_values: List[float] = []
+        for match in re.finditer(r"(?:ssl[-\s]?vpn|vpn)[^\d]{0,80}(?P<value>\d[\d,]*)\s*(?:concurrent\s+)?users?\b", lowered):
+            values.append(parse_int(match.group("value")))
+        for match in re.finditer(r"\b(?:scalable|scale|handle)[^\d]{0,80}(?P<value>\d[\d,]*)\s*(?:concurrent\s+)?ssl[-\s]?vpn\s+users?\b", lowered):
+            scalable_values.append(parse_int(match.group("value")))
+        for match in re.finditer(r"\b(?:scalable|scale|handle)[^\d]{0,80}(?P<value>\d[\d,]*)\s*concurrent[^\|.;]{0,40}ssl\s+vpn\s+users?\b", lowered):
+            scalable_values.append(parse_int(match.group("value")))
+
+        if values or scalable_values:
+            selected = max(values + scalable_values)
+            requirements["ssl_vpn_users"] = selected
+            requirements.pop("max_local_remote_users", None)
+            requirements["device_type"] = "NGFW"
+            if scalable_values and max(scalable_values) >= selected:
+                requirements["solution_scale_ssl_vpn_users"] = max(scalable_values)
+            nested = dict(requirements.get("requirements") or {})
+            nested["ssl_vpn_users"] = selected
+            nested.pop("max_local_remote_users", None)
+            if requirements.get("solution_scale_ssl_vpn_users"):
+                nested["solution_scale_ssl_vpn_users"] = requirements["solution_scale_ssl_vpn_users"]
+            requirements["requirements"] = nested
 
     @staticmethod
     def _default_vendors(constraints: Dict[str, Any]) -> List[str]:
@@ -396,10 +501,45 @@ class FortinetRAGMatcher:
         category = constraints.get("device_type") or constraints.get("category")
         if category and not FortinetRAGMatcher._category_is_compatible(category, str(product.get("category") or "")):
             return False
+        if category == "LOGGING" and "fortilogger" in _norm(product.get("model")):
+            return True
         if not ProductMatcher._has_hard_constraints(constraints):
             return True
         ok, _, _, _ = ProductMatcher._passes_hard_filters(product, constraints)
         return ok
+
+    @staticmethod
+    def has_matchable_product_intent(query: str, constraints: Dict[str, Any]) -> bool:
+        if ProductMatcher._has_hard_constraints(constraints):
+            return True
+
+        query_lower = str(query or "").lower()
+        if re.search(
+            r"\b(procurement title|scope of work|delivery schedule|invitation to bid|bidder|eligibility|qualification|support, warranty|warranty, subscription|training|payment terms|general content|misc requirements|notes)\b",
+            query_lower,
+        ):
+            return False
+
+        explicit_patterns = (
+            r"\b(?:fortigate|fortiswitch|fortimanager|fortianalyzer|fortilogger|fortisiem)\b",
+            r"\bhardware\s+based\s+(?:next\s+generation\s+firewall|firewall|logging|management)\b",
+            r"\b(?:firewall|ngfw)\s+(?:appliance|equipment|hardware|throughput)\b",
+            r"\b(?:remote|central)\s+site\s+(?:equipment|firewall)s?\b",
+            r"\b(?:ssl[-\s]?vpn)\s+(?:users?|throughput|appliance|concurrent)\b",
+            r"\b(?:data\s*center|datacenter|core|access|distribution)\s+switch(?:es)?\b",
+            r"\bswitching\s+capacity\b",
+            r"\b(?:hardware\s+logging|logging\s+appliance|log\s+reporting|log\s+backup|firewall\s+logs?)\b",
+            r"\b(?:centralized|network)\s+management\s+(?:appliance|hardware|solution)\b",
+        )
+        if any(re.search(pattern, query_lower) for pattern in explicit_patterns):
+            return True
+
+        category = constraints.get("device_type") or constraints.get("category")
+        if category in {"LOGGING", "CENTRALIZED_MANAGEMENT"} and any(
+            term in query_lower for term in ("hardware", "appliance", "device", "equipment", "logs", "management")
+        ):
+            return True
+        return False
 
     def _adjust_solution_scale_constraints(self, query: str, constraints: Dict[str, Any], vendor: str) -> Dict[str, Any]:
         adjusted = dict(constraints or {})
@@ -451,10 +591,11 @@ class FortinetRAGMatcher:
     def _select_fallback(self, candidates: List[FortinetCandidate], constraints: Dict[str, Any]) -> FortinetCandidate:
         return sorted(candidates, key=lambda candidate: self._fallback_sort_key(candidate, constraints))[0]
 
-    def _fallback_sort_key(self, candidate: FortinetCandidate, constraints: Dict[str, Any]) -> Tuple[float, float, float, float, float]:
+    def _fallback_sort_key(self, candidate: FortinetCandidate, constraints: Dict[str, Any]) -> Tuple[float, ...]:
         matched, _, _ = self._constraint_details(candidate.product, constraints)
         try:
             score = ProductMatcher._score_product(candidate.product, constraints, matched)
+            url_penalty = self._datasheet_url_penalty(candidate.product)
             if constraints.get("solution_scale_ssl_vpn_users"):
                 ssl_users = ProductMatcher._product_numeric_value(candidate.product, "ssl_vpn_users", None) or 0.0
                 return (
@@ -462,6 +603,7 @@ class FortinetRAGMatcher:
                     -float(score.get("hardware_scale", 0)),
                     float(score.get("weighted_overprovision_penalty", 999)),
                     float(score.get("weighted_worst_overprovision", 999)),
+                    url_penalty,
                     -candidate.score,
                 )
             return (
@@ -469,10 +611,20 @@ class FortinetRAGMatcher:
                 float(score.get("weighted_worst_overprovision", 999)),
                 float(score.get("overprovision_penalty", 999)),
                 float(score.get("hardware_scale", 999)),
+                url_penalty,
                 -candidate.score,
             )
         except Exception:
             return (999.0, 999.0, 999.0, 999.0, -candidate.score)
+
+    @staticmethod
+    def _datasheet_url_penalty(product: Dict[str, Any]) -> float:
+        url = str(product.get("datasheet_url") or "").lower()
+        if "data-sheets" in url and "infographic" not in url and "product_matrix" not in url:
+            return 0.0
+        if url.endswith(".pdf"):
+            return 0.5
+        return 1.0
 
     def _llm_rank(
         self,
@@ -578,10 +730,17 @@ class FortinetRAGMatcher:
             for key, detail in (hard_details.get("interfaces") or {}).items():
                 if detail.get("passes"):
                     checks.append(f"interfaces.{key}: required {detail.get('required')}, candidate {detail.get('candidate')}")
-            reasoning = (
-                f"{vendor}: selected {product.get('model')} from RAG-retrieved catalog candidates after hard constraint filtering. "
-                "The candidate was not below any parsed numeric/interface/HA constraints."
-            )
+            if constraints.get("device_type") == "LOGGING" and "fortilogger" in _norm(product.get("model")) and missing:
+                status = "family_match"
+                reasoning = (
+                    f"{vendor}: selected {product.get('model')} because the requirement is for a dedicated hardware logging solution. "
+                    "The catalog entry does not expose all EPS/log-volume capacity fields in structured form, so final sizing should be checked against the FortiLogger datasheet/configuration."
+                )
+            else:
+                reasoning = (
+                    f"{vendor}: selected {product.get('model')} from RAG-retrieved catalog candidates after hard constraint filtering. "
+                    "The candidate was not below any parsed numeric/interface/HA constraints."
+                )
             if constraints.get("constraint_adjustment_note"):
                 reasoning += f" {constraints['constraint_adjustment_note']}"
             if checks:
