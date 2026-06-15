@@ -64,6 +64,31 @@ class FortinetReferenceInjectorTests(unittest.TestCase):
         self.assertIn("fortigate-", sheet["rows"][1][ref_idx].lower())
         self.assertTrue(all(row[ref_idx] == "" for row in sheet["rows"][2:]))
 
+    def test_inferred_firewall_block_overrides_bad_gemini_continuation_flags(self):
+        data = {
+            "sheets": [{
+                "title": "Hardware Based Next Generation Firewall",
+                "headers": ["SN", "Requirement", "Required Value / Spec"],
+                "rows": [
+                    {"row_type": "data", "data": ["Perimeter Firewalls", "", ""], "metadata": {"requires_reference": False, "product_group_primary_row": False}},
+                    {"row_type": "data", "data": ["1.", "Next Generation Firewall Throughput", "20Gbps"], "metadata": {"requires_reference": False, "product_group_primary_row": False}},
+                    {"row_type": "data", "data": ["2.", "IPS Throughput", "20Gbps"], "metadata": {"is_product_spec_continuation": True}},
+                    {"row_type": "data", "data": ["3.", "SSL VPN Throughput", "15Gbps"], "metadata": {"is_product_spec_continuation": True}},
+                    {"row_type": "data", "data": ["4.", "25 GE SFP28 interfaces with matched transceivers", "4"], "metadata": {"is_product_spec_continuation": True}},
+                    {"row_type": "data", "data": ["5.", "10 GE SFP+ interfaces with matched transceivers", "8"], "metadata": {"is_product_spec_continuation": True}},
+                    {"row_type": "data", "data": ["6.", "All hardware equipment must be Dual Power Supply", "Yes"], "metadata": {"is_product_spec_continuation": True}},
+                ],
+            }]
+        }
+
+        enriched, stats = inject_fortinet_references(data, CATALOG_DIR)
+        sheet = enriched["sheets"][0]
+        ref_idx = _reference_index(sheet)
+
+        self.assertEqual(stats["matched_rows"], 1)
+        self.assertIn("Fortinet: FortiGate", sheet["rows"][1]["data"][ref_idx])
+        self.assertTrue(all(row["data"][ref_idx] == "" for row in sheet["rows"][2:]))
+
     def test_multi_product_sheet_references_each_product_anchor(self):
         data = {
             "sheets": [{

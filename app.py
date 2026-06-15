@@ -187,13 +187,7 @@ def process_upload():
             start_page, end_page = page_range
         skip_enrichment = reference_provider != "fortinet"
         if reference_provider == "fortinet" and request.form.get("skip_enrichment") == "on":
-            allow_skip = os.getenv("ALLOW_ADMIN_GUIDE_SKIP", "").strip().lower() in {"1", "true", "yes", "on"}
-            if allow_skip:
-                skip_enrichment = True
-            else:
-                app.logger.warning(
-                    "Ignoring Fortinet skip_enrichment request because ALLOW_ADMIN_GUIDE_SKIP is not enabled."
-                )
+            skip_enrichment = True
         toc_index_path, admin_guide_pdf_path = prepare_admin_guide_index(
             PROJECT_ROOT,
             skip_enrichment=skip_enrichment,
@@ -210,6 +204,7 @@ def process_upload():
             admin_guide_pdf_path,
             selected_model["id"],
             reference_provider,
+            skip_enrichment,
         )
         final_excel_path = outputs["final_excel_path"]
         download_name = f"{Path(original_name).stem}_enriched_requirements.xlsx"

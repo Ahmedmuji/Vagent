@@ -138,7 +138,7 @@ def recover_admin_guide_index(project_root, toc_index_path=None, admin_guide_pdf
 
     return toc_index_path, admin_guide_pdf_path
 
-def process_pdf_section(filename, input_path, start_page, end_page, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path=None, admin_guide_pdf_path=None, model_name=None, reference_provider="fortinet"):
+def process_pdf_section(filename, input_path, start_page, end_page, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path=None, admin_guide_pdf_path=None, model_name=None, reference_provider="fortinet", skip_admin_guide=False):
     base_name = os.path.splitext(filename)[0].replace("_Requirements", "")
     print(f"\n--- Processing: {base_name} pages {start_page}-{end_page} ---")
 
@@ -192,7 +192,7 @@ def process_pdf_section(filename, input_path, start_page, end_page, extracted_pd
 
     final_excel_path = excel_path
     enrichment_stats = None
-    if reference_provider in FORTINET_REFERENCE_PROVIDERS:
+    if reference_provider in FORTINET_REFERENCE_PROVIDERS and not skip_admin_guide:
         project_root = os.path.dirname(os.path.abspath(__file__))
         toc_index_path, admin_guide_pdf_path = recover_admin_guide_index(
             project_root,
@@ -200,7 +200,9 @@ def process_pdf_section(filename, input_path, start_page, end_page, extracted_pd
             admin_guide_pdf_path,
         )
 
-    if reference_provider in FORTINET_REFERENCE_PROVIDERS and toc_index_path and os.path.exists(toc_index_path):
+    if skip_admin_guide and reference_provider in FORTINET_REFERENCE_PROVIDERS:
+        print("  Skipping Admin Guide enrichment because skip_enrichment is enabled.")
+    elif reference_provider in FORTINET_REFERENCE_PROVIDERS and toc_index_path and os.path.exists(toc_index_path):
         print("Enriching with Fortinet Admin Guide references...")
         enriched_filename = f"{base_name}_enriched_with_admin_guide_references.xlsx"
         enriched_path = os.path.join(pdf_excel_dir, enriched_filename)
@@ -234,7 +236,7 @@ def process_pdf_section(filename, input_path, start_page, end_page, extracted_pd
         "enrichment_stats": enrichment_stats,
     }
 
-def process_single_file(filename, input_path, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path=None, admin_guide_pdf_path=None, model_name=None, reference_provider="fortinet"):
+def process_single_file(filename, input_path, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path=None, admin_guide_pdf_path=None, model_name=None, reference_provider="fortinet", skip_admin_guide=False):
 
     """Orchestrates the full extraction for a single PDF file."""
     base_name = os.path.splitext(filename)[0].replace("_Requirements", "")
@@ -256,6 +258,7 @@ def process_single_file(filename, input_path, extracted_pdf_dir, json_results_di
             admin_guide_pdf_path,
             model_name,
             reference_provider,
+            skip_admin_guide,
         )
         print(f"SUCCESS: Generated reports for {base_name}:")
         print(f"  JSON:  {outputs['json_path']}")
@@ -310,7 +313,7 @@ def main():
             print(f"Error: File not found: {args.input}")
             return
         filename = os.path.basename(args.input)
-        process_single_file(filename, args.input, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path, admin_guide_pdf_path, args.model, args.reference_provider)
+        process_single_file(filename, args.input, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path, admin_guide_pdf_path, args.model, args.reference_provider, args.skip_enrichment)
     else:
         # BATCH MODE
         if not os.path.exists(input_dir):
@@ -322,7 +325,7 @@ def main():
         
         for filename in files:
             input_path = os.path.join(input_dir, filename)
-            process_single_file(filename, input_path, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path, admin_guide_pdf_path, args.model, args.reference_provider)
+            process_single_file(filename, input_path, extracted_pdf_dir, json_results_dir, excel_results_dir, toc_index_path, admin_guide_pdf_path, args.model, args.reference_provider, args.skip_enrichment)
 
     print("\n=== PIPELINE COMPLETE ===")
     print(f"JSON Results:  {json_results_dir}")

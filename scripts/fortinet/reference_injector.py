@@ -110,7 +110,7 @@ class FortinetReferenceInjector:
                 and metadata.get("group_primary_row") is not True
             ):
                 continue
-            if not self._is_reference_anchor(metadata, effective_metadata):
+            if inferred_block is None and not self._is_reference_anchor(metadata, effective_metadata):
                 continue
             if inferred_block is None and not self._should_reference(contextual_text, effective_metadata):
                 continue
@@ -372,6 +372,9 @@ class FortinetReferenceInjector:
             if "hardware based logging" in sheet_title or "logging solut" in sheet_title:
                 anchor = cls._best_sheet_level_anchor(row_texts, preferred_terms=("100gb", "eps", "centralized logging", "firewall logs", "log analytics"))
                 return [{"anchor_idx": anchor, "start_idx": 0, "end_idx": max(0, len(rows) - 1)}] if anchor >= 0 else []
+            if cls._sheet_contains_logging_product(row_texts):
+                anchor = cls._best_sheet_level_anchor(row_texts, preferred_terms=("fortilogger", "hardware logging", "logging appliance", "100gb", "eps", "centralized logging", "firewall logs", "log analytics"))
+                return [{"anchor_idx": anchor, "start_idx": 0, "end_idx": max(0, len(rows) - 1)}] if anchor >= 0 else []
             if "management" in sheet_title and "monitor" in sheet_title:
                 anchor = cls._best_sheet_level_anchor(row_texts, preferred_terms=("centralized management", "unified dashboard", "configuration", "orchestration"))
                 return [{"anchor_idx": anchor, "start_idx": 0, "end_idx": max(0, len(rows) - 1)}] if anchor >= 0 else []
@@ -417,9 +420,21 @@ class FortinetReferenceInjector:
         return first_non_empty
 
     @staticmethod
+    def _sheet_contains_logging_product(row_texts: List[str]) -> bool:
+        context = " ".join(row_texts).lower()
+        if re.search(r"\b(?:hardware\s+logging|logging\s+appliance|fortilogger|centralized\s+logging)\b", context):
+            return True
+        return bool(
+            re.search(r"\b(?:logs?|logging|reports?|analytics)\b", context)
+            and re.search(r"\b(?:eps|gb\s+per\s+day|firewall\s+logs?|log\s+backup)\b", context)
+        )
+
+    @staticmethod
     def _is_product_anchor_text(lowered: str) -> bool:
         if any(term in lowered for term in ("gartner", "quoted firewall", "quoted firewalls", "oem of quoted", "leaders/challengers")):
             return False
+        if re.search(r"\b(?:hardware\s+logging|logging\s+appliance|fortilogger)\b", lowered):
+            return True
         if "virtual router" in lowered or "virtual routers" in lowered:
             return False
         if "perimeter firewall" in lowered:
