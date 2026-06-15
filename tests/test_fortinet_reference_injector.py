@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from fortinet.rag_matcher import FortinetRAGMatcher  # noqa: E402
 from fortinet.reference_injector import inject_fortinet_references  # noqa: E402
 
 
@@ -63,6 +64,27 @@ class FortinetReferenceInjectorTests(unittest.TestCase):
         self.assertIn("Fortinet: FortiGate", sheet["rows"][1][ref_idx])
         self.assertIn("fortigate-", sheet["rows"][1][ref_idx].lower())
         self.assertTrue(all(row[ref_idx] == "" for row in sheet["rows"][2:]))
+
+    def test_firewall_fit_prefers_closest_safe_model_over_oversized_model(self):
+        matcher = FortinetRAGMatcher(CATALOG_DIR, top_k=20, use_llm=False, include_juniper=False)
+        requirement = (
+            "Perimeter Firewalls Next Generation Firewall Throughput 20Gbps "
+            "IPS Throughput 20Gbps Concurrent sessions 12 Million "
+            "Connections Per Seconds 500,000 Policies 100,000 "
+            "Storage Support (Usable) 1TB Threat protection throughput 20Gbps "
+            "SSL/TLS Inspection throughput 15Gbps SSL VPN Throughput 15Gbps "
+            "Interfaces 25 GE SFP28 interfaces with matched transceivers 4 "
+            "10 GE SFP+ interfaces with matched transceivers 8 "
+            "1/10 GE RJ45 2 HA Port Yes Console Port Yes Management Port RJ-45 Yes "
+            "High Availability Active/Active, Active/Passive, Clustering"
+        )
+
+        constraints = matcher._parse_constraints(requirement, {})
+        result = matcher.match_vendor(requirement, constraints, "Fortinet")
+
+        self.assertEqual(constraints["interfaces"]["1_10g_rj45"], 2)
+        self.assertIn("Fortinet: FortiGate 2601F", result["reference"])
+        self.assertNotIn("FortiGate 3501F", result["reference"])
 
     def test_inferred_firewall_block_overrides_bad_gemini_continuation_flags(self):
         data = {

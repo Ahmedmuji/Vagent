@@ -157,7 +157,7 @@ INTERFACE_PATTERNS = {
     "40g_qsfp_plus": r"(?P<count>\d+)\s*(?:x|×)?\s*(?:40\s*g|40gbe|40\s*gbps).*?(?:qsfp\+|qsfp)?",
     "25g_sfp28": r"(?P<count>\d+)\s*(?:x|×)?\s*(?:25\s*g|25gbe|25\s*gbps).*?(?:sfp28)?",
     "10g_sfp_plus": r"(?P<count>\d+)\s*(?:x|×)?\s*(?:10\s*g|10gbe|10\s*gbps).*?(?:sfp\+|sfp plus|sfp)?",
-    "1_10g_rj45": r"(?P<count>\d+)\s*(?:x|×)?\s*(?:1/10\s*g|1g/10g|10\s*g|10gbe).*?(?:rj45|base-t|copper)",
+    "1_10g_rj45": r"(?P<count>\d+)\s*(?:x|×)\s*(?:1/10\s*(?:g|ge|gbe|gbps)|1g/10g|10\s*(?:g|ge|gbe|gbps)).{0,35}?(?:rj45|base-t|copper)",
     "1g_rj45": r"(?P<count>\d+)\s*(?:x|×)?\s*(?:1\s*g|1gbe|gigabit).*?(?:rj45|base-t|copper)",
 }
 
@@ -169,14 +169,14 @@ INTERFACE_REVERSE_PATTERNS = {
     "40g_qsfp_plus": r"(?:interfaces?|ports?).{0,50}40\s*(?:g|gig|gbe|gbps).{0,35}(?:qsfp\+|qsfp)?.{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
     "25g_sfp28": r"(?:interfaces?|ports?).{0,50}25\s*(?:g|gig|gbe|gbps).{0,35}(?:sfp28)?.{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
     "10g_sfp_plus": r"(?:interfaces?|ports?).{0,50}10\s*(?:g|gig|gbe|gbps).{0,35}(?:sfp\+|sfp plus|sfp)?.{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
-    "1_10g_rj45": r"(?:interfaces?|ports?).{0,50}(?:1/10\s*g|1g/10g).{0,35}(?:rj45|base-t|copper)?.{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
+    "1_10g_rj45": r"(?:interfaces?|ports?).{0,50}(?:1/10\s*(?:g|ge|gbe|gbps)|1g/10g|10\s*(?:g|ge|gbe|gbps)).{0,35}(?:rj45|base-t|copper).{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
     "1g_rj45": r"(?:interfaces?|ports?).{0,50}(?:copper|rj45|base-t).{0,25}(?:1\s*(?:g|gig|gbe|gbps)|gigabit).{0,15}(?:=|:|qty|quantity|count)\s*(?P<count>\d+)",
 }
 
 INTERFACE_TRAILING_VALUE_PATTERNS = {
     "25g_sfp28": r"25\s*(?:g|ge|gig|gbe|gbps).{0,40}(?:sfp28|sfp).{0,80}?(?:interfaces?|ports?).{0,80}?(?P<count>\d+)",
     "10g_sfp_plus": r"10\s*(?:g|ge|gig|gbe|gbps).{0,40}(?:sfp\+|sfp plus|sfp).{0,80}?(?:interfaces?|ports?).{0,80}?(?P<count>\d+)",
-    "1_10g_rj45": r"1\s*/\s*10\s*(?:g|ge|gig|gbe|gbps).{0,60}(?:rj45|base-t|copper).{0,80}?(?P<count>\d+)",
+    "1_10g_rj45": r"(?:1\s*/\s*10|10)\s*(?:g|ge|gig|gbe|gbps).{0,45}(?:rj45|base-t|copper).{0,40}?(?P<count>\d+)",
     "1g_rj45": r"(?:1\s*(?:g|ge|gig|gbe|gbps)|gigabit).{0,50}(?:rj45|base-t|copper).{0,80}?(?:interfaces?|ports?)?.{0,80}?(?P<count>\d+)",
 }
 
@@ -598,6 +598,19 @@ class ProductMatcher:
         return any(requirements.get(field) is True for field in BOOLEAN_REQUIREMENT_FIELDS)
 
     @staticmethod
+    def _storage_requirement_passes(field: str, available_value: float, required_value: float) -> bool:
+        if field != "storage_tb" or required_value <= 0:
+            return False
+        if available_value >= required_value:
+            return True
+        # Fortinet catalogs often expose local storage as parsed binary TiB
+        # after reading 960 GB / 1 TB-class drive specs. Treat that narrow
+        # storage-only unit mismatch as equivalent so a nominal 1 TB requirement
+        # does not force a much larger appliance.
+        whole_tb_requirement = abs(required_value - round(required_value)) < 0.01
+        return whole_tb_requirement and available_value >= required_value * 0.93
+
+    @staticmethod
     def _passes_hard_filters(product: Dict[str, Any], requirements: Dict[str, Any]) -> Tuple[bool, List[str], List[str], Dict[str, Any]]:
         matched: List[str] = []
         missing: List[str] = []
@@ -624,11 +637,14 @@ class ProductMatcher:
             if required_value is None or available_value is None:
                 missing.append(field)
                 continue
-            if available_value < required_value:
+            storage_tolerance_pass = ProductMatcher._storage_requirement_passes(field, available_value, required_value)
+            if available_value < required_value and not storage_tolerance_pass:
                 missing.append(field)
             else:
                 matched.append(field)
                 details["requirements"][field]["passes"] = True
+                if storage_tolerance_pass:
+                    details["requirements"][field]["unit_tolerance"] = "decimal_tb_vs_binary_tib"
         required_interfaces = requirements.get("interfaces") or {}
         for name, required_count in required_interfaces.items():
             if required_count in (None, ""):

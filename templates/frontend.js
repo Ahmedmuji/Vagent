@@ -152,7 +152,7 @@ const state = {
       const isFortinet = referenceProviderInput.value === 'fortinet';
       enrichmentRow.classList.toggle('opacity-60', !isFortinet);
       skipEnrichmentInput.disabled = !isFortinet;
-      skipEnrichmentInput.checked = !isFortinet;
+      if (!isFortinet) skipEnrichmentInput.checked = false;
     }
 
     function handleFile(file) {
@@ -280,7 +280,7 @@ const state = {
       formData.append('reference_provider', state.pendingReferenceProvider || referenceProviderInput.value);
       formData.append('start_page', startPageInput.value);
       formData.append('end_page', endPageInput.value);
-      if (skipEnrichmentInput.checked) formData.append('skip_enrichment', 'on');
+      if (skipEnrichmentInput.checked) formData.append('enable_admin_guide', 'on');
 
       const timers = [
         setTimeout(() => updateSteps(2), 4500),

@@ -185,9 +185,13 @@ def process_upload():
             end_page = detected["end_page"]
         else:
             start_page, end_page = page_range
-        skip_enrichment = reference_provider != "fortinet"
-        if reference_provider == "fortinet" and request.form.get("skip_enrichment") == "on":
-            skip_enrichment = True
+        enable_admin_guide = (
+            reference_provider == "fortinet"
+            and request.form.get("enable_admin_guide") == "on"
+        )
+        if request.form.get("skip_enrichment") == "on":
+            enable_admin_guide = False
+        skip_enrichment = not enable_admin_guide
         toc_index_path, admin_guide_pdf_path = prepare_admin_guide_index(
             PROJECT_ROOT,
             skip_enrichment=skip_enrichment,
@@ -207,7 +211,8 @@ def process_upload():
             skip_enrichment,
         )
         final_excel_path = outputs["final_excel_path"]
-        download_name = f"{Path(original_name).stem}_enriched_requirements.xlsx"
+        suffix = "_enriched_requirements.xlsx" if enable_admin_guide else "_hardware_references.xlsx"
+        download_name = f"{Path(original_name).stem}{suffix}"
         return send_file(final_excel_path, as_attachment=True, download_name=download_name)
     except UserInputError as exc:
         return jsonify({"error": str(exc)}), 400
