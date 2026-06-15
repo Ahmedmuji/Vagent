@@ -18,6 +18,31 @@ from product_matcher import ProductMatcher
 
 FORTINET_RAG_CATALOGS = ("fortinet_scraped.json", "fortinet.json")
 OPTIONAL_RAG_CATALOGS = ("juniper.json",)
+CURATED_FALLBACK_PRODUCTS = (
+    {
+        "vendor": "Fortinet",
+        "model": "FortiLogger",
+        "category": "LOGGING",
+        "product_url": "https://www.fortilogger.com/",
+        "datasheet_url": "https://www.fortilogger.com/",
+        "description": "Dedicated Fortinet-compatible hardware logging, reporting, and log backup appliance.",
+        "use_case": "hardware logging solution, firewall logs, centralized logging, log reporting, log backup",
+    },
+    {
+        "vendor": "Fortinet",
+        "model": "FortiSwitch 1048E",
+        "category": "DATACENTER_SWITCH",
+        "switching_capacity_gbps": 1760,
+        "interfaces": {
+            "10g_sfp_plus": 48,
+            "40g_qsfp_plus": 6,
+        },
+        "management_port": True,
+        "product_url": "https://www.fortinet.com/products/ethernet-switches/fortiswitch",
+        "datasheet_url": "https://www.fortinet.com/content/dam/fortinet/assets/data-sheets/FortiSwitch_Data_Center_Series.pdf",
+        "description": "FortiSwitch data-center switch family member for high-density 10G SFP+ switching requirements.",
+    },
+)
 NETWORK_CATEGORIES = {
     "NGFW",
     "DATACENTER_SWITCH",
@@ -281,6 +306,15 @@ class FortinetRAGMatcher:
                     continue
                 seen.add(key)
                 products.append(item)
+        for item in CURATED_FALLBACK_PRODUCTS:
+            key = (
+                str(item.get("vendor") or "").lower(),
+                str(item.get("model") or "").lower(),
+                str(item.get("category") or "").lower(),
+            )
+            if key not in seen:
+                seen.add(key)
+                products.append(dict(item))
         return products
 
     @staticmethod
@@ -392,7 +426,8 @@ class FortinetRAGMatcher:
             return value
 
         explicit_fields = {
-            "firewall_throughput_gbps": r"(?:next\s+generation\s+firewall|ngfw|firewall)\s+throughput",
+            "ngfw_throughput_gbps": r"(?:next\s+generation\s+firewall|ngfw)\s+throughput",
+            "firewall_throughput_gbps": r"(?<!generation\s)firewall\s+throughput",
             "ips_throughput_gbps": r"\bips\s+throughput",
             "threat_protection_gbps": r"threat\s+protection\s+throughput",
             "ssl_tls_inspection_gbps": r"ssl\s*/\s*tls\s+inspection\s+throughput|ssl\s+inspection\s+throughput|tls\s+inspection\s+throughput",
@@ -403,6 +438,14 @@ class FortinetRAGMatcher:
             value = labeled_gbps(pattern)
             if value is not None:
                 requirements[field] = value
+        if requirements.get("ngfw_throughput_gbps") not in (None, ""):
+            source = lowered[:1200]
+            if "next generation firewall throughput" in source or "ngfw throughput" in source:
+                requirements.pop("firewall_throughput_gbps", None)
+                nested = dict(requirements.get("requirements") or {})
+                nested.pop("firewall_throughput_gbps", None)
+                nested["ngfw_throughput_gbps"] = requirements["ngfw_throughput_gbps"]
+                requirements["requirements"] = nested
 
     @staticmethod
     def _apply_explicit_ssl_vpn_user_labels(requirements: Dict[str, Any], text: str) -> None:
@@ -598,11 +641,13 @@ class FortinetRAGMatcher:
             url_penalty = self._datasheet_url_penalty(candidate.product)
             if constraints.get("solution_scale_ssl_vpn_users"):
                 ssl_users = ProductMatcher._product_numeric_value(candidate.product, "ssl_vpn_users", None) or 0.0
+                required_ssl_users = ProductMatcher._parse_catalog_number(constraints.get("ssl_vpn_users")) or ssl_users or 1.0
+                ssl_user_gap = abs(float(ssl_users) - float(required_ssl_users)) / max(float(required_ssl_users), 1.0)
                 return (
-                    -float(ssl_users),
-                    -float(score.get("hardware_scale", 0)),
+                    ssl_user_gap,
                     float(score.get("weighted_overprovision_penalty", 999)),
                     float(score.get("weighted_worst_overprovision", 999)),
+                    float(score.get("hardware_scale", 999)),
                     url_penalty,
                     -candidate.score,
                 )
