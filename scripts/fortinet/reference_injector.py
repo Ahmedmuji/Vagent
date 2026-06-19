@@ -417,6 +417,8 @@ class FortinetReferenceInjector:
                         anchor = candidate_idx
                         break
             end_idx = max(anchor, next_anchor - 1)
+            if cls._is_self_contained_firewall_capacity_row(row_texts[anchor]):
+                end_idx = anchor
             blocks.append({"anchor_idx": anchor, "start_idx": start_anchor, "end_idx": end_idx})
         return blocks
 
@@ -496,6 +498,15 @@ class FortinetReferenceInjector:
         )):
             return False
         return FortinetReferenceInjector._is_product_anchor_text(lowered)
+
+    @staticmethod
+    def _is_self_contained_firewall_capacity_row(text: str) -> bool:
+        lowered = text.lower()
+        if "firewall" not in lowered:
+            return False
+        if not re.search(r"\b(?:hardware\s+capacity|equipment\s+hardware\s+capacity|ipsec\s+vpn\s+throughput|interfaces?\s+copper|redundant\s+power|ha\s+configuration)\b", lowered):
+            return False
+        return bool(re.search(r"\b(?:gbps|mbps|interfaces?|redundant\s+power|active/passive|active-passive)\b", lowered))
 
     @classmethod
     def _inferred_block_context(cls, sheet: Dict[str, Any], headers: List[str], block: Dict[str, int]) -> str:

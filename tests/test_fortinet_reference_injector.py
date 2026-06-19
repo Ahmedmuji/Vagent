@@ -116,6 +116,22 @@ class FortinetReferenceInjectorTests(unittest.TestCase):
         self.assertIn("Fortinet: FortiGate 700G", result["reference"])
         self.assertNotIn("no catalog item met", result["reasoning"].lower())
 
+    def test_multiplied_40g_metadata_is_corrected_from_text(self):
+        matcher = FortinetRAGMatcher(CATALOG_DIR, top_k=20, use_llm=False, include_juniper=False)
+        requirement = "Core switch must provide minimum 3x 40G interfaces and 1 Tbps switching capacity."
+        gemini_metadata = {
+            "device_type": "DATACENTER_SWITCH",
+            "detected_specs": {
+                "interfaces_40g": 120,
+                "switching_capacity_gbps": 1000,
+            },
+        }
+
+        constraints = matcher._parse_constraints(requirement, gemini_metadata)
+
+        self.assertEqual(constraints["interfaces"]["40g_qsfp_plus"], 3)
+        self.assertNotEqual(constraints["interfaces"]["40g_qsfp_plus"], 120)
+
     def test_inferred_firewall_block_overrides_bad_gemini_continuation_flags(self):
         data = {
             "sheets": [{
@@ -204,6 +220,29 @@ class FortinetReferenceInjectorTests(unittest.TestCase):
         self.assertIn("Fortinet: FortiGate", sheet["rows"][1][ref_idx])
         self.assertIn("Fortinet: FortiSwitch", sheet["rows"][16][ref_idx])
         self.assertTrue(all(sheet["rows"][idx][ref_idx] == "" for idx in (0, 2, 10, 15, 17, 18)))
+
+    def test_self_contained_remote_firewall_row_does_not_absorb_feature_rows(self):
+        data = {
+            "sheets": [{
+                "title": "Technical Compliance Sheet",
+                "headers": ["S#", "Description", "Compliance"],
+                "rows": [
+                    ["2.", "Total Remote Sites Firewalls = 196x Remote Site Equipment Hardware Capacity: a) IPSec VPN throughput with all features 200 Mbps b) Interfaces Copper 1Gig = 5", ""],
+                    ["4.", "Provided equipment must load balance, load sharing and fail-over between network links.", ""],
+                    ["5.", "Proposed equipment must provide SDWAN features including link bundling and traffic steering.", ""],
+                ],
+            }]
+        }
+
+        enriched, stats = inject_fortinet_references(data, CATALOG_DIR)
+        sheet = enriched["sheets"][0]
+        ref_idx = _reference_index(sheet)
+        reason_idx = sheet["headers"].index("Hardware_Reference_Reasoning")
+
+        self.assertEqual(stats["matched_rows"], 1)
+        self.assertIn("Fortinet: FortiGate 40F", sheet["rows"][0][ref_idx])
+        self.assertNotIn("ha_modes", sheet["rows"][0][reason_idx].lower())
+        self.assertTrue(all(row[ref_idx] == "" for row in sheet["rows"][1:]))
 
     def test_hardware_logging_uses_fortilogger_not_fortianalyzer(self):
         data = {

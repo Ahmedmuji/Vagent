@@ -402,9 +402,51 @@ class FortinetRAGMatcher:
         if not normalized.get("device_type"):
             normalized["device_type"] = extracted.get("device_type")
         FortinetRAGMatcher._apply_explicit_throughput_labels(normalized, text)
+        FortinetRAGMatcher._apply_explicit_interface_counts(normalized, text)
         FortinetRAGMatcher._apply_explicit_ssl_vpn_user_labels(normalized, text)
         FortinetRAGMatcher._sanitize_cross_product_constraints(normalized)
         return normalized
+
+    @staticmethod
+    def _apply_explicit_interface_counts(requirements: Dict[str, Any], text: str) -> None:
+        explicit = ProductMatcher._extract_interfaces(ProductMatcher._normalize_text(text))
+        if not explicit:
+            return
+        interfaces = dict(requirements.get("interfaces") or {})
+        speed_by_name = {
+            "1g_rj45": 1,
+            "10g_rj45": 10,
+            "1_10g_rj45": 10,
+            "1g_sfp": 1,
+            "10g_sfp_plus": 10,
+            "25g_sfp28": 25,
+            "40g_qsfp_plus": 40,
+            "50g_sfp56": 50,
+            "100g_qsfp28": 100,
+            "200g_qsfp56": 200,
+            "400g_qsfp_dd": 400,
+        }
+        corrected = {}
+        for name, explicit_count in explicit.items():
+            current = ProductMatcher._parse_catalog_number(interfaces.get(name))
+            speed = speed_by_name.get(name)
+            if current is None:
+                interfaces[name] = explicit_count
+                continue
+            if speed and int(current) == int(explicit_count) * speed:
+                interfaces[name] = explicit_count
+                corrected[name] = {"from": int(current), "to": explicit_count}
+            elif int(current) < int(explicit_count):
+                interfaces[name] = explicit_count
+        if interfaces:
+            requirements["interfaces"] = interfaces
+            nested = dict(requirements.get("requirements") or {})
+            nested["interfaces"] = interfaces
+            requirements["requirements"] = nested
+        if corrected:
+            notes = list(requirements.get("constraint_sanitization_notes") or [])
+            notes.append(f"Corrected multiplied interface metadata from explicit text: {corrected}")
+            requirements["constraint_sanitization_notes"] = notes
 
     @staticmethod
     def _sanitize_cross_product_constraints(requirements: Dict[str, Any]) -> None:
