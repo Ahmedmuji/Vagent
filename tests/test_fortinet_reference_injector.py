@@ -99,7 +99,8 @@ class FortinetReferenceInjectorTests(unittest.TestCase):
             "licenses for 200x Firewalls and centrally manage SDWAN feature sets."
         )
         gemini_metadata = {
-            "device_type": "NGFW",
+            "device_type": "CENTRALIZED_MANAGEMENT",
+            "device_category": "CENTRALIZED_MANAGEMENT",
             "detected_specs": {
                 "ipsec_vpn_throughput_gbps": 10,
                 "concurrent_sessions": 20_000_000,
@@ -112,6 +113,7 @@ class FortinetReferenceInjectorTests(unittest.TestCase):
         constraints = matcher._parse_constraints(requirement, gemini_metadata)
         result = matcher.match_vendor(requirement, constraints, "Fortinet")
 
+        self.assertEqual(constraints["device_type"], "NGFW")
         self.assertNotIn("max_devices_vdoms", constraints)
         self.assertIn("Fortinet: FortiGate 700G", result["reference"])
         self.assertNotIn("no catalog item met", result["reasoning"].lower())

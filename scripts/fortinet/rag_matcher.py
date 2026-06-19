@@ -377,10 +377,13 @@ class FortinetRAGMatcher:
         extracted = ProductMatcher.extract_requirement_metadata(text)
         merged = dict(metadata or {})
         query_lower = str(text or "").lower()
-        if re.search(r"\b(fortilogger|hardware logging|centralized logging|log reporting|log backup|logging appliance|firewall logs?)\b", query_lower):
+        if FortinetRAGMatcher._has_explicit_ngfw_hardware_requirement(query_lower):
+            merged["device_category"] = "NGFW"
+            merged["device_type"] = "NGFW"
+        elif re.search(r"\b(fortilogger|hardware logging|centralized logging|log reporting|log backup|logging appliance|firewall logs?)\b", query_lower):
             merged["device_category"] = "LOGGING"
             merged["device_type"] = "LOGGING"
-        elif re.search(r"\b(perimeter firewall|next generation firewall|ngfw|firewall appliance|firewall throughput|threat protection throughput|ssl[-\s]?vpn\s+(?:throughput|users?|concurrent)|remote site firewall|central site firewall)\b", query_lower):
+        elif re.search(r"\b(perimeter firewall|aggregation firewall|aggregation firewalls|next generation firewall|ngfw|firewall appliance|firewall throughput|threat protection throughput|ipsec\s+vpn\s+throughput|ssl[-\s]?vpn\s+(?:throughput|users?|concurrent)|remote site firewall|central site firewall)\b", query_lower):
             merged["device_category"] = "NGFW"
             merged["device_type"] = "NGFW"
         elif re.search(r"\b(data\s*center|datacenter|core|access|distribution)\s+switch(?:es)?\b|\bswitching capacity\b", query_lower):
@@ -406,6 +409,22 @@ class FortinetRAGMatcher:
         FortinetRAGMatcher._apply_explicit_ssl_vpn_user_labels(normalized, text)
         FortinetRAGMatcher._sanitize_cross_product_constraints(normalized)
         return normalized
+
+    @staticmethod
+    def _has_explicit_ngfw_hardware_requirement(text: str) -> bool:
+        if re.search(r"\b(?:aggregation|perimeter|remote\s+site|central\s+site)\s+firewalls?\s*(?:\(|-|–|\s)*(?:hardware|equipment)?\b", text):
+            return True
+        firewall_context = "firewall" in text or "firewalls" in text or "ngfw" in text
+        firewall_hardware_specs = (
+            "ipsec vpn throughput",
+            "firewall throughput",
+            "threat protection throughput",
+            "concurrent sessions",
+            "10gig interfaces",
+            "10g interfaces",
+            "redundant power",
+        )
+        return firewall_context and sum(1 for term in firewall_hardware_specs if term in text) >= 2
 
     @staticmethod
     def _apply_explicit_interface_counts(requirements: Dict[str, Any], text: str) -> None:
