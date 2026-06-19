@@ -376,19 +376,10 @@ class FortinetRAGMatcher:
     def _parse_constraints(text: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
         extracted = ProductMatcher.extract_requirement_metadata(text)
         merged = dict(metadata or {})
-        query_lower = str(text or "").lower()
-        if FortinetRAGMatcher._has_explicit_ngfw_hardware_requirement(query_lower):
-            merged["device_category"] = "NGFW"
-            merged["device_type"] = "NGFW"
-        elif re.search(r"\b(fortilogger|hardware logging|centralized logging|log reporting|log backup|logging appliance|firewall logs?)\b", query_lower):
-            merged["device_category"] = "LOGGING"
-            merged["device_type"] = "LOGGING"
-        elif re.search(r"\b(perimeter firewall|aggregation firewall|aggregation firewalls|next generation firewall|ngfw|firewall appliance|firewall throughput|threat protection throughput|ipsec\s+vpn\s+throughput|ssl[-\s]?vpn\s+(?:throughput|users?|concurrent)|remote site firewall|central site firewall)\b", query_lower):
-            merged["device_category"] = "NGFW"
-            merged["device_type"] = "NGFW"
-        elif re.search(r"\b(data\s*center|datacenter|core|access|distribution)\s+switch(?:es)?\b|\bswitching capacity\b", query_lower):
-            merged["device_category"] = "DATACENTER_SWITCH"
-            merged["device_type"] = "DATACENTER_SWITCH"
+        extracted_requirements = ProductMatcher.normalize_requirements(extracted, source_text=text[:1000])
+        if extracted.get("device_type") and ProductMatcher._has_hard_constraints(extracted_requirements):
+            merged["device_category"] = extracted["device_type"]
+            merged["device_type"] = extracted["device_type"]
         for key, value in extracted.items():
             if key == "requirements" and isinstance(value, dict):
                 existing = merged.setdefault("requirements", {})
@@ -404,6 +395,7 @@ class FortinetRAGMatcher:
         normalized = ProductMatcher.normalize_requirements(merged, source_text=text[:1000])
         if not normalized.get("device_type"):
             normalized["device_type"] = extracted.get("device_type")
+        FortinetRAGMatcher._apply_constraint_derived_category(normalized)
         FortinetRAGMatcher._apply_explicit_throughput_labels(normalized, text)
         FortinetRAGMatcher._apply_explicit_interface_counts(normalized, text)
         FortinetRAGMatcher._apply_explicit_ssl_vpn_user_labels(normalized, text)
@@ -411,20 +403,21 @@ class FortinetRAGMatcher:
         return normalized
 
     @staticmethod
-    def _has_explicit_ngfw_hardware_requirement(text: str) -> bool:
-        if re.search(r"\b(?:aggregation|perimeter|remote\s+site|central\s+site)\s+firewalls?\s*(?:\(|-|–|\s)*(?:hardware|equipment)?\b", text):
-            return True
-        firewall_context = "firewall" in text or "firewalls" in text or "ngfw" in text
-        firewall_hardware_specs = (
-            "ipsec vpn throughput",
-            "firewall throughput",
-            "threat protection throughput",
-            "concurrent sessions",
-            "10gig interfaces",
-            "10g interfaces",
-            "redundant power",
+    def _apply_constraint_derived_category(requirements: Dict[str, Any]) -> None:
+        log_capacity_fields = (
+            "logs_per_day_gb",
+            "analytic_rate_logs_sec",
+            "collector_rate_logs_sec",
+            "performance_eps",
         )
-        return firewall_context and sum(1 for term in firewall_hardware_specs if term in text) >= 2
+        if any(requirements.get(field) not in (None, "", 0) for field in log_capacity_fields):
+            requirements["device_type"] = "LOGGING"
+            requirements["device_category"] = "LOGGING"
+            nested = dict(requirements.get("requirements") or {})
+            for field in log_capacity_fields:
+                if requirements.get(field) not in (None, "", 0):
+                    nested[field] = requirements[field]
+            requirements["requirements"] = nested
 
     @staticmethod
     def _apply_explicit_interface_counts(requirements: Dict[str, Any], text: str) -> None:

@@ -118,6 +118,42 @@ class FortinetReferenceInjectorTests(unittest.TestCase):
         self.assertIn("Fortinet: FortiGate 700G", result["reference"])
         self.assertNotIn("no catalog item met", result["reasoning"].lower())
 
+    def test_mixed_sdwan_row_is_split_before_matching(self):
+        data = {
+            "sheets": [{
+                "title": "Technical Compliance",
+                "headers": ["S#", "Description"],
+                "rows": [{
+                    "row_type": "data",
+                    "data": [
+                        "1.",
+                        (
+                            "Bidder should propose complete SD-WAN solution for 200x remote sites. "
+                            "1.2.1 Aggregation Firewalls for PR & DR must comply: "
+                            "IPSec VPN throughput with all features 10 Gbps; Equipment must support 2000+ IPSec VPNs; "
+                            "Minimum 8x 10Gig Interfaces other than HA; Concurrent Sessions 20Million; "
+                            "Redundant Power Supplies. "
+                            "1.2.2 Redundant Controllers for PR & DR Sites must comply: bidder should provide "
+                            "licenses for 200x Firewalls and centrally manage SDWAN feature sets."
+                        ),
+                    ],
+                    "metadata": {
+                        "device_type": "CENTRALIZED_MANAGEMENT",
+                        "detected_specs": {"max_devices_vdoms": 200},
+                    },
+                }],
+            }]
+        }
+
+        enriched, stats = inject_fortinet_references(data, CATALOG_DIR)
+        sheet = enriched["sheets"][0]
+        ref = sheet["rows"][0]["data"][_reference_index(sheet)]
+
+        self.assertEqual(stats["matched_rows"], 1)
+        self.assertIn("Fortinet: FortiGate 700G", ref)
+        fortinet_reason = sheet["rows"][0]["data"][sheet["headers"].index("Hardware_Reference_Reasoning")].split("\n\n")[0].lower()
+        self.assertNotIn("no catalog item met", fortinet_reason)
+
     def test_multiplied_40g_metadata_is_corrected_from_text(self):
         matcher = FortinetRAGMatcher(CATALOG_DIR, top_k=20, use_llm=False, include_juniper=False)
         requirement = "Core switch must provide minimum 3x 40G interfaces and 1 Tbps switching capacity."

@@ -1146,6 +1146,19 @@ class ProductMatcher:
         cls._extract_count(text, values, "analytic_rate_logs_sec", ("analytics logs/sec", "analytic logs/sec", "analytics rate"))
         cls._extract_count(text, values, "collector_rate_logs_sec", ("collector logs/sec", "collection logs/sec", "collector rate"))
         cls._extract_count(text, values, "performance_eps", ("eps", "events per second"))
+        if re.search(r"\b(?:logs?|logging|reports?|reporting|analytics?)\b", text):
+            gb_per_day = re.findall(r"(\d[\d,]*(?:\.\d+)?)\s*gb\s*(?:per\s+day|/day|pd)\b", text)
+            if gb_per_day:
+                values["logs_per_day_gb"] = max(
+                    values.get("logs_per_day_gb", 0),
+                    max(cls._parse_count(value, "") for value in gb_per_day),
+                )
+            eps_values = re.findall(r"(\d[\d,]*(?:\.\d+)?)\s*eps\b", text)
+            if eps_values:
+                values["performance_eps"] = max(
+                    values.get("performance_eps", 0),
+                    max(cls._parse_count(value, "") for value in eps_values),
+                )
         cls._extract_count(text, values, "email_routing_per_hour", ("email routing per hour", "messages per hour", "emails per hour"))
         cls._extract_count(text, values, "atp_per_hour", ("atp per hour", "atp scans per hour"))
         cls._extract_count(text, values, "email_domains", ("email domains", "domains"))

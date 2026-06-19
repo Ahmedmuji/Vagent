@@ -120,48 +120,74 @@ class FortinetReferenceInjector:
             contextual_text = self._group_contextual_row_text(sheet, headers, row_idx, contextual_text, metadata)
             if inferred_block is None:
                 contextual_text = self._single_product_contextual_row_text(sheet, headers, row_idx, contextual_text, effective_metadata)
-            query = self.matcher._build_query(contextual_text, effective_metadata)
-            constraints = self.matcher._parse_constraints(query, effective_metadata)
-            if not self.matcher.has_matchable_product_intent(query, constraints):
-                continue
-            vendors = self.matcher._default_vendors(constraints)
-            vendor_items: Dict[str, Dict[str, Any]] = {}
-            for vendor in vendors:
-                vendor_constraints = self.matcher._adjust_solution_scale_constraints(query, constraints, vendor)
-                retrieved = self.matcher.retrieve(query, vendor_constraints, vendor=vendor)
-                safe_candidates = [
-                    candidate for candidate in retrieved
-                    if self.matcher._passes_hard_constraints(candidate.product, vendor_constraints)
-                ]
-                candidates = self.matcher._merge_candidates(
-                    safe_candidates,
-                    self.matcher._safe_catalog_candidates(query, vendor_constraints, vendor),
-                    vendor_constraints,
-                )
-                local_selected = self.matcher._select_fallback(candidates, vendor_constraints) if candidates else None
-                vendor_items[vendor] = {
-                    "constraints": vendor_constraints,
-                    "retrieved": retrieved,
-                    "candidates": candidates,
-                    "local_selected": local_selected,
-                }
-            pending.append({
-                "row_id": f"{sheet.get('title') or sheet.get('name') or 'Sheet'}:{row_idx + 1}",
-                "row": row,
-                "row_data": row_data,
-                "query": query,
-                "constraints": constraints,
-                "vendors": vendor_items,
-            })
+            segment_texts = self._product_requirement_segments(contextual_text)
+            for segment_idx, segment_text in enumerate(segment_texts):
+                segment_metadata = {} if len(segment_texts) > 1 else effective_metadata
+                query = self.matcher._build_query(segment_text, segment_metadata)
+                constraints = self.matcher._parse_constraints(query, segment_metadata)
+                if not self.matcher.has_matchable_product_intent(query, constraints):
+                    continue
+                vendors = self.matcher._default_vendors(constraints)
+                vendor_items: Dict[str, Dict[str, Any]] = {}
+                for vendor in vendors:
+                    vendor_constraints = self.matcher._adjust_solution_scale_constraints(query, constraints, vendor)
+                    retrieved = self.matcher.retrieve(query, vendor_constraints, vendor=vendor)
+                    safe_candidates = [
+                        candidate for candidate in retrieved
+                        if self.matcher._passes_hard_constraints(candidate.product, vendor_constraints)
+                    ]
+                    candidates = self.matcher._merge_candidates(
+                        safe_candidates,
+                        self.matcher._safe_catalog_candidates(query, vendor_constraints, vendor),
+                        vendor_constraints,
+                    )
+                    local_selected = self.matcher._select_fallback(candidates, vendor_constraints) if candidates else None
+                    vendor_items[vendor] = {
+                        "constraints": vendor_constraints,
+                        "retrieved": retrieved,
+                        "candidates": candidates,
+                        "local_selected": local_selected,
+                    }
+                row_id = f"{sheet.get('title') or sheet.get('name') or 'Sheet'}:{row_idx + 1}"
+                pending.append({
+                    "row_id": f"{row_id}:segment-{segment_idx + 1}",
+                    "row_key": row_id,
+                    "row": row,
+                    "row_data": row_data,
+                    "query": query,
+                    "constraints": constraints,
+                    "vendors": vendor_items,
+                })
         decisions = self._batch_llm_decide(pending)
+        row_groups: Dict[str, Dict[str, Any]] = {}
         for item in pending:
             result = self._result_for_pending_item(item, decisions)
-            row_data = item["row_data"]
+            row_key = item.get("row_key") or item["row_id"]
+            group = row_groups.setdefault(row_key, {
+                "row": item["row"],
+                "row_data": item["row_data"],
+                "references": [],
+                "reasoning": [],
+                "segments": [],
+            })
             reference = result.get("reference") or ""
+            if reference:
+                for part in reference.split(" | "):
+                    if part and part not in group["references"]:
+                        group["references"].append(part)
+            if result.get("reasoning"):
+                group["reasoning"].append(result["reasoning"])
+            group["segments"].append(result.get("details") or {})
+        for group in row_groups.values():
+            row_data = group["row_data"]
+            reference = " | ".join(group["references"])
             row_data[ref_idx] = reference
-            row_data[reason_idx] = result.get("reasoning") or ""
-            row_data[details_idx] = json.dumps(result.get("details") or {}, ensure_ascii=False, indent=2)
-            row = item["row"]
+            row_data[reason_idx] = "\n\n".join(group["reasoning"])
+            row_data[details_idx] = json.dumps({
+                "provider": "fortinet-rag",
+                "segments": group["segments"],
+            }, ensure_ascii=False, indent=2)
+            row = group["row"]
             if isinstance(row, dict) and REFERENCE_COLUMN in row:
                 row[REFERENCE_COLUMN] = reference
             if reference:
@@ -344,6 +370,46 @@ class FortinetReferenceInjector:
         }
         header_context = " | ".join(str(header or "") for header in headers[:5] if str(header or "") not in ignored)
         return " | ".join(part for part in (title, header_context, text) if part.strip())
+
+    @classmethod
+    def _product_requirement_segments(cls, text: str) -> List[str]:
+        parts = cls._split_numbered_requirement_sections(text)
+        if len(parts) <= 1:
+            return [text]
+        segments: List[str] = []
+        for part in parts:
+            extracted = ProductMatcher.extract_requirement_metadata(part)
+            normalized = ProductMatcher.normalize_requirements(extracted, source_text=part[:1000])
+            if ProductMatcher._has_hard_constraints(normalized) or cls._has_product_segment_intent(part, normalized):
+                segments.append(part)
+        return segments if segments else [text]
+
+    @staticmethod
+    def _split_numbered_requirement_sections(text: str) -> List[str]:
+        cleaned = re.sub(r"\s+", " ", str(text or "")).strip()
+        if not cleaned:
+            return []
+        matches = list(re.finditer(r"\b\d+(?:\.\d+){1,}\s+", cleaned))
+        if len(matches) < 2:
+            return [cleaned]
+        parts: List[str] = []
+        for idx, match in enumerate(matches):
+            start = match.start()
+            end = matches[idx + 1].start() if idx + 1 < len(matches) else len(cleaned)
+            part = cleaned[start:end].strip(" |")
+            if part:
+                parts.append(part)
+        return parts or [cleaned]
+
+    @staticmethod
+    def _has_product_segment_intent(text: str, normalized: Dict[str, Any]) -> bool:
+        if normalized.get("device_type"):
+            return True
+        lowered = str(text or "").lower()
+        return bool(
+            re.search(r"\b(?:hardware|appliance|controller|gateway|firewall|switch|router|manager|logging|ups|rack|pdu|cooling)\b", lowered)
+            and re.search(r"\b(?:must|shall|should|provide|support|comply|required|capacity|throughput|interfaces?|licenses?)\b", lowered)
+        )
 
     @classmethod
     def _infer_product_blocks(cls, sheet: Dict[str, Any], headers: List[str]) -> List[Dict[str, int]]:
