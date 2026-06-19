@@ -82,15 +82,15 @@ class FortinetReferenceInjector:
             row_data[ref_idx] = ""
             row_data[reason_idx] = ""
             row_data[details_idx] = ""
-            if isinstance(row, dict) and REFERENCE_COLUMN in row:
-                row[REFERENCE_COLUMN] = ""
-            if row_type == "section":
-                self.stats["sections_skipped"] += 1
-                continue
             text = self._row_text(headers, row_data)
             contextual_text = self._contextual_row_text(sheet, headers, text)
             effective_metadata = self._effective_metadata(metadata, contextual_text)
             inferred_block = anchor_to_block.get(row_idx)
+            if isinstance(row, dict) and REFERENCE_COLUMN in row:
+                row[REFERENCE_COLUMN] = ""
+            if row_type == "section" and inferred_block is None:
+                self.stats["sections_skipped"] += 1
+                continue
             if inferred_blocks and row_idx < first_block_start:
                 continue
             if inferred_block is None and row_idx in covered_to_anchor:
@@ -369,6 +369,20 @@ class FortinetReferenceInjector:
 
         if not raw_anchors:
             sheet_title = str(sheet.get("title") or sheet.get("name") or sheet.get("sheet_name") or "").lower()
+            if cls._sheet_contains_firewall_product(row_texts, sheet_title):
+                anchor = cls._best_sheet_level_anchor(
+                    row_texts,
+                    preferred_terms=(
+                        "next generation firewall throughput",
+                        "ngfw throughput",
+                        "ips throughput",
+                        "threat protection throughput",
+                        "ssl/tls inspection",
+                        "ssl vpn throughput",
+                        "concurrent sessions",
+                    ),
+                )
+                return [{"anchor_idx": anchor, "start_idx": 0, "end_idx": max(0, len(rows) - 1)}] if anchor >= 0 else []
             if "hardware based logging" in sheet_title or "logging solut" in sheet_title:
                 anchor = cls._best_sheet_level_anchor(row_texts, preferred_terms=("100gb", "eps", "centralized logging", "firewall logs", "log analytics"))
                 return [{"anchor_idx": anchor, "start_idx": 0, "end_idx": max(0, len(rows) - 1)}] if anchor >= 0 else []
@@ -430,6 +444,26 @@ class FortinetReferenceInjector:
         )
 
     @staticmethod
+    def _sheet_contains_firewall_product(row_texts: List[str], sheet_title: str = "") -> bool:
+        context = " ".join([sheet_title, " ".join(row_texts)]).lower()
+        if re.search(r"\b(?:perimeter\s+firewalls?|next\s+generation\s+firewall|ngfw|firewall\s+appliance)\b", context):
+            return True
+        throughput_signals = sum(
+            1
+            for term in (
+                "ips throughput",
+                "threat protection throughput",
+                "ssl/tls inspection",
+                "ssl vpn throughput",
+                "concurrent sessions",
+                "firewall throughput",
+            )
+            if term in context
+        )
+        interface_signal = bool(re.search(r"\b(?:sfp\+?|sfp28|qsfp|rj45|ge\s+interfaces?)\b", context))
+        return throughput_signals >= 2 and interface_signal
+
+    @staticmethod
     def _is_product_anchor_text(lowered: str) -> bool:
         if any(term in lowered for term in ("gartner", "quoted firewall", "quoted firewalls", "oem of quoted", "leaders/challengers")):
             return False
@@ -470,8 +504,6 @@ class FortinetReferenceInjector:
         rows = sheet.get("rows") or []
         for idx in range(block["start_idx"], min(block["end_idx"] + 1, len(rows))):
             row_type, row_data, _ = cls._get_row_parts(rows[idx])
-            if row_type == "section":
-                continue
             row_text = cls._row_text(headers, row_data)
             if row_text:
                 marker = "PRIMARY" if idx == block["anchor_idx"] else f"SPEC_ROW_{idx + 1}"

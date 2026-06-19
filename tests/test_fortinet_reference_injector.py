@@ -111,6 +111,32 @@ class FortinetReferenceInjectorTests(unittest.TestCase):
         self.assertIn("Fortinet: FortiGate", sheet["rows"][1]["data"][ref_idx])
         self.assertTrue(all(row["data"][ref_idx] == "" for row in sheet["rows"][2:]))
 
+    def test_firewall_sheet_still_references_when_model_marks_rows_as_sections(self):
+        data = {
+            "sheets": [{
+                "title": "Hardware Based Next Generation Firewall",
+                "headers": ["SN", "Requirement", "Required Value / Spec"],
+                "rows": [
+                    {"row_type": "section", "data": ["", "Perimeter Firewalls", ""], "metadata": {"requires_reference": False}},
+                    {"row_type": "section", "data": ["1.", "Next Generation Firewall Throughput", "20Gbps"], "metadata": {"requires_reference": False}},
+                    {"row_type": "section", "data": ["2.", "IPS Throughput", "20Gbps"], "metadata": {"requires_reference": False}},
+                    {"row_type": "section", "data": ["3.", "Concurrent sessions", "12 Million"], "metadata": {"requires_reference": False}},
+                    {"row_type": "section", "data": ["4.", "Storage Support (Usable)", "1TB"], "metadata": {"requires_reference": False}},
+                    {"row_type": "section", "data": ["5.", "SSL VPN Throughput", "15Gbps"], "metadata": {"requires_reference": False}},
+                    {"row_type": "section", "data": ["6.", "10 GE SFP+ interfaces with matched transceivers", "8"], "metadata": {"requires_reference": False}},
+                    {"row_type": "section", "data": ["7.", "1/10 GE RJ45", "2"], "metadata": {"requires_reference": False}},
+                ],
+            }]
+        }
+
+        enriched, stats = inject_fortinet_references(data, CATALOG_DIR)
+        sheet = enriched["sheets"][0]
+        ref_idx = _reference_index(sheet)
+
+        self.assertEqual(stats["matched_rows"], 1)
+        self.assertIn("Fortinet: FortiGate", sheet["rows"][1]["data"][ref_idx])
+        self.assertTrue(all(row["data"][ref_idx] == "" for idx, row in enumerate(sheet["rows"]) if idx != 1))
+
     def test_multi_product_sheet_references_each_product_anchor(self):
         data = {
             "sheets": [{
