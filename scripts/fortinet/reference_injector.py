@@ -86,6 +86,7 @@ class FortinetReferenceInjector:
             contextual_text = self._contextual_row_text(sheet, headers, text)
             effective_metadata = self._effective_metadata(metadata, contextual_text)
             inferred_block = anchor_to_block.get(row_idx)
+            standalone_product_row = self._is_standalone_product_requirement(contextual_text, effective_metadata)
             if isinstance(row, dict) and REFERENCE_COLUMN in row:
                 row[REFERENCE_COLUMN] = ""
             if row_type == "section" and inferred_block is None:
@@ -108,9 +109,10 @@ class FortinetReferenceInjector:
                 and row_idx != self._first_data_row_index(sheet)
                 and metadata.get("product_group_primary_row") is not True
                 and metadata.get("group_primary_row") is not True
+                and not standalone_product_row
             ):
                 continue
-            if inferred_block is None and not self._is_reference_anchor(metadata, effective_metadata):
+            if inferred_block is None and not standalone_product_row and not self._is_reference_anchor(metadata, effective_metadata):
                 continue
             if inferred_block is None and not self._should_reference(contextual_text, effective_metadata):
                 continue
@@ -410,6 +412,24 @@ class FortinetReferenceInjector:
             re.search(r"\b(?:hardware|appliance|controller|gateway|firewall|switch|router|manager|logging|ups|rack|pdu|cooling)\b", lowered)
             and re.search(r"\b(?:must|shall|should|provide|support|comply|required|capacity|throughput|interfaces?|licenses?)\b", lowered)
         )
+
+    @classmethod
+    def _is_standalone_product_requirement(cls, text: str, metadata: Dict[str, Any]) -> bool:
+        normalized = ProductMatcher.normalize_requirements(metadata, source_text=text[:1000])
+        if not ProductMatcher._has_hard_constraints(normalized):
+            return False
+        if not normalized.get("device_type"):
+            return False
+        lowered = str(text or "").lower()
+        product_signal = re.search(
+            r"\b(?:hardware|appliance|equipment|device|firewalls?|switch(?:es)?|router|controller|gateway|ups|rack|pdu|cooling)\b",
+            lowered,
+        )
+        sizing_signal = re.search(
+            r"\b(?:capacity|throughput|interfaces?|ports?|sessions?|power\s+suppl|ha\s+configuration|redundant|minimum|min|qty|quantity)\b",
+            lowered,
+        )
+        return bool(product_signal and sizing_signal)
 
     @classmethod
     def _infer_product_blocks(cls, sheet: Dict[str, Any], headers: List[str]) -> List[Dict[str, int]]:

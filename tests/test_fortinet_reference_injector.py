@@ -282,6 +282,52 @@ class FortinetReferenceInjectorTests(unittest.TestCase):
         self.assertNotIn("ha_modes", sheet["rows"][0][reason_idx].lower())
         self.assertTrue(all(row[ref_idx] == "" for row in sheet["rows"][1:]))
 
+    def test_standalone_capacity_rows_override_bad_continuation_metadata(self):
+        data = {
+            "sheets": [{
+                "title": "Technical Compliance Sheet",
+                "headers": ["S#", "Description", "Compliance"],
+                "rows": [
+                    {
+                        "row_type": "data",
+                        "data": ["2.", "Total Remote Sites Firewalls = 196x Remote Site Equipment Hardware Capacity: a) IPSec VPN throughput with all features 200 Mbps b) Interfaces Copper 1Gig = 5", ""],
+                        "metadata": {
+                            "device_category": "ngfw",
+                            "requires_reference": False,
+                            "product_group_primary_row": False,
+                            "is_product_spec_continuation": True,
+                            "detected_specs": {"ipsec_vpn_throughput_gbps": 0.2, "interfaces_1g": 5},
+                        },
+                    },
+                    {
+                        "row_type": "data",
+                        "data": ["3.", "Total Remote Sites Firewalls = 04x Remote Site Equipment Hardware Capacity: a) IPSec VPN throughput with all features 1 Gbps b) Interfaces Copper 1Gig = 5 c) Must support HA configuration with Active/Passive d) Redundant power supply.", ""],
+                        "metadata": {
+                            "device_category": "ngfw",
+                            "requires_reference": False,
+                            "product_group_primary_row": False,
+                            "is_product_spec_continuation": True,
+                            "detected_specs": {"ipsec_vpn_throughput_gbps": 1.0, "interfaces_1g": 5, "redundant_power": True},
+                        },
+                    },
+                    {
+                        "row_type": "data",
+                        "data": ["4.", "Provided equipment must load balance, load sharing and fail-over between network links.", ""],
+                        "metadata": {"device_category": "ngfw", "is_product_spec_continuation": True},
+                    },
+                ],
+            }]
+        }
+
+        enriched, stats = inject_fortinet_references(data, CATALOG_DIR)
+        sheet = enriched["sheets"][0]
+        ref_idx = _reference_index(sheet)
+
+        self.assertEqual(stats["matched_rows"], 2)
+        self.assertIn("Fortinet: FortiGate", sheet["rows"][0]["data"][ref_idx])
+        self.assertIn("Fortinet: FortiGate", sheet["rows"][1]["data"][ref_idx])
+        self.assertEqual(sheet["rows"][2]["data"][ref_idx], "")
+
     def test_hardware_logging_uses_fortilogger_not_fortianalyzer(self):
         data = {
             "sheets": [{
