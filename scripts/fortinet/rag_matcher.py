@@ -403,7 +403,43 @@ class FortinetRAGMatcher:
             normalized["device_type"] = extracted.get("device_type")
         FortinetRAGMatcher._apply_explicit_throughput_labels(normalized, text)
         FortinetRAGMatcher._apply_explicit_ssl_vpn_user_labels(normalized, text)
+        FortinetRAGMatcher._sanitize_cross_product_constraints(normalized)
         return normalized
+
+    @staticmethod
+    def _sanitize_cross_product_constraints(requirements: Dict[str, Any]) -> None:
+        category = requirements.get("device_type") or requirements.get("category")
+        if category != "NGFW":
+            return
+        controller_or_service_fields = {
+            "logs_per_day_gb",
+            "analytic_rate_logs_sec",
+            "collector_rate_logs_sec",
+            "performance_eps",
+            "email_routing_per_hour",
+            "atp_per_hour",
+            "email_domains",
+            "server_mode_mailboxes",
+            "max_devices_vdoms",
+            "max_local_remote_users",
+            "max_user_groups",
+            "max_nas_devices",
+            "max_fortitokens",
+        }
+        nested = dict(requirements.get("requirements") or {})
+        removed = {}
+        for field in controller_or_service_fields:
+            if field in requirements:
+                removed[field] = requirements.pop(field)
+            nested.pop(field, None)
+        if removed:
+            requirements["requirements"] = nested
+            notes = list(requirements.get("constraint_sanitization_notes") or [])
+            notes.append(
+                "Ignored controller/logging/service capacity fields while matching NGFW appliance hardware: "
+                + ", ".join(sorted(removed))
+            )
+            requirements["constraint_sanitization_notes"] = notes
 
     @staticmethod
     def _apply_explicit_throughput_labels(requirements: Dict[str, Any], text: str) -> None:

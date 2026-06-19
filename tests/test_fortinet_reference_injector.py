@@ -86,6 +86,36 @@ class FortinetReferenceInjectorTests(unittest.TestCase):
         self.assertIn("Fortinet: FortiGate 2601F", result["reference"])
         self.assertNotIn("FortiGate 3501F", result["reference"])
 
+    def test_mixed_sdwan_controller_text_does_not_pollute_firewall_constraints(self):
+        matcher = FortinetRAGMatcher(CATALOG_DIR, top_k=20, use_llm=False, include_juniper=False)
+        requirement = (
+            "Bidder should propose complete SD-WAN solution for 200x remote sites. "
+            "PR Site Aggregation Firewalls (Hardware) Qty 2, DR Site Aggregation Firewalls Qty 2, "
+            "PR Site Controllers Qty 2, DR Site Controllers Qty 2. "
+            "1.2.1 Aggregation Firewalls for PR & DR must comply: "
+            "IPSec VPN throughput with all features 10 Gbps; Equipment must support 2000+ IPSec VPNs; "
+            "Minimum 8x 10Gig Interfaces other than HA; Concurrent Sessions 20Million; "
+            "Redundant Power Supplies. 1.2.2 Redundant Controllers for PR & DR Sites must provide "
+            "licenses for 200x Firewalls and centrally manage SDWAN feature sets."
+        )
+        gemini_metadata = {
+            "device_type": "NGFW",
+            "detected_specs": {
+                "ipsec_vpn_throughput_gbps": 10,
+                "concurrent_sessions": 20_000_000,
+                "interfaces_10g": 8,
+                "redundant_power": True,
+                "max_devices_vdoms": 200,
+            },
+        }
+
+        constraints = matcher._parse_constraints(requirement, gemini_metadata)
+        result = matcher.match_vendor(requirement, constraints, "Fortinet")
+
+        self.assertNotIn("max_devices_vdoms", constraints)
+        self.assertIn("Fortinet: FortiGate 700G", result["reference"])
+        self.assertNotIn("no catalog item met", result["reasoning"].lower())
+
     def test_inferred_firewall_block_overrides_bad_gemini_continuation_flags(self):
         data = {
             "sheets": [{
