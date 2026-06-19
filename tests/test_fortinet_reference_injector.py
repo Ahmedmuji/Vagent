@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from fortinet.rag_matcher import FortinetRAGMatcher  # noqa: E402
-from fortinet.reference_injector import inject_fortinet_references  # noqa: E402
+from fortinet.reference_injector import FortinetReferenceInjector, inject_fortinet_references  # noqa: E402
 
 
 CATALOG_DIR = str(ROOT / "data" / "product_catalogs")
@@ -21,14 +21,25 @@ def _reference_index(sheet):
 class FortinetReferenceInjectorTests(unittest.TestCase):
     def setUp(self):
         self.previous_include_juniper = os.environ.get("FORTINET_RAG_INCLUDE_JUNIPER")
+        self.previous_use_llm = os.environ.get("FORTINET_RAG_USE_LLM")
+        self.previous_llm_override = os.environ.get("FORTINET_RAG_LLM_CAN_OVERRIDE")
         os.environ["FORTINET_RAG_INCLUDE_JUNIPER"] = "0"
         os.environ["FORTINET_RAG_USE_LLM"] = "0"
+        os.environ["FORTINET_RAG_LLM_CAN_OVERRIDE"] = "0"
 
     def tearDown(self):
         if self.previous_include_juniper is None:
             os.environ.pop("FORTINET_RAG_INCLUDE_JUNIPER", None)
         else:
             os.environ["FORTINET_RAG_INCLUDE_JUNIPER"] = self.previous_include_juniper
+        if self.previous_use_llm is None:
+            os.environ.pop("FORTINET_RAG_USE_LLM", None)
+        else:
+            os.environ["FORTINET_RAG_USE_LLM"] = self.previous_use_llm
+        if self.previous_llm_override is None:
+            os.environ.pop("FORTINET_RAG_LLM_CAN_OVERRIDE", None)
+        else:
+            os.environ["FORTINET_RAG_LLM_CAN_OVERRIDE"] = self.previous_llm_override
 
     def test_single_firewall_section_references_only_anchor_row(self):
         data = {
@@ -85,6 +96,75 @@ class FortinetReferenceInjectorTests(unittest.TestCase):
         self.assertEqual(constraints["interfaces"]["1_10g_rj45"], 2)
         self.assertIn("Fortinet: FortiGate 2601F", result["reference"])
         self.assertNotIn("FortiGate 3501F", result["reference"])
+
+    def test_llm_cannot_override_closest_safe_firewall_by_default(self):
+        matcher = FortinetRAGMatcher(CATALOG_DIR, top_k=20, use_llm=True, include_juniper=False)
+        matcher._llm_rank = lambda query, constraints, candidates, vendor: {
+            "selected_model": "FortiGate 3501F",
+            "match_status": "safe_match",
+            "confidence": 0.99,
+            "reasoning": "LLM preferred the largest available appliance.",
+        }
+        requirement = (
+            "Perimeter Firewalls Next Generation Firewall Throughput 20Gbps "
+            "IPS Throughput 20Gbps Concurrent sessions 12 Million "
+            "Connections Per Seconds 500,000 Policies 100,000 "
+            "Storage Support (Usable) 1TB Threat protection throughput 20Gbps "
+            "SSL/TLS Inspection throughput 15Gbps SSL VPN Throughput 15Gbps "
+            "Interfaces 25 GE SFP28 interfaces with matched transceivers 4 "
+            "10 GE SFP+ interfaces with matched transceivers 8 "
+            "1/10 GE RJ45 2 High Availability Active/Active, Active/Passive, Clustering"
+        )
+
+        constraints = matcher._parse_constraints(requirement, {})
+        result = matcher.match_vendor(requirement, constraints, "Fortinet")
+
+        self.assertIn("Fortinet: FortiGate 2601F", result["reference"])
+        self.assertNotIn("FortiGate 3501F", result["reference"])
+        self.assertNotIn("largest available", result["reasoning"])
+
+    def test_batch_llm_cannot_override_injector_closest_safe_firewall_by_default(self):
+        os.environ["FORTINET_RAG_USE_LLM"] = "1"
+        data = {
+            "sheets": [{
+                "title": "Technical Requirements",
+                "headers": ["Section", "SN", "Requirement", "Required Value / Spec"],
+                "rows": [
+                    ["Perimeter Firewalls", "", "", ""],
+                    ["", "1.", "Next Generation Firewall Throughput", "20Gbps"],
+                    ["", "2.", "IPS Throughput", "20Gbps"],
+                    ["", "3.", "Concurrent sessions", "12 Million"],
+                    ["", "4.", "Connections Per Seconds", "500,000"],
+                    ["", "5.", "Policies", "100,000"],
+                    ["", "6.", "Storage Support (Usable)", "1TB"],
+                    ["", "7.", "Threat protection throughput", "20Gbps"],
+                    ["", "8.", "SSL/TLS Inspection throughput", "15Gbps"],
+                    ["", "9.", "SSL VPN Throughput", "15Gbps"],
+                    ["Interfaces", "1.", "25 GE SFP28 interfaces with matched transceivers", "4"],
+                    ["", "2.", "10 GE SFP+ interfaces with matched transceivers", "8"],
+                    ["", "3.", "1/10 GE RJ45", "2"],
+                ],
+            }]
+        }
+        injector = FortinetReferenceInjector(CATALOG_DIR)
+        injector._batch_llm_decide = lambda pending: {
+            f"{item['row_id']}::fortinet": {
+                "selected_model": "FortiGate 3501F",
+                "match_status": "safe_match",
+                "confidence": 0.99,
+                "reasoning": "LLM preferred the largest available appliance.",
+            }
+            for item in pending
+        }
+
+        enriched = injector.inject(data)
+        sheet = enriched["sheets"][0]
+        ref = sheet["rows"][1][_reference_index(sheet)]
+        reasoning = sheet["rows"][1][sheet["headers"].index("Hardware_Reference_Reasoning")]
+
+        self.assertIn("Fortinet: FortiGate 2601F", ref)
+        self.assertNotIn("FortiGate 3501F", ref)
+        self.assertNotIn("largest available", reasoning)
 
     def test_mixed_sdwan_controller_text_does_not_pollute_firewall_constraints(self):
         matcher = FortinetRAGMatcher(CATALOG_DIR, top_k=20, use_llm=False, include_juniper=False)
@@ -169,6 +249,31 @@ class FortinetReferenceInjectorTests(unittest.TestCase):
 
         self.assertEqual(constraints["interfaces"]["40g_qsfp_plus"], 3)
         self.assertNotEqual(constraints["interfaces"]["40g_qsfp_plus"], 120)
+
+    def test_site_quantity_does_not_pollute_explicit_interface_count(self):
+        matcher = FortinetRAGMatcher(CATALOG_DIR, top_k=20, use_llm=False, include_juniper=False)
+        requirement = (
+            "Bidder should propose complete SD-WAN solution for 200x remote sites. "
+            "Aggregation Firewalls for PR & DR must comply: IPSec VPN throughput with all features 10 Gbps; "
+            "Minimum 8x 10Gig Interfaces other than HA; Concurrent Sessions 20Million; Redundant Power Supplies."
+        )
+        gemini_metadata = {
+            "device_type": "NGFW",
+            "detected_specs": {
+                "ipsec_vpn_throughput_gbps": 10,
+                "interfaces_10g": 20_000_008,
+                "concurrent_sessions": 20_000_000,
+                "redundant_power": True,
+            },
+        }
+
+        constraints = matcher._parse_constraints(requirement, gemini_metadata)
+        result = matcher.match_vendor(requirement, constraints, "Fortinet")
+
+        self.assertEqual(constraints["interfaces"]["10g_sfp_plus"], 8)
+        self.assertNotEqual(constraints["interfaces"]["10g_sfp_plus"], 20_000_008)
+        self.assertIn("Fortinet: FortiGate", result["reference"])
+        self.assertNotIn("no catalog item met", result["reasoning"].lower())
 
     def test_inferred_firewall_block_overrides_bad_gemini_continuation_flags(self):
         data = {

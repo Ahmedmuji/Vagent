@@ -173,11 +173,6 @@ class FortinetRAGMatcher:
             self._safe_catalog_candidates(query, constraints, vendor),
             constraints,
         )
-        llm_result = self._llm_rank(query, constraints, candidates, vendor) if self.use_llm else None
-        if llm_result and llm_result.get("selected_model") and str(llm_result.get("match_status", "")).lower() != "no_safe_match":
-            selected = self._candidate_by_model(candidates, str(llm_result["selected_model"])) or (candidates[0] if candidates else None)
-            if selected:
-                return self._format_result(selected, query, constraints, retrieved, llm_result)
         if not candidates:
             return {
                 "reference": "",
@@ -192,7 +187,14 @@ class FortinetRAGMatcher:
                 },
             }
         selected = self._select_fallback(candidates, constraints)
-        return self._format_result(selected, query, constraints, retrieved, None)
+        llm_result = self._llm_rank(query, constraints, candidates, vendor) if self.use_llm else None
+        if self._llm_override_enabled() and llm_result and llm_result.get("selected_model") and str(llm_result.get("match_status", "")).lower() != "no_safe_match":
+            llm_selected = self._candidate_by_model(candidates, str(llm_result["selected_model"]))
+            if llm_selected and self._is_no_worse_fit(llm_selected, selected, constraints):
+                selected = llm_selected
+        else:
+            llm_result = self._compatible_llm_explanation(llm_result, selected)
+        return self._format_result(selected, query, constraints, retrieved, llm_result)
 
     def retrieve(self, query: str, constraints: Dict[str, Any], vendor: Optional[str] = None) -> List[FortinetCandidate]:
         category = constraints.get("device_type") or constraints.get("category")
@@ -446,6 +448,9 @@ class FortinetRAGMatcher:
                 interfaces[name] = explicit_count
                 continue
             if speed and int(current) == int(explicit_count) * speed:
+                interfaces[name] = explicit_count
+                corrected[name] = {"from": int(current), "to": explicit_count}
+            elif int(current) > int(explicit_count) and int(current) >= max(int(explicit_count) * 1000, 1000):
                 interfaces[name] = explicit_count
                 corrected[name] = {"from": int(current), "to": explicit_count}
             elif int(current) < int(explicit_count):
@@ -723,6 +728,25 @@ class FortinetRAGMatcher:
 
     def _select_fallback(self, candidates: List[FortinetCandidate], constraints: Dict[str, Any]) -> FortinetCandidate:
         return sorted(candidates, key=lambda candidate: self._fallback_sort_key(candidate, constraints))[0]
+
+    @staticmethod
+    def _llm_override_enabled() -> bool:
+        return os.getenv("FORTINET_RAG_LLM_CAN_OVERRIDE", "0").lower() in {"1", "true", "yes", "on"}
+
+    def _is_no_worse_fit(self, candidate: FortinetCandidate, baseline: FortinetCandidate, constraints: Dict[str, Any]) -> bool:
+        return self._fallback_sort_key(candidate, constraints) <= self._fallback_sort_key(baseline, constraints)
+
+    def _compatible_llm_explanation(
+        self,
+        llm_result: Optional[Dict[str, Any]],
+        selected: FortinetCandidate,
+    ) -> Optional[Dict[str, Any]]:
+        if not llm_result:
+            return None
+        selected_model = str(llm_result.get("selected_model") or "")
+        if selected_model and self._candidate_by_model([selected], selected_model):
+            return llm_result
+        return None
 
     def _fallback_sort_key(self, candidate: FortinetCandidate, constraints: Dict[str, Any]) -> Tuple[float, ...]:
         matched, _, _ = self._constraint_details(candidate.product, constraints)

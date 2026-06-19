@@ -119,8 +119,9 @@ class FortinetReferenceInjector:
             self.stats["groups_seen"] += 1
             if inferred_block is not None:
                 contextual_text = self._inferred_block_context(sheet, headers, inferred_block)
-            contextual_text = self._group_contextual_row_text(sheet, headers, row_idx, contextual_text, metadata)
-            if inferred_block is None:
+            if not standalone_product_row:
+                contextual_text = self._group_contextual_row_text(sheet, headers, row_idx, contextual_text, metadata)
+            if inferred_block is None and not standalone_product_row:
                 contextual_text = self._single_product_contextual_row_text(sheet, headers, row_idx, contextual_text, effective_metadata)
             segment_texts = self._product_requirement_segments(contextual_text)
             for segment_idx, segment_text in enumerate(segment_texts):
@@ -221,13 +222,17 @@ class FortinetReferenceInjector:
                     },
                 }
             else:
-                selected = None
-                if decision and decision.get("selected_model") and str(decision.get("match_status", "")).lower() != "no_safe_match":
-                    selected = self.matcher._candidate_by_model(candidates, str(decision["selected_model"]))
-                if selected is None:
-                    selected = vendor_item.get("local_selected") or candidates[0]
-                    decision = None
                 vendor_constraints = vendor_item.get("constraints") or item["constraints"]
+                selected = vendor_item.get("local_selected") or self.matcher._select_fallback(candidates, vendor_constraints)
+                if decision and decision.get("selected_model") and str(decision.get("match_status", "")).lower() != "no_safe_match":
+                    llm_selected = self.matcher._candidate_by_model(candidates, str(decision["selected_model"]))
+                    if self.matcher._llm_override_enabled() and llm_selected and self.matcher._is_no_worse_fit(llm_selected, selected, vendor_constraints):
+                        selected = llm_selected
+                    elif not self.matcher._candidate_by_model([selected], str(decision["selected_model"])):
+                        decision = None
+                if selected is None:
+                    selected = candidates[0]
+                    decision = None
                 vendor_result = self.matcher._format_result(
                     selected,
                     item["query"],
