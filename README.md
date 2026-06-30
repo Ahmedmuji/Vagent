@@ -1,94 +1,188 @@
-# RFP Technical Extraction Pipeline 🚀
+# Request for Proposal Technical Extraction Pipeline
 
-A high-performance, AI-driven pipeline for isolating technical requirements from RFP (Request for Proposal) PDF documents and transforming them into enriched, actionable Excel workbooks.
+The Request for Proposal (RFP) Technical Extraction Pipeline is an enterprise-grade, document intelligence system designed to automate the process of identifying, parsing, and resolving technical requirements from dense PDF documents. The system isolates compliance tables, matches requirements against multi-vendor product catalogs (Fortinet, Juniper, and Vertiv) to recommend specific hardware models, and enriches output sheets with deep-link documentation citations using semantic search.
+
+The final output is generated as a structured Excel workbook with professional styling, clear compliance tracking, and automated citation links.
 
 ![UI Mockup](image/ss.png)
 
-## 🌟 Key Features
+## Key Capabilities
 
-- **Heuristic Section Detection**: Instantly identifies technical requirement sections in large PDFs without consuming API credits.
-- **AI-Powered Table Extraction**: Leverages Google Gemini AI to accurately parse complex, nested technical tables into structured JSON.
-- **Deterministic Hardware Injection**: Cross-references extracted items with product catalogs for verified hardware identification.
-- **Fortinet Admin Guide Enrichment**: Automatically embeds deep-link citations from the FortiOS Administration Guide using semantic search and embedding matching.
-- **Modern Web Interface**: A premium, JS-driven Glassmorphism UI for effortless file uploads and real-time processing feedback.
-- **Batch Processing**: CLI support for processing entire directories of RFP documents in one go.
+### Heuristic Section Detection
 
-## 🛠 Technology Stack
+The pipeline executes a pre-processing step using local heuristic analysis to detect the exact page range containing the technical specifications or Bill of Quantities (BOQ). This isolates requirement tables without incurring LLM API costs or token overhead from cover pages, indices, and legal terms.
 
-- **Backend**: Python 3.x, Flask
-- **AI**: Google Gemini Pro (via Vertex AI / Generative AI SDK)
-- **PDF Processing**: PyPDF, PDFPlumber
-- **Data Handling**: Pandas, OpenPyXL
-- **Frontend**: Vanilla JavaScript (ES6+), CSS3 (Glassmorphism), HTML5
+### AI-Driven Table Parsing
 
-## 📋 Prerequisites
+Using Google Gemini models, the pipeline parses complex, multi-column, and nested requirement tables. The model segments documents, extracts text context, and outputs formatted JSON structures that map directly to standard compliance schemas.
 
-- Python 3.9+
-- A Google Cloud Project with Gemini API access
-- An API Key (configured in `.env`)
+### Multi-Vendor Catalog Alignment
 
-## 🚀 Getting Started
+The pipeline contains dedicated RAG (Retrieval-Augmented Generation) and rule-based matching engines for three primary hardware vendors:
 
-### 1. Clone the Repository
+- **Fortinet**: Resolves next-generation firewalls (NGFW), switches, logging platforms, access points, and software licenses.
+- **Juniper**: Matches routing, switching, and security requirements against the Juniper catalog (including SRX, EX, QFX, MX, ACX, and PTX series).
+- **Vertiv**: Matches power distribution units (PDU), critical uninterruptible power supplies (UPS), Liebert thermal cooling systems, rack enclosures, and environmental monitoring devices.
+
+### Semantic Admin Guide Citations
+
+For Fortinet solutions, the pipeline matches the extracted requirements against the FortiOS Administration Guide index using sentence embeddings and cosine similarity. It embeds exact chapter and page-level deep-link citations into the generated spreadsheet as audit evidence.
+
+### Pre-flight Cost Estimation
+
+Before initiating any API processing, the system runs a token cost calculation. It checks the target PDF page count, estimates the required input/output tokens, applies vendor pricing configurations, and prompts the operator with a budget confirmation modal. The estimator includes adjustments for scanned documents by enforcing a page character floor.
+
+### Enterprise Web Dashboard
+
+A responsive, single-page web dashboard provides a visual interface for managing uploads, selecting target models and vendors, setting custom page ranges, reviewing pre-flight estimates, and monitoring execution stages in real time.
+
+---
+
+## Architecture and Technology Stack
+
+The pipeline consists of a Python 3.9+ backend, a modular data matching pipeline, and a modern frontend.
+
+### Core Dependencies
+
+- **Backend Framework**: Flask and Gunicorn for running scalable, concurrent web operations.
+- **Artificial Intelligence**: Google GenAI SDK (Gemini Pro and Flash models).
+- **Embeddings & Vector Search**: Sentence-Transformers (utilizing the all-MiniLM-L6-v2 model), Scikit-Learn, and NumPy for semantic matching.
+- **String Processing**: RapidFuzz for token-ratio and Levenshtein-based matching.
+- **PDF Manipulation**: PyMuPDF (Fitz) for high-performance page extraction and text scraping, PyPDF, and PDFPlumber.
+- **Data Engineering**: Pandas and OpenPyXL for data frame transformation, Excel styling, and conditional formatting.
+
+---
+
+## Directory Structure
+
+```
+vagent/
+├── app.py                      # Flask web server and routing controller
+├── main_pipeline.py            # End-to-end pipeline orchestrator
+├── requirements.txt            # System dependencies and versions
+├── gunicorn_config.py          # Configuration for production Gunicorn workers
+├── deploy.sh                   # Production deployment script
+├── scripts/
+│   ├── cost_estimator.py       # API token usage and price estimation module
+│   ├── gemini_extractor.py     # Gemini extraction prompt and parsing logic
+│   ├── local_section_detector.py # Pre-extraction PDF heuristic scanner
+│   ├── json_to_excel.py        # Excel report generator and styling engine
+│   ├── pdf_segmenter.py        # Document page slicing utility
+│   ├── pdf_admin_metadata.py   # PDF bookmark and metadata extraction tool
+│   ├── product_matcher.py      # Base vendor matching helper functions
+│   ├── reference_injector.py   # Rule-based catalog matching controller
+│   ├── fortinet/               # Fortinet-specific matching and guide citation
+│   ├── juniper/                # Juniper-specific matching and data structures
+│   └── vertiv/                 # Vertiv-specific matching and data structures
+├── data/
+│   ├── Complete RFPs/          # Input directory for processing PDFs
+│   ├── product_catalogs/       # Scraped product data (Fortinet, Juniper, Vertiv)
+│   ├── Reference dataset/      # Reference documents (FortiOS Admin Guide PDF)
+│   └── navigation/             # Pre-built semantic indexes and flat JSON structures
+└── output/                     # Directory for generated reports and temp files
+```
+
+---
+
+## Configuration Variables
+
+System configurations are loaded from environment variables defined in a `.env` file at the project root.
+
+| Environment Variable               | Description                                                      | Default Value               |
+| :--------------------------------- | :--------------------------------------------------------------- | :-------------------------- |
+| `GOOGLE_API_KEY`                 | Developer API key for Google Gemini model access.                | None (Required)             |
+| `FLASK_SECRET_KEY`               | Secret key for Flask session signing and CSRF security.          | `vagent-local-dev-secret` |
+| `MAX_UPLOAD_MB`                  | Maximum allowed file size for PDF uploads via the web UI.        | `200`                     |
+| `OUTPUT_TOKEN_RATIO`             | Scaling factor to estimate output tokens relative to input size. | `2.00`                    |
+| `VERTIV_USE_SENTENCE_EMBEDDINGS` | Enables semantic search matching for Vertiv equipment.           | `1`                       |
+| `VERTIV_EMBEDDING_MODEL`         | HuggingFace embedding model name for Vertiv RAG matcher.         | `all-MiniLM-L6-v2`        |
+| `JUNIPER_RAG_TOP_K`              | Number of catalog candidates retrieved for Juniper matching.     | `8`                       |
+| `FORTINET_RAG_INCLUDE_JUNIPER`   | Allows Fortinet matchers to reference Juniper fallback items.    | `1`                       |
+
+---
+
+## Installation and Deployment
+
+### 1. Repository Setup
+
+Clone the codebase and navigate to the project directory:
 
 ```bash
 git clone https://github.com/your-username/rfp-extractor.git
 cd rfp-extractor
 ```
 
-### 2. Install Dependencies
+### 2. Environment Installation
+
+Install the required packages using pip:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Configure Environment
+### 3. Environment File Configuration
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the root folder:
 
 ```env
 GOOGLE_API_KEY=your_gemini_api_key_here
-FLASK_SECRET_KEY=your_secret_key
+FLASK_SECRET_KEY=generate_a_secure_random_key_here
 MAX_UPLOAD_MB=200
 ```
 
-### 4. Run the Web UI
+---
+
+## Execution Procedures
+
+### Web Interface Mode
+
+Start the Flask development server:
 
 ```bash
 python app.py
 ```
 
-Open `http://127.0.0.1:5000` in your browser.
+To access the dashboard, open your browser and navigate to `http://127.0.0.1:5000`.
 
-### 5. Run via CLI (Batch Mode)
+Using the interface:
 
-Place your PDFs in `data/Complete RFPs/` and run:
+1. Drag and drop the target RFP PDF file into the upload zone.
+2. Select the appropriate **Reference Provider** (Fortinet, Juniper, or Vertiv).
+3. Choose the extraction model (such as Gemini 3.5 Flash).
+4. Define a custom start and end page range if you want to bypass automatic heuristic detection.
+5. Click **Estimate & Process** to review the estimated API costs, then confirm execution to generate and download the formatted Excel report.
+
+### CLI Batch Mode
+
+For batch jobs or automation scripts, use the command-line orchestrator:
 
 ```bash
-python main_pipeline.py
+python main_pipeline.py [arguments]
 ```
 
-## 📁 Project Structure
+#### Command-Line Arguments
 
-- `app.py`: Flask web server and API endpoints.
-- `main_pipeline.py`: Main orchestrator for end-to-end processing.
-- `scripts/`:
-  - `local_section_detector.py`: Heuristic-based PDF segmentation.
-  - `gemini_extractor.py`: AI table extraction logic.
-  - `admin_guide_enricher.py`: Reference injection and citation logic.
-  - `json_to_excel.py`: Formatted Excel generation.
-- `templates/`: Modern JS-driven frontend.
-- `data/`: Input PDFs, product catalogs, and reference datasets.
-- `output/`: Generated indexes and cached metadata.
+- `--input`: Path to a specific RFP PDF file. If this flag is omitted, the script runs in batch mode and processes all files located in the `data/Complete RFPs/` directory.
+- `--reference-provider`: Catalog database to match specifications against. Choices are `fortinet`, `fortinet-rag`, `fortinet-rules`, `deterministic`, `vertiv`, and `juniper` (Default: `fortinet`).
+- `--skip-enrichment`: Bypasses the Fortinet Admin Guide citation lookup, outputting hardware recommendations only.
+- `--model`: Specific Gemini model ID to execute for requirements table parsing.
 
-## 🤝 Contributing
+#### Example Commands
 
-Contributions are welcome! Please open an issue or submit a pull request for any improvements or bug fixes.
+Run a single file through the Juniper matching engine:
 
-## 📄 License
+```bash
+python main_pipeline.py --input "data/Complete RFPs/RFP_Security_Network.pdf" --reference-provider juniper
+```
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Run batch operations for Vertiv power infrastructure recommendations, skipping Admin Guide steps:
+
+```bash
+python main_pipeline.py --reference-provider vertiv --skip-enrichment
+```
 
 ---
 
-*Developed for Premier Systems - Automating Technical Excellence.*
+## Development and Contributions
+
+For details on database structures, scraping routines, or custom RAG embeddings, refer to the source files within the `scripts/` directory. Contributions should be submitted via branch pull requests following standard code reviews.
